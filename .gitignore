@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# DARE artifacts (generated when applying the method)
+# Users adopting DARE in their projects don't need to track these
+DARE/EXECUTION/*.md
+DARE/TELEMETRY.md
+!DARE/EXECUTION/.gitkeep

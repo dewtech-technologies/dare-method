@@ -1,329 +1,310 @@
-# 🚀 Sistema de Automação DARE para Cursor
+<div align="center">
 
-**Versão:** 1.0 | **Última atualização:** Abril 2026
+<img src="docs/assets/dewtech-logo.png" alt="Dewtech" width="120"/>
 
-Este repositório contém a implementação completa do **Método DARE** (Design → Architect → Review → Execute) otimizada para o **Cursor IDE**. O sistema integra os princípios de Context Engineering e Agentic Engineering para garantir que a IA gere código de alta qualidade, seguindo os padrões do seu projeto e mantendo você (o humano) sempre no controle através de revisões obrigatórias.
+# DARE Method
 
-## 📖 O Método DARE
+### Design. Architect. Review. Execute.
 
-O Método DARE é um fluxo estruturado que combina planejamento humano com execução automatizada de IA:
+**A structured methodology for AI-assisted software development with mandatory human-in-the-loop reviews.**
 
-| Fase | O que faz | Quem faz | Saída |
-|------|-----------|----------|-------|
-| **Design** | Define requisitos e funcionalidades | Humano (IA auxilia) | `DARE/DESIGN.md` |
-| **Architect** | Cria arquitetura e plano de execução | IA (Cursor) | `DARE/BLUEPRINT.md` |
-| **Review** | Valida e aprova o plano | Humano | Aprovação ✓ |
-| **Execute** | Implementa o código com testes | IA (Cursor) | Código + Testes ✓ |
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Built by Dewtech](https://img.shields.io/badge/built%20by-Dewtech-0070f3)](https://dewtech.tech)
+[![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
+[![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
-## 🎯 Fluxo Completo
+[**Quickstart**](#-quickstart-em-5-minutos) ·
+[**Método**](#-o-método) ·
+[**Ralph Loop**](#-ralph-loop) ·
+[**Implementações**](#%EF%B8%8F-implementações) ·
+[**Comparações**](#%EF%B8%8F-comparações)
+
+</div>
+
+---
+
+## ⚡ Quickstart em 5 minutos
+
+```bash
+# 1. Clone o repo
+git clone https://github.com/dewtech-technologies/dare-method.git
+cd dare-method
+
+# 2. Copie a implementação para o IDE que você usa
+# Para Cursor:
+cp -r implementations/cursor/.cursor seu-projeto/
+cp implementations/cursor/.cursorrules seu-projeto/
+
+# 3. Abra seu projeto no Cursor e dispare o primeiro comando
+/generate-design "Quero uma API de autenticação JWT em Node.js"
+```
+
+Pronto. Você está usando DARE.
+
+---
+
+## 🎯 O Problema
+
+O desenvolvimento de software com IA hoje opera em dois extremos:
+
+| Vibe Coding | Tradicional |
+|---|---|
+| "Me dá um código que faça X" + esperança | Especificação detalhada feita só por humanos |
+| Rápido pra protótipo, **caos pra evoluir** | Lento, **aproveita pouco a IA** |
+| Sem auditabilidade do raciocínio | Sem ganho de produtividade real |
+
+**DARE preenche o gap entre os dois.** Mantém a velocidade da IA, mas com **estrutura, contexto e checkpoints humanos**.
+
+---
+
+## 🚀 O Método
+
+DARE é o acrônimo de **4 fases sequenciais** com responsabilidades claras:
 
 ```
-1. /generate-design "Sua ideia"
-   ↓ (Você revisa e aprova)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│   1. DESIGN     →  2. ARCHITECT  →  3. REVIEW   →  4. EXECUTE          │
+│   ─────────       ─────────────     ─────────      ─────────            │
+│   Humano          IA propõe         Humano         IA implementa       │
+│   define          arquitetura       valida         + Ralph Loop        │
+│   requisitos                        e aprova                            │
+│                                                                         │
+│   ↓ DESIGN.md     ↓ BLUEPRINT.md    ↓ ✓ approval   ↓ Code + Tests ✓    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+| Fase | O que faz | Quem faz | Saída | Tempo típico |
+|------|-----------|----------|-------|--------------|
+| **1. Design** | Define **o que** vamos construir e **por quê** | Humano (IA auxilia) | `DARE/DESIGN.md` | 15-30 min |
+| **2. Architect** | Decide **como** vamos construir, em arquitetura e tasks | IA propõe, humano valida | `DARE/BLUEPRINT.md` | 5-15 min |
+| **3. Review** | Aprova ou ajusta o plano antes de gastar tokens | Humano | ✓ approval explícito | 5-10 min |
+| **4. Execute** | Implementa task por task, com **Ralph Loop** rodando até gates passarem | IA | Código + testes verdes | varia |
+
+> 💡 **Princípio central:** humanos pensam estratégia (1 e 3), IA executa tática (2 e 4). Cada transição entre fases passa por checkpoint explícito.
+
+---
+
+## 🤡 Ralph Loop
+
+<div align="center">
+
+<img src="docs/assets/ralph-loop.webp" alt="Ralph Wiggum — I'm in danger" width="320"/>
+
+*"I'm in danger 😄"*
+
+</div>
+
+Inspirado no **Ralph Wiggum** dos Simpsons, o **Ralph Loop** é o ciclo de **auto-correção pós-execução** que acontece dentro da fase 4 (Execute).
+
+A piada esconde uma verdade técnica: agentes de IA são **excelentes em iteração até o objetivo**, mas **ruins em planejamento estratégico**. O Ralph Loop usa essa força. As fases anteriores (Design → Architect → Review) suprem a fraqueza.
+
+### Como funciona
+
+```
+┌──────────────────────────────────────────────┐
+│  IA implementa task (escreve código)         │
+│              ↓                               │
+│  Roda os Validation Gates                    │
+│    • testes unitários                        │
+│    • testes de integração                    │
+│    • linter / formatter                      │
+│    • type checker                            │
+│              ↓                               │
+│  ┌─────────────┐   FAIL    ┌──────────────┐  │
+│  │  Passou?    │ ────────► │ Lê o erro    │  │
+│  └─────────────┘           │ Corrige      │  │
+│       PASS                 │ Tenta de novo│  │
+│        ↓                   └──────┬───────┘  │
+│   ✓ Task done                     │          │
+│                                   └─────────┘ ⟲
+│                                  Ralph Loop   │
+└──────────────────────────────────────────────┘
+```
+
+### Por que "Ralph"?
+
+Porque a IA, igual ao Ralph Wiggum, **persiste confiante** mesmo errando. Não desiste até a casa parar de pegar fogo (testes verdes). Não entende inteiramente o porquê — só sabe que precisa fazer passar. E, surpreendentemente, **funciona**.
+
+### Referências externas
+
+- [Ralph Loops: automação iterativa e o novo papel do engenheiro](https://medium.com/@itaifos/ralph-loops-automa%C3%A7%C3%A3o-iterativa-e-o-novo-papel-do-engenheiro-93df8b4e37e5) — Itai Fos (Medium)
+- [The greatest AI fix for your bug](https://www.crazystack.com.br/2025-3/the-greatest-ai-fix-for-your-b) — CrazyStack
+
+---
+
+## 🔁 Fluxo completo
+
+```
+1. /generate-design "Sua ideia em uma frase"
+   └─► DARE/DESIGN.md
+       ✋ Você revisa e aprova
+
 2. /generate-blueprint DARE/DESIGN.md
-   ↓ (Você revisa e aprova)
-3. /generate-dockerfile (Opcional: cria container)
-   ↓ (Você revisa e aprova)
-4. /generate-docker-compose (Opcional: orquestração)
-   ↓ (Você revisa e aprova)
-5. /generate-tasks DARE/BLUEPRINT.md
-   ↓ (Você revisa e aprova)
-6. /execute-task task-001
-   ↓ (IA implementa + testes)
-7. /execute-task task-002
-   ↓ (Repita para todas as tasks)
-8. /telemetry-report (Opcional: análise de uso)
+   └─► DARE/BLUEPRINT.md
+       ✋ Você revisa e aprova
+
+3. /generate-tasks DARE/BLUEPRINT.md
+   └─► DARE/TASKS.md + DARE/EXECUTION/task-001.md, task-002.md…
+       ✋ Você revisa e aprova
+
+4. /execute-task task-001
+   └─► IA implementa com Ralph Loop até gates passarem
+       ✓ Código + testes verdes
+
+5. /execute-task task-002
+   └─► repete para cada task
+
+📊 /telemetry-report (opcional)
+   └─► Análise de tokens, modelos, custo
 ```
 
-## 📋 Comandos Disponíveis
+---
 
-### Comandos Principais (DARE Core)
+## 🛠️ Implementações
 
-| Comando | Descrição | Entrada | Saída |
-|---------|-----------|---------|-------|
-| `/generate-design` | Transforma ideia em Design estruturado | Descrição de feature | `DARE/DESIGN.md` |
-| `/generate-blueprint` | Cria arquitetura a partir do Design | `DARE/DESIGN.md` | `DARE/BLUEPRINT.md` |
-| `/generate-tasks` | Quebra Blueprint em tarefas atômicas | `DARE/BLUEPRINT.md` | `DARE/TASKS.md` + `task-*.md` |
-| `/execute-task` | Implementa uma tarefa com testes | `task-001` | Código + Testes ✓ |
+| IDE / Agente | Status | Pasta |
+|---|---|---|
+| **Cursor IDE** | ✅ Production-ready | [`implementations/cursor/`](implementations/cursor) |
+| **Antigravity** | ✅ Production-ready | [`implementations/antigravity/`](implementations/antigravity) |
+| Claude Code | 🔜 Roadmap | — |
+| VS Code + Continue | 🔜 Roadmap | — |
+| JetBrains AI Assistant | 🔜 Roadmap | — |
 
-### Comandos de Infraestrutura
+Cada implementação tem README próprio com setup detalhado.
 
-| Comando | Descrição | Entrada | Saída |
-|---------|-----------|---------|-------|
-| `/generate-dockerfile` | Cria Dockerfile otimizado | Stack do projeto | `Dockerfile` + `.dockerignore` |
-| `/generate-docker-compose` | Cria orquestração de serviços | `DARE/BLUEPRINT.md` | `docker-compose.yml` |
+---
 
-### Comandos de Análise
+## 📋 Comandos disponíveis (Cursor)
 
-| Comando | Descrição | Entrada | Saída |
-|---------|-----------|---------|-------|
-| `/telemetry-report` | Gera relatório de tokens/modelos | `DARE/TELEMETRY.md` | Análise completa |
+### Core (DARE)
 
-## 🧠 Skills (Regras de Contexto)
+| Comando | Entrada | Saída |
+|---------|---------|-------|
+| `/generate-design` | Descrição da feature | `DARE/DESIGN.md` |
+| `/generate-blueprint` | `DARE/DESIGN.md` | `DARE/BLUEPRINT.md` |
+| `/generate-tasks` | `DARE/BLUEPRINT.md` | `DARE/TASKS.md` + `task-*.md` |
+| `/execute-task` | `task-001` | Código + testes ✓ |
 
-As skills ensinam o Cursor como se comportar em cada contexto. Todas são carregadas automaticamente:
+### Infraestrutura
 
-| Skill | Arquivo | Propósito |
-|-------|---------|----------|
-| **Laravel API** | `skill-laravel-api.mdc` | Padrões para PHP 8.3 + Laravel 11 |
-| **Docker** | `skill-docker.mdc` | Multi-stage builds, segurança, otimização |
-| **Segurança** | `skill-security.mdc` | OWASP Top 10, validação, criptografia |
-| **Telemetria** | `skill-telemetry.mdc` | Rastreamento de tokens e modelos |
+| Comando | Saída |
+|---------|-------|
+| `/generate-dockerfile` | `Dockerfile` + `.dockerignore` |
+| `/generate-docker-compose` | `docker-compose.yml` |
 
-**Como adicionar mais skills:**
-1. Crie um arquivo `.cursor/rules/skill-[nome].mdc`
-2. Defina as regras e convenções
-3. O Cursor carregará automaticamente na próxima conversa
+### Análise
 
-## 📂 Estrutura de Arquivos
+| Comando | Saída |
+|---------|-------|
+| `/telemetry-report` | Análise de tokens / modelos / custo |
+| `/generate-bugfix-design` | DESIGN específico para correção de bug |
+| `/generate-feature-design` | DESIGN específico para feature nova |
+
+---
+
+## 📂 Estrutura de arquivos esperada no seu projeto
+
+Após adotar DARE, seu projeto fica assim:
 
 ```
 seu-projeto/
-├── .cursorrules                    # Regras globais (carregado automaticamente)
+├── .cursorrules                  # Regras globais (do DARE)
 ├── .cursor/
-│   ├── commands/                   # Comandos DARE
-│   │   ├── generate-design.md
-│   │   ├── generate-blueprint.md
-│   │   ├── generate-tasks.md
-│   │   ├── execute-task.md
-│   │   ├── generate-dockerfile.md
-│   │   ├── generate-docker-compose.md
-│   │   └── telemetry-report.md
-│   ├── rules/                      # Skills por contexto
-│   │   ├── skill-laravel-api.mdc
-│   │   ├── skill-docker.mdc
-│   │   ├── skill-security.mdc
-│   │   ├── skill-telemetry.mdc
-│   │   ├── skill-python-api.mdc    # (Opcional)
-│   │   ├── skill-go-api.mdc        # (Opcional)
-│   │   └── skill-vue-frontend.mdc  # (Opcional)
-│   └── settings.local.json         # Configurações do Cursor
-├── DARE/
-│   ├── DESIGN.md                   # Requisitos aprovados
-│   ├── BLUEPRINT.md                # Arquitetura aprovada
-│   ├── TASKS.md                    # Visão geral das tarefas
-│   ├── TELEMETRY.md                # Rastreamento de uso (opcional)
-│   └── EXECUTION/
-│       ├── task-001.md
-│       ├── task-002.md
-│       └── ...
-├── templates/                      # Templates para geração de documentos
-│   ├── DESIGN-template.md
-│   ├── BLUEPRINT-template.md
-│   ├── TASKS-template.md
-│   ├── TASK-SPEC-template.md
-│   └── TELEMETRY-template.md
-├── examples/                       # Exemplos de código-base
-│   ├── laravel-user-controller.php
-│   ├── laravel-store-user-request.php
-│   ├── laravel-user-model.php
-│   ├── laravel-Dockerfile
-│   ├── laravel-docker-compose.yml
-│   └── vue-user-form.vue
-├── scripts/                        # Utilitários
-│   └── analyze-telemetry.py
-├── Dockerfile                      # Gerado por /generate-dockerfile
-├── docker-compose.yml              # Gerado por /generate-docker-compose
-└── [resto do projeto]
+│   ├── commands/                 # Os comandos /generate-*
+│   └── rules/                    # Skills (Laravel, Docker, Security, etc.)
+│
+├── DARE/                         # Pasta de governança do método
+│   ├── DESIGN.md                 # ← Fase 1 (humano define)
+│   ├── BLUEPRINT.md              # ← Fase 2 (IA propõe, humano valida)
+│   ├── TASKS.md                  # ← Visão geral
+│   ├── EXECUTION/                # ← Fase 4 (specs por task)
+│   │   ├── task-001.md
+│   │   ├── task-002.md
+│   │   └── …
+│   └── TELEMETRY.md              # ← métricas opcionais
+│
+└── (resto do seu código)
 ```
 
-## 🚀 Início Rápido
+---
 
-### Opção 1: Setup Automático (Recomendado)
+## ⚖️ Comparações
 
-**Windows:**
-```bash
-cd DARE-SYSTEM
-setup-projeto.bat C:\caminho\para\seu\projeto
-```
+| Aspecto | DARE | Vibe Coding | BDD | TDD tradicional |
+|---|---|---|---|---|
+| **Estrutura** | Alta (4 fases) | Nenhuma | Alta | Média |
+| **Velocidade inicial** | Média | Alta | Baixa | Baixa |
+| **Velocidade longo prazo** | Alta | Cai com complexidade | Alta | Média |
+| **Auditabilidade** | Total (DESIGN, BLUEPRINT, TASKS) | Nenhuma | Alta (specs) | Média (testes) |
+| **Uso de IA** | Otimizado (fases 2 e 4) | Total mas caótico | Baixo | Baixo |
+| **Curva de aprendizado** | Média | Zero | Alta | Alta |
+| **Ideal para** | Times sérios com IA | Protótipos rápidos descartáveis | Domínios regulados | Bibliotecas / kernels |
 
-**macOS/Linux:**
-```bash
-cd DARE-SYSTEM
-chmod +x setup-projeto.sh
-./setup-projeto.sh /caminho/para/seu/projeto
-```
+---
 
-### Opção 2: Setup Manual
+## 🏢 Battle-tested
 
-1. Copie `.cursor/` para a raiz do seu projeto
-2. Copie `.cursorrules` para a raiz do seu projeto
-3. Copie `templates/` e `examples/` para referência
-4. Crie o diretório `DARE/EXECUTION`
+DARE foi desenvolvido durante a construção de produtos reais de IA generativa na **Dewtech** e está em uso ativo em projetos de produção desde 2025. A metodologia evoluiu a partir de problemas concretos de:
 
-### Verificar Instalação
+- Manter qualidade em codebases que crescem rápido com IA
+- Garantir que decisões arquiteturais fiquem registradas e revisitáveis
+- Reduzir débito técnico gerado por "Vibe Coding" sem estrutura
+- Permitir que membros novos do time entrem rapidamente sem perder contexto
 
-1. Abra seu projeto no Cursor: **File → Open Folder**
-2. Abra o Composer: **Ctrl+I** (Windows/Linux) ou **Cmd+I** (Mac)
-3. Digite `/` para ver os comandos disponíveis
-4. Teste: `/generate-design "Teste rápido"`
+O método **não é um framework experimental** — é o padrão pelo qual a Dewtech entrega software hoje.
 
-## 📚 Documentação Completa
+---
 
-| Documento | Propósito |
-|-----------|-----------|
-| **CONFIGURACAO-CURSOR.md** | Como o Cursor carrega regras e comandos |
-| **SETUP-RAPIDO.md** | Setup em 5 minutos |
-| **REFERENCIA-RAPIDA.md** | Cheat sheet com todos os comandos |
-| **GUIA-DE-USO.md** | Exemplo prático completo (To-Do List API) |
-| **GUIA-TELEMETRIA.md** | Como rastrear tokens e modelos do Cursor |
+## 📚 Documentação
 
-## 🛡️ Segurança (OWASP Top 10)
+- 📖 [Metodologia detalhada](docs/methodology.md)
+- 🎭 [Ralph Loop em profundidade](docs/ralph-loop.md)
+- 🔄 [Cada uma das 4 fases](docs/phases/)
+- 🧩 [Glossário](docs/glossary.md)
+- ❓ [FAQ](docs/faq.md)
+- ⚖️ [Comparações com outras metodologias](docs/comparisons.md)
 
-A skill de segurança garante que o Cursor gere código seguro em todas as fases:
+---
 
-- **Design:** Requisitos de segurança explícitos
-- **Blueprint:** Arquitetura com proteções (Auth, Rate Limit, Validação)
-- **Tasks:** Tarefas incluem validações de segurança
-- **Execute:** Código com Bcrypt, SQL Injection prevention, XSS protection
+## 🗺️ Roadmap
 
-Vulnerabilidades cobertas: Broken Access Control, Cryptographic Failures, Injection, Insecure Design, Security Misconfiguration, Authentication Failures, SSRF.
+- [ ] Implementação para **Claude Code**
+- [ ] Implementação para **VS Code + Continue**
+- [ ] CLI standalone (`dare init`, `dare design`, `dare execute`)
+- [ ] Templates por linguagem: Python/FastAPI, Node.js/NestJS, Go, Rust
+- [ ] Site dedicado em `dare-method.dev`
+- [ ] Curso / certificação
 
-## 🐳 Docker & Containerização
-
-O sistema gera Dockerfiles otimizados com:
-
-- **Multi-stage builds** para reduzir tamanho
-- **Usuários não-root** para segurança
-- **Cache de camadas** para performance
-- **Health checks** para confiabilidade
-- **docker-compose.yml** com volumes persistentes e redes isoladas
-
-Suporte para: Laravel/PHP, Python, Go, Vue.js/Node.
-
-## 📊 Telemetria & Análise
-
-Rastreie qual modelo do Cursor foi usado em cada etapa:
-
-```bash
-/telemetry-report
-```
-
-Gera análise com:
-- Tokens processados por etapa
-- Modelos utilizados (GPT-4, Claude, Gemini)
-- Tempo de execução
-- Recomendações de otimização
-
-Análise visual em terminal:
-```bash
-python3 scripts/analyze-telemetry.py
-```
-
-## 🔧 Customização
-
-### Trocar de Stack
-
-Edite `.cursorrules` e adicione skills correspondentes:
-
-```markdown
-# Para Python FastAPI
-Stack: Python 3.11 + FastAPI + PostgreSQL
-
-# Adicione em .cursor/rules/
-skill-python-api.mdc
-```
-
-### Adicionar Novas Skills
-
-1. Crie `.cursor/rules/skill-[nome].mdc`
-2. Defina as regras e convenções
-3. Carregamento automático na próxima conversa
-
-### Adicionar Exemplos de Código
-
-Coloque arquivos na pasta `examples/`:
-- Controllers
-- Models
-- Services
-- Components
-- Migrations
-
-A IA usará esses exemplos como referência de padrão.
-
-## 🎯 Casos de Uso
-
-### Caso 1: Criar uma API de Autenticação
-
-```
-/generate-design "Criar API de login com JWT"
-→ Revisar DARE/DESIGN.md
-→ /generate-blueprint DARE/DESIGN.md
-→ Revisar DARE/BLUEPRINT.md
-→ /generate-tasks DARE/BLUEPRINT.md
-→ Revisar DARE/TASKS.md
-→ /execute-task task-001 (Migration)
-→ /execute-task task-002 (AuthController)
-→ /execute-task task-003 (Testes)
-```
-
-### Caso 2: Containerizar Projeto Existente
-
-```
-/generate-dockerfile
-→ Revisar Dockerfile
-→ /generate-docker-compose
-→ Revisar docker-compose.yml
-→ docker-compose up -d
-```
-
-### Caso 3: Monitorar Custos de IA
-
-```
-/telemetry-report
-→ Análise de tokens por etapa
-→ Recomendações de otimização
-→ python3 scripts/analyze-telemetry.py (visual)
-```
-
-## 🔄 Ralph Loop (Validação Automática)
-
-Quando você executa `/execute-task`, a IA:
-
-1. **Implementa** o código conforme a especificação
-2. **Executa** testes (PHPUnit, Pytest, etc)
-3. **Se falhar:** Lê o erro, corrige e repete
-4. **Se passar:** Marca como concluído
-
-Isso garante que o código entregue **sempre funciona**.
-
-## 📖 Stack Suportadas
-
-| Stack | Status | Skill | Exemplos |
-|-------|--------|-------|----------|
-| Laravel/PHP | ✓ Completo | `skill-laravel-api.mdc` | Sim |
-| Python (FastAPI) | ✓ Completo | `skill-python-api.mdc` | Em breve |
-| Go | ✓ Completo | `skill-go-api.mdc` | Em breve |
-| Vue.js | ✓ Completo | `skill-vue-frontend.mdc` | Sim |
-| Docker | ✓ Completo | `skill-docker.mdc` | Sim |
-| Segurança | ✓ Completo | `skill-security.mdc` | N/A |
-| Telemetria | ✓ Completo | `skill-telemetry.mdc` | N/A |
+---
 
 ## 🤝 Contribuindo
 
-Para adicionar melhorias:
+PRs são muito bem-vindos. Veja [CONTRIBUTING.md](CONTRIBUTING.md) pra:
 
-1. Crie uma nova skill em `.cursor/rules/skill-[nome].mdc`
-2. Adicione exemplos em `examples/`
-3. Documente em um novo arquivo `GUIA-[NOME].md`
-4. Atualize este README
-
-## 📞 Suporte
-
-Se algo não funcionar:
-
-1. Consulte **CONFIGURACAO-CURSOR.md** (seção Troubleshooting)
-2. Verifique se os arquivos estão no lugar certo
-3. Feche e reabra o Cursor
-4. Teste novamente
-
-## 🔗 Referências
-
-- [Método DARE (DewTech)](https://www.youtube.com/@dewtech)
-- [Context Engineering (Cole Medin)](https://github.com/coleam00/context-engineering-intro)
-- [PRP Agentic Engineering (Wirasm)](https://github.com/Wirasm/PRPs-agentic-eng)
-- [Cursor IDE Docs](https://cursor.com/docs)
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- Adicionar nova implementação (IDE / agente)
+- Adicionar nova skill (Python, Go, Rust, mobile, etc.)
+- Reportar bugs ou sugerir melhorias na metodologia
+- Compartilhar case studies de uso real
 
 ---
-**Versão:** 1.0 | **Última atualização:** Abril 2026
+
+## 📜 Licença
+
+MIT — veja [LICENSE](LICENSE).
+
+---
+
+## 🚀 Adotando DARE no seu time?
+
+Workshops, consultoria de adoção e cases study customizados disponíveis via Dewtech.
+
+📧 **wanderson@dewtech.tech**
+🌐 **https://dewtech.tech**
+
+<div align="center">
+
+Feito com ❤️ pela [Dewtech](https://dewtech.tech) em Belo Horizonte, Brasil 🇧🇷
+
+</div>
