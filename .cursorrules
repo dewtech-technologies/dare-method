@@ -1,0 +1,100 @@
+# Regras Globais do Projeto DARE
+
+Este arquivo define as regras e convenções globais que o Cursor deve seguir em todos os prompts.
+Ele é lido automaticamente pelo Cursor IDE em cada conversa.
+
+## Método DARE (Design → Architect → Review → Execute)
+
+Este projeto segue o Método DARE para desenvolvimento com IA. O fluxo é:
+
+1. **Design (Humano Define):** Cria `DARE/DESIGN.md` com requisitos.
+2. **Architect (IA Planeja):** Gera `DARE/BLUEPRINT.md` com arquitetura.
+3. **Review (Humano Valida):** Aprova ou ajusta o Blueprint.
+4. **Execute (IA Implementa):** Lê `DARE/EXECUTION/task-*.md` e implementa o código.
+
+Você (a IA) é responsável pelas fases 2 e 4. O humano sempre valida antes de avançar.
+
+## Estrutura de Diretórios
+
+```
+projeto/
+├── .cursorrules              # Este arquivo
+├── .cursor/
+│   ├── rules/                # Skills e regras por stack
+│   │   ├── skill-laravel-api.mdc
+│   │   ├── skill-python-api.mdc
+│   │   ├── skill-go-api.mdc
+│   │   └── skill-vue-frontend.mdc
+│   └── commands/             # Os 4 comandos DARE
+│       ├── generate-design.md
+│       ├── generate-blueprint.md
+│       ├── generate-tasks.md
+│       └── execute-task.md
+├── DARE/
+│   ├── DESIGN.md             # Requisitos aprovados
+│   ├── BLUEPRINT.md          # Arquitetura aprovada
+│   ├── TASKS.md              # Visão geral das tarefas
+│   └── EXECUTION/            # Especificações isoladas
+│       ├── task-001.md
+│       ├── task-002.md
+│       └── ...
+├── templates/                # Templates para documentos
+├── examples/                 # Exemplos de código-base
+└── [resto do projeto]
+```
+
+## Convenções Globais
+
+### Tipagem e Linguagem
+- Sempre use tipagem forte (Type Hints) em todas as linguagens.
+- Prefira exceções bem definidas a valores `null`.
+- Escreva comentários explicando o *porquê*, não o *o quê*.
+
+### Tratamento de Erros
+- Erros de validação devem retornar status 422 com detalhes dos campos.
+- Erros de autenticação devem retornar 401.
+- Erros de autorização devem retornar 403.
+- Erros internos devem retornar 500 com mensagem genérica (nunca exponha detalhes internos).
+
+### Testes
+- Escreva testes para todos os endpoints e lógica de negócio.
+- Testes devem passar 100% antes de considerar uma tarefa completa.
+- Use Factories e Seeders para popular dados de teste.
+
+### Documentação
+- Mantenha `DARE/DESIGN.md` e `DARE/BLUEPRINT.md` atualizados conforme o projeto evolui.
+- Adicione comentários em código apenas para lógica complexa.
+
+## Fluxo de Trabalho com Cursor
+
+### Para Gerar Design
+```
+/generate-design "Criar uma API de autenticação com JWT"
+```
+
+### Para Gerar Blueprint
+```
+/generate-blueprint DARE/DESIGN.md
+```
+
+### Para Gerar Tasks
+```
+/generate-tasks DARE/BLUEPRINT.md
+```
+
+### Para Executar uma Task
+```
+/execute-task task-001
+```
+
+## Ralph Loop (Validação Automática)
+
+Quando você executa uma tarefa, você DEVE rodar os Validation Gates (testes/linting) definidos na especificação da tarefa.
+Se algum teste falhar, você DEVE:
+
+1. Ler a mensagem de erro.
+2. Corrigir o código.
+3. Rodar o teste novamente.
+4. Repetir até que TODOS os testes passem.
+
+Isso é conhecido como Ralph Loop e garante que o código entregue está sempre funcionando.

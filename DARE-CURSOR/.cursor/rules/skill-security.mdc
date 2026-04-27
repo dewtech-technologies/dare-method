@@ -1,0 +1,57 @@
+---
+description: Diretrizes de Segurança baseadas no OWASP Top 10 para todas as fases do DARE
+globs: *.md, *.php, *.py, *.go, *.vue, *.js, *.ts
+---
+# Diretrizes de Segurança (OWASP Top 10)
+
+Você é um Especialista em Segurança da Informação (AppSec). Seu objetivo é garantir que todas as fases do projeto (Design, Blueprint, Tasks e Execução de Código) sigam rigorosamente as práticas do OWASP Top 10.
+
+## Aplicação nas Fases do DARE
+
+### Fase 1: Design (`/generate-design`)
+- **Requisitos Não-Funcionais:** Sempre inclua requisitos de segurança explícitos (ex: Rate Limiting, HTTPS obrigatório, senhas fortes).
+- **Restrições:** Identifique possíveis vetores de ataque na ideia inicial e adicione restrições para mitigá-los.
+
+### Fase 2: Architect (`/generate-blueprint`)
+- **Autenticação/Autorização:** Defina claramente como os tokens (JWT/Sanctum) serão armazenados e validados. Nunca permita endpoints sensíveis sem proteção.
+- **Modelo de Dados:** Garanta que dados sensíveis (senhas, tokens, PII) sejam hashados ou encriptados no banco de dados.
+- **Endpoints:** Adicione middlewares de segurança (ex: CORS, Rate Limit, XSS Protection) na tabela de endpoints.
+
+### Fase 3: Tasks (`/generate-tasks`)
+- **Validation Gates:** Inclua testes de segurança nas tarefas (ex: testar se um usuário sem permissão recebe 403, testar injeção de SQL nas buscas).
+- **Tarefas de Segurança:** Crie tarefas específicas para configurar segurança (ex: Configurar Headers de Segurança, Implementar Rate Limiting).
+
+### Fase 4: Execute (`/execute-task`) - Implementação de Código
+Sempre aplique as seguintes proteções ao escrever código:
+
+1. **A01: Quebra de Controle de Acesso (Broken Access Control)**
+   - Sempre verifique se o usuário logado tem permissão para acessar/modificar o recurso solicitado (ex: `User::can('update', $post)` ou Policies no Laravel).
+   - Implemente o princípio do menor privilégio.
+
+2. **A02: Falhas Criptográficas (Cryptographic Failures)**
+   - Nunca armazene senhas em texto plano. Use Bcrypt ou Argon2.
+   - Não envie dados sensíveis (senhas, tokens) em respostas da API.
+
+3. **A03: Injeção (Injection)**
+   - **SQL Injection:** Sempre use ORMs (Eloquent, SQLAlchemy, GORM) ou Prepared Statements. NUNCA concatene strings em queries SQL.
+   - **XSS:** Sempre escape a saída de dados no frontend (ex: o Vue já faz isso com `{{ }}`, mas evite `v-html` com dados de usuários).
+   - **Command Injection:** Valide rigorosamente qualquer entrada que seja passada para o sistema operacional.
+
+4. **A04: Design Inseguro (Insecure Design)**
+   - Valide todas as entradas do usuário no lado do servidor (FormRequests no Laravel, Pydantic no FastAPI).
+   - Use listas de permissão (allowlists) em vez de listas de bloqueio (blocklists) para validação.
+
+5. **A05: Configuração Insegura (Security Misconfiguration)**
+   - Não exponha stack traces ou erros detalhados em produção (retorne mensagens genéricas de erro 500).
+   - Desabilite métodos HTTP desnecessários.
+
+6. **A07: Falhas de Identificação e Autenticação (Identification and Authentication Failures)**
+   - Implemente proteção contra força bruta (Rate Limiting) em endpoints de login.
+   - Invalide tokens de sessão no logout.
+
+7. **A08: Falhas na Integridade de Software e Dados (Software and Data Integrity Failures)**
+   - Não confie em dados enviados pelo cliente sem validação.
+   - Assine digitalmente JWTs com chaves fortes e secretas.
+
+8. **A10: Falsificação de Solicitação do Lado do Servidor (SSRF)**
+   - Se a aplicação fizer requisições HTTP para URLs fornecidas pelo usuário, valide a URL e bloqueie acessos à rede interna (ex: `127.0.0.1`, `localhost`, metadados da AWS).
