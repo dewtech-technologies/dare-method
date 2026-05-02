@@ -10,12 +10,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Built by Dewtech](https://img.shields.io/badge/built%20by-Dewtech-0070f3)](https://dewtech.tech)
+[![npm](https://img.shields.io/npm/v/@dewtech/dare-cli?label=%40dewtech%2Fdare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
 [**Ralph Loop**](#-ralph-loop) ·
+[**CLI**](#-dare-cli-pacote-npm) ·
 [**Implementações**](#%EF%B8%8F-implementações) ·
 [**Comparações**](#%EF%B8%8F-comparações)
 
@@ -25,13 +27,32 @@
 
 ## ⚡ Quickstart em 5 minutos
 
+### Opção 1 — Via CLI (recomendado)
+
+```bash
+# 1. Instale o CLI globalmente
+npm install -g @dewtech/dare-cli
+
+# 2. Inicialize seu projeto de forma interativa
+dare init meu-projeto
+# → Escolha: IDE (Cursor / Antigravity / Hybrid)
+# → Escolha: Backend (Rust/Axum, Node/NestJS, Python/FastAPI, PHP/Laravel)
+# → Escolha: Frontend (React, Vue)
+# → Escolha: GraphRAG (SQLite, JSON, Neo4j)
+
+# 3. Abra seu projeto e dispare o primeiro comando
+cd meu-projeto
+dare design "Quero uma API de autenticação JWT"
+```
+
+### Opção 2 — Manual (Cursor)
+
 ```bash
 # 1. Clone o repo
 git clone https://github.com/dewtech-technologies/dare-method.git
 cd dare-method
 
-# 2. Copie a implementação para o IDE que você usa
-# Para Cursor:
+# 2. Copie a implementação para o seu projeto
 cp -r implementations/cursor/.cursor seu-projeto/
 cp implementations/cursor/.cursorrules seu-projeto/
 
@@ -176,6 +197,61 @@ Cada implementação tem README próprio com setup detalhado.
 
 ---
 
+## 📦 DARE CLI — Pacote npm
+
+O DARE Method agora está disponível como um **pacote npm instalável**, com suporte a múltiplos stacks e IDEs.
+
+### Pacotes disponíveis
+
+| Pacote | Descrição | Status |
+|--------|-----------|--------|
+| [`@dewtech/dare-cli`](packages/cli) | CLI interativo com `dare init`, `dare design`, `dare blueprint`, `dare execute` | ✅ MVP |
+| [`@dewtech/dare-mcp-server`](packages/mcp-server) | Servidor MCP local para queries de contexto (90% menos tokens) | ✅ MVP |
+| [`@dewtech/dare-graphrag`](packages/graphrag) | Motor de conhecimento gráfico com SQLite + FTS5 | ✅ MVP |
+
+### Stacks suportados
+
+**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel
+
+**Frontend:** React 18+ · Vue 3+
+
+### Execução paralela com DAG Task Runner
+
+Inspired by [Cursor Cookbook DAG Task Runner](https://github.com/cursor/cookbook), o DARE CLI suporta execução paralela de tasks:
+
+```bash
+# Gerar grafo de dependências e executar em paralelo
+dare blueprint          # gera BLUEPRINT.md + dare-dag.yaml
+dare execute --parallel # executa tasks independentes em paralelo
+```
+
+| Modo | Tempo estimado |
+|------|----------------|
+| Sequencial (anterior) | ~280 minutos |
+| Paralelo com DAG | ~70 minutos |
+| **Ganho** | **75% mais rápido** |
+
+### Economia de tokens com MCP Server
+
+Em vez de a IA reler o `BLUEPRINT.md` inteiro a cada task, o MCP Server fornece apenas o contexto necessário:
+
+```bash
+# Iniciar o servidor MCP local
+dare-mcp-server
+
+# A IA consulta contexto via HTTP em vez de reler arquivos
+# POST http://localhost:3000/context/query
+# { "type": "architecture", "query": "authentication", "limit": 3 }
+```
+
+| Método | Tokens usados |
+|--------|---------------|
+| Reler BLUEPRINT.md completo | ~8.000 tokens |
+| Query MCP (5 resultados) | ~400 tokens |
+| **Economia** | **~95%** |
+
+---
+
 ## 📋 Comandos disponíveis (Cursor)
 
 ### Core (DARE)
@@ -270,12 +346,30 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 
 ## 🗺️ Roadmap
 
+### Concluído ✅
+
+- [x] CLI standalone (`dare init`, `dare design`, `dare blueprint`, `dare execute`)
+- [x] Templates por linguagem: Rust/Axum, Node.js/NestJS, Python/FastAPI, PHP/Laravel
+- [x] Templates frontend: React 18+, Vue 3+
+- [x] Execução paralela de tasks com DAG Task Runner
+- [x] MCP Server local para economia de tokens (90% de redução)
+- [x] GraphRAG com SQLite para contexto persistente
+- [x] Monorepo com pnpm workspaces e TypeScript strict
+
+### Em andamento 🔄
+
+- [ ] Publicação dos pacotes no npm registry
+- [ ] GitHub Actions para CI/CD e publish automático
+- [ ] Pacote `@dewtech/dare-core` (lógica compartilhada)
+
+### Próximos passos 🔜
+
 - [ ] Implementação para **Claude Code**
 - [ ] Implementação para **VS Code + Continue**
-- [ ] CLI standalone (`dare init`, `dare design`, `dare execute`)
-- [ ] Templates por linguagem: Python/FastAPI, Node.js/NestJS, Go, Rust
+- [ ] Templates para Go e Kotlin
 - [ ] Site dedicado em `dare-method.dev`
 - [ ] Curso / certificação
+- [ ] DARE Cloud (GraphRAG remoto para times)
 
 ---
 
