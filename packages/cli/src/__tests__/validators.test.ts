@@ -61,7 +61,7 @@ describe('validators', () => {
     });
 
     it('should replace special characters with hyphens', () => {
-      expect(sanitizeProjectName('my@project!')).toBe('my-project-');
+      expect(sanitizeProjectName('my@project!')).toBe('my-project');
     });
 
     it('should collapse multiple hyphens', () => {

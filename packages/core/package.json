@@ -1,13 +1,10 @@
 {
-  "name": "@dewtech/dare-cli",
+  "name": "@dewtech/dare-core",
   "version": "0.1.0",
-  "description": "DARE Framework CLI - Interactive project setup and task execution",
+  "description": "DARE Framework Core - Shared types, utilities, and constants",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "dare": "./dist/bin/dare.js"
-  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -19,23 +16,12 @@
   ],
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/bin/dare.ts",
+    "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src"
   },
-  "dependencies": {
-    "@dewtech/dare-core": "workspace:*",
-    "chalk": "^5.3.0",
-    "commander": "^11.0.0",
-    "fs-extra": "^11.1.1",
-    "inquirer": "^9.2.0",
-    "ora": "^7.0.1",
-    "yaml": "^2.3.1"
-  },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.1",
-    "@types/inquirer": "^9.0.3",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -47,16 +33,16 @@
   },
   "keywords": [
     "dare",
-    "cli",
-    "ai-assisted",
-    "development"
+    "core",
+    "types",
+    "utils"
   ],
   "author": "Dewtech Technologies",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/dewtech-technologies/dare-method.git",
-    "directory": "packages/cli"
+    "directory": "packages/core"
   },
   "engines": {
     "node": ">=18.0.0"
