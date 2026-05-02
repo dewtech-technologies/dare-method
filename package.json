@@ -1,0 +1,45 @@
+{
+  "name": "@dewtech/dare-framework",
+  "version": "0.1.0",
+  "description": "DARE Framework - Distributed AI-assisted Requirements Engineering",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --recursive --parallel dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "format": "pnpm --recursive format",
+    "cli": "pnpm -F @dewtech/dare-cli",
+    "mcp": "pnpm -F @dewtech/dare-mcp-server",
+    "graphrag": "pnpm -F @dewtech/dare-graphrag"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0"
+  },
+  "keywords": [
+    "dare",
+    "methodology",
+    "ai-assisted",
+    "software-development",
+    "cli",
+    "framework"
+  ],
+  "author": "Dewtech Technologies",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dewtech-technologies/dare-method.git"
+  }
+}
