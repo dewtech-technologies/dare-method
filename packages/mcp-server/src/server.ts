@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, Express } from 'express';
 import cors from 'cors';
 import fs from 'fs-extra';
 import path from 'path';
@@ -27,8 +27,8 @@ export interface TaskStatus {
   updatedAt: string;
 }
 
-export function createMcpServer(projectPath: string = process.cwd()) {
-  const app = express();
+export function createMcpServer(projectPath: string = process.cwd()): Express {
+  const app: Express = express();
   app.use(cors());
   app.use(express.json());
 
@@ -66,10 +66,9 @@ export function createMcpServer(projectPath: string = process.cwd()) {
           const lines = content.split('\n');
           const queryLower = query.toLowerCase();
 
-          // Find relevant sections
           let currentSection = '';
           let sectionContent = '';
-          let relevantSections: { section: string; content: string; relevance: number }[] = [];
+          const relevantSections: { section: string; content: string; relevance: number }[] = [];
 
           for (const line of lines) {
             if (line.startsWith('#')) {
@@ -150,7 +149,8 @@ export function createMcpServer(projectPath: string = process.cwd()) {
   app.get('/blueprint', async (_req: Request, res: Response) => {
     const blueprintPath = path.join(projectPath, 'DARE', 'BLUEPRINT.md');
     if (!await fs.pathExists(blueprintPath)) {
-      return res.status(404).json({ error: 'BLUEPRINT.md not found. Run: dare blueprint' });
+      res.status(404).json({ error: 'BLUEPRINT.md not found. Run: dare blueprint' });
+      return;
     }
     const content = await fs.readFile(blueprintPath, 'utf-8');
     res.json({ content, source: 'DARE/BLUEPRINT.md' });
@@ -160,7 +160,8 @@ export function createMcpServer(projectPath: string = process.cwd()) {
   app.get('/dag', async (_req: Request, res: Response) => {
     const dagPath = path.join(projectPath, 'DARE', 'dare-dag.yaml');
     if (!await fs.pathExists(dagPath)) {
-      return res.status(404).json({ error: 'dare-dag.yaml not found. Run: dare blueprint' });
+      res.status(404).json({ error: 'dare-dag.yaml not found. Run: dare blueprint' });
+      return;
     }
     const content = await fs.readFile(dagPath, 'utf-8');
     res.json({ content, source: 'DARE/dare-dag.yaml' });
@@ -171,11 +172,15 @@ export function createMcpServer(projectPath: string = process.cwd()) {
     const { taskId } = req.params;
     const tasksPath = path.join(projectPath, 'DARE', 'TASKS.md');
     if (!await fs.pathExists(tasksPath)) {
-      return res.status(404).json({ error: 'TASKS.md not found' });
+      res.status(404).json({ error: 'TASKS.md not found' });
+      return;
     }
     const content = await fs.readFile(tasksPath, 'utf-8');
     const line = content.split('\n').find((l) => l.includes(taskId));
-    if (!line) return res.status(404).json({ error: `Task ${taskId} not found` });
+    if (!line) {
+      res.status(404).json({ error: `Task ${taskId} not found` });
+      return;
+    }
 
     let status = 'PENDING';
     if (line.includes('✅')) status = 'DONE';
@@ -193,7 +198,8 @@ export function createMcpServer(projectPath: string = process.cwd()) {
     const tasksPath = path.join(projectPath, 'DARE', 'TASKS.md');
 
     if (!await fs.pathExists(tasksPath)) {
-      return res.status(404).json({ error: 'TASKS.md not found' });
+      res.status(404).json({ error: 'TASKS.md not found' });
+      return;
     }
 
     const icons: Record<string, string> = {
@@ -204,13 +210,15 @@ export function createMcpServer(projectPath: string = process.cwd()) {
       SKIPPED: '⏭️ SKIPPED',
     };
 
-    let content = await fs.readFile(tasksPath, 'utf-8');
+    const content = await fs.readFile(tasksPath, 'utf-8');
     const lines = content.split('\n');
     const lineIdx = lines.findIndex((l) => l.includes(taskId));
 
-    if (lineIdx === -1) return res.status(404).json({ error: `Task ${taskId} not found` });
+    if (lineIdx === -1) {
+      res.status(404).json({ error: `Task ${taskId} not found` });
+      return;
+    }
 
-    // Replace status in line
     lines[lineIdx] = lines[lineIdx]
       .replace(/⏳ PENDING|🔄 IN_PROGRESS|✅ DONE|❌ FAILED|⏭️ SKIPPED/, icons[status] || status);
 
@@ -222,7 +230,8 @@ export function createMcpServer(projectPath: string = process.cwd()) {
   app.get('/project', async (_req: Request, res: Response) => {
     const configPath = path.join(projectPath, 'dare.config.json');
     if (!await fs.pathExists(configPath)) {
-      return res.status(404).json({ error: 'dare.config.json not found. Run: dare init' });
+      res.status(404).json({ error: 'dare.config.json not found. Run: dare init' });
+      return;
     }
     const config = await fs.readJSON(configPath);
     res.json(config);
