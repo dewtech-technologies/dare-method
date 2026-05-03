@@ -5,6 +5,14 @@ interface TemplateConfig {
   mcp: boolean;
 }
 
+interface McpTemplateConfig {
+  mcpTransport?: string;
+  mcpLanguage?: string;
+  mcpFeatures?: string[];
+  graphrag: string;
+  mcp: boolean;
+}
+
 export function generateCursorRules(config: TemplateConfig): string {
   const { backend, frontend, graphrag, mcp } = config;
 
@@ -115,6 +123,107 @@ ${mcp ? `- Query MCP Server at http://localhost:3000 for context
 - Update task status in DARE/TASKS.md in real-time
 - Run Ralph Loop before marking any task as DONE
 - Request human review for architectural decisions
+`;
+}
+
+export function generateMcpCursorRules(config: McpTemplateConfig): string {
+  const { mcpTransport = 'stdio', mcpLanguage = 'node-ts', mcpFeatures = ['tools'], graphrag, mcp } = config;
+  const featuresStr = mcpFeatures.join(', ');
+
+  const langRules = mcpLanguage === 'python'
+    ? `## Language: Python
+- Use FastMCP (@mcp.tool, @mcp.resource, @mcp.prompt decorators)
+- Type all arguments — FastMCP builds JSON schema from type hints
+- Use docstrings as tool/resource/prompt descriptions
+- Test: npx @modelcontextprotocol/inspector python main.py
+- Lint: ruff check . && mypy .`
+    : `## Language: TypeScript
+- Import from '@modelcontextprotocol/sdk/server/index.js' and types
+- Always define strict inputSchema for every tool (Claude depends on it)
+- Use zod for runtime validation when needed
+- Test: npm run inspect (MCP Inspector)
+- Build: npm run build before marking any task DONE`;
+
+  const transportNote = mcpTransport === 'stdio'
+    ? `- Transport: stdio — server communicates via stdin/stdout, no HTTP port needed`
+    : mcpTransport === 'sse'
+    ? `- Transport: SSE — server exposes GET /sse and POST /messages endpoints`
+    : `- Transport: HTTP Stream — use StreamableHTTPServerTransport`;
+
+  return `# DARE Framework - Cursor Rules (MCP Server Project)
+
+## DARE Methodology
+You are an AI assistant following the DARE methodology:
+- **D**esign: Define MCP server requirements and capabilities
+- **A**rchitect: Create technical blueprint and task graph
+- **R**eview: Validate implementation against blueprint
+- **E**xecute: Implement tools, resources, and prompts following the DAG
+
+## Core Rules
+- Always read DARE/BLUEPRINT.md before implementing any tool or resource
+- Update DARE/TASKS.md status after completing each task
+- Never skip the Ralph Loop (build → test → inspect) before marking a task as DONE
+- Test every tool with MCP Inspector before marking DONE
+- Validate tool inputSchema matches actual handler logic exactly
+
+## MCP Server Configuration
+- Transport: ${mcpTransport}
+- Features: ${featuresStr}
+${transportNote}
+
+${langRules}
+
+## MCP Best Practices
+- Keep tool names snake_case and descriptive
+- Return structured content arrays, not plain strings
+- Handle unknown tool/resource/prompt names with explicit errors
+- Never expose secrets via tool outputs or resource contents
+- Document every tool argument in inputSchema description fields
+
+## GraphRAG Context (${graphrag})
+${mcp ? `- Query MCP Server at http://localhost:3000 for context instead of reading full files` : '- Use DARE/BLUEPRINT.md as the single source of truth'}
+
+## Ralph Loop (Mandatory before DONE)
+1. Build (npm run build / python -m py_compile)
+2. Test (npm test / pytest)
+3. Inspect with MCP Inspector to verify tool contracts
+4. Only mark DONE if all 3 steps pass
+`;
+}
+
+export function generateMcpAntigravityRules(config: McpTemplateConfig): string {
+  const { mcpTransport = 'stdio', mcpLanguage = 'node-ts', mcpFeatures = ['tools'], graphrag, mcp } = config;
+
+  return `# DARE Framework - Antigravity Rules (MCP Server Project)
+
+## Agent Configuration
+You are an autonomous AI agent implementing an MCP server using the DARE methodology.
+Execute tasks from DARE/dare-dag.yaml in parallel when dependencies allow.
+
+## DARE Phases
+- **Design**: Read DARE/DESIGN.md — what tools/resources/prompts does this MCP server expose?
+- **Architect**: Read DARE/BLUEPRINT.md — tool schemas, transport, auth strategy
+- **Review**: Test each tool with MCP Inspector before marking DONE
+- **Execute**: Implement tasks, update DARE/TASKS.md
+
+## MCP Stack
+- Language: ${mcpLanguage}
+- Transport: ${mcpTransport}
+- Features: ${mcpFeatures.join(', ')}
+
+## Implementation Rules
+- Each tool must have a strict inputSchema — Claude uses it to call the tool
+- Test with MCP Inspector after implementing each tool
+- Never skip error handling for unknown tool names
+
+## Context Strategy (${graphrag})
+${mcp ? `- Query MCP Server at http://localhost:3000 for project context` : '- Read DARE/BLUEPRINT.md for context'}
+
+## Execution Rules
+- Always check task dependencies before starting
+- Update task status in DARE/TASKS.md in real-time
+- Run Ralph Loop before marking any task as DONE
+- Request human review for transport or auth design decisions
 `;
 }
 

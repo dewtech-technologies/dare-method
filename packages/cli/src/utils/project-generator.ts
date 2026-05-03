@@ -1,12 +1,15 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { generateCursorRules, generateAntigravityRules, generateSharedConfig } from './templates.js';
+import { generateCursorRules, generateAntigravityRules, generateSharedConfig, generateMcpCursorRules, generateMcpAntigravityRules } from './templates.js';
 
 export interface ProjectConfig {
   name: string;
-  structure: 'monorepo' | 'backend' | 'frontend';
+  structure: 'monorepo' | 'backend' | 'frontend' | 'mcp-server';
   backend?: string;
   frontend?: string;
+  mcpTransport?: 'stdio' | 'sse' | 'http-stream';
+  mcpLanguage?: 'node-ts' | 'python';
+  mcpFeatures?: ('tools' | 'resources' | 'prompts')[];
   ide: 'cursor' | 'antigravity' | 'hybrid';
   graphrag: 'sqlite' | 'json' | 'neo4j';
   mcp: boolean;
@@ -23,43 +26,53 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   await fs.ensureDir(path.join(outputDir, 'DARE', 'EXECUTION'));
 
   // Write dare.config.json
-  await fs.writeJSON(
-    path.join(outputDir, 'dare.config.json'),
-    { name, structure, backend, frontend, ide, graphrag, mcp, version: '0.1.0' },
-    { spaces: 2 }
-  );
+  const configData: Record<string, unknown> = { name, structure, backend, frontend, ide, graphrag, mcp, version: '0.1.0' };
+  if (structure === 'mcp-server') {
+    configData.mcpTransport = config.mcpTransport;
+    configData.mcpLanguage = config.mcpLanguage;
+    configData.mcpFeatures = config.mcpFeatures;
+  }
+  await fs.writeJSON(path.join(outputDir, 'dare.config.json'), configData, { spaces: 2 });
 
   // Write .gitignore
+  const gitignoreExtras = structure === 'mcp-server' && config.mcpLanguage === 'python'
+    ? '\n__pycache__/\n*.py[cod]\n.venv/\n'
+    : '';
   await fs.writeFile(
     path.join(outputDir, '.gitignore'),
-    `node_modules/\ndist/\nbuild/\n*.db\n*.db-shm\n*.db-wal\n.env\n.env.local\n.dare/\nlogs/\n*.log\n`
+    `node_modules/\ndist/\nbuild/\n*.db\n*.db-shm\n*.db-wal\n.env\n.env.local\n.dare/\nlogs/\n*.log\n${gitignoreExtras}`
   );
 
-  // Write .cursorrules (global)
+  // Cursor rules
   if (ide === 'cursor' || ide === 'hybrid') {
-    await fs.writeFile(
-      path.join(outputDir, '.cursorrules'),
-      generateCursorRules({ backend, frontend, graphrag, mcp })
-    );
+    const cursorRulesContent = structure === 'mcp-server'
+      ? generateMcpCursorRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
+      : generateCursorRules({ backend, frontend, graphrag, mcp });
 
+    await fs.writeFile(path.join(outputDir, '.cursorrules'), cursorRulesContent);
     await fs.ensureDir(path.join(outputDir, '.cursor', 'rules'));
     await fs.ensureDir(path.join(outputDir, '.cursor', 'commands'));
 
-    // Write stack-specific skills
-    if (backend) {
+    if (structure === 'mcp-server') {
       await fs.writeFile(
-        path.join(outputDir, '.cursor', 'rules', `skill-${backend}.mdc`),
-        generateStackSkill(backend)
+        path.join(outputDir, '.cursor', 'rules', 'skill-mcp-server.mdc'),
+        generateMcpStackSkill(config.mcpLanguage || 'node-ts')
       );
-    }
-    if (frontend) {
-      await fs.writeFile(
-        path.join(outputDir, '.cursor', 'rules', `skill-${frontend}.mdc`),
-        generateStackSkill(frontend)
-      );
+    } else {
+      if (backend) {
+        await fs.writeFile(
+          path.join(outputDir, '.cursor', 'rules', `skill-${backend}.mdc`),
+          generateStackSkill(backend)
+        );
+      }
+      if (frontend) {
+        await fs.writeFile(
+          path.join(outputDir, '.cursor', 'rules', `skill-${frontend}.mdc`),
+          generateStackSkill(frontend)
+        );
+      }
     }
 
-    // Write DARE commands for Cursor
     await fs.writeFile(
       path.join(outputDir, '.cursor', 'commands', 'generate-design.md'),
       `# Generate Design\nGenerate a DESIGN.md for the described feature.\n`
@@ -74,13 +87,13 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     );
   }
 
-  // Write .antigravityrules
+  // Antigravity rules
   if (ide === 'antigravity' || ide === 'hybrid') {
-    await fs.writeFile(
-      path.join(outputDir, '.antigravityrules'),
-      generateAntigravityRules({ backend, frontend, graphrag, mcp })
-    );
+    const antigravityContent = structure === 'mcp-server'
+      ? generateMcpAntigravityRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
+      : generateAntigravityRules({ backend, frontend, graphrag, mcp });
 
+    await fs.writeFile(path.join(outputDir, '.antigravityrules'), antigravityContent);
     await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-design'));
     await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-blueprint'));
     await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-execute'));
@@ -88,22 +101,315 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     await fs.ensureDir(path.join(outputDir, '.agents', 'workflows'));
   }
 
-  // Write shared config
-  await fs.writeFile(
-    path.join(outputDir, 'DARE', 'README.md'),
-    generateSharedConfig(name)
-  );
+  // Write shared DARE README
+  await fs.writeFile(path.join(outputDir, 'DARE', 'README.md'), generateSharedConfig(name));
 
-  // Create backend structure
-  if (structure !== 'frontend' && backend) {
-    const backendDir = structure === 'monorepo' ? path.join(outputDir, 'backend') : outputDir;
-    await generateBackendTemplate(backendDir, backend);
+  // Generate project templates
+  if (structure === 'mcp-server') {
+    await generateMcpTemplate(outputDir, config);
+  } else {
+    if (structure !== 'frontend' && backend) {
+      const backendDir = structure === 'monorepo' ? path.join(outputDir, 'backend') : outputDir;
+      await generateBackendTemplate(backendDir, backend);
+    }
+    if (structure !== 'backend' && frontend) {
+      const frontendDir = structure === 'monorepo' ? path.join(outputDir, 'frontend') : outputDir;
+      await generateFrontendTemplate(frontendDir, frontend);
+    }
+  }
+}
+
+export async function installDareToExistingProject(
+  projectDir: string,
+  config: Omit<ProjectConfig, 'outputDir'>
+): Promise<void> {
+  const outputDir = projectDir;
+  const { name, structure, backend, frontend, ide, graphrag, mcp } = config;
+
+  await fs.ensureDir(path.join(outputDir, 'DARE'));
+  await fs.ensureDir(path.join(outputDir, 'DARE', 'EXECUTION'));
+
+  const configData: Record<string, unknown> = { name, structure, backend, frontend, ide, graphrag, mcp, version: '0.1.0', installedAt: new Date().toISOString() };
+  if (structure === 'mcp-server') {
+    configData.mcpTransport = config.mcpTransport;
+    configData.mcpLanguage = config.mcpLanguage;
+    configData.mcpFeatures = config.mcpFeatures;
+  }
+  await fs.writeJSON(path.join(outputDir, 'dare.config.json'), configData, { spaces: 2 });
+
+  await fs.writeFile(path.join(outputDir, 'DARE', 'README.md'), generateSharedConfig(name));
+
+  if (ide === 'cursor' || ide === 'hybrid') {
+    const cursorRulesContent = structure === 'mcp-server'
+      ? generateMcpCursorRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
+      : generateCursorRules({ backend, frontend, graphrag, mcp });
+
+    await fs.writeFile(path.join(outputDir, '.cursorrules'), cursorRulesContent);
+    await fs.ensureDir(path.join(outputDir, '.cursor', 'rules'));
+    await fs.ensureDir(path.join(outputDir, '.cursor', 'commands'));
+
+    if (structure === 'mcp-server') {
+      await fs.writeFile(
+        path.join(outputDir, '.cursor', 'rules', 'skill-mcp-server.mdc'),
+        generateMcpStackSkill(config.mcpLanguage || 'node-ts')
+      );
+    } else {
+      if (backend) {
+        await fs.writeFile(
+          path.join(outputDir, '.cursor', 'rules', `skill-${backend}.mdc`),
+          generateStackSkill(backend)
+        );
+      }
+      if (frontend) {
+        await fs.writeFile(
+          path.join(outputDir, '.cursor', 'rules', `skill-${frontend}.mdc`),
+          generateStackSkill(frontend)
+        );
+      }
+    }
+
+    await fs.writeFile(path.join(outputDir, '.cursor', 'commands', 'generate-design.md'), `# Generate Design\nGenerate a DESIGN.md for the described feature.\n`);
+    await fs.writeFile(path.join(outputDir, '.cursor', 'commands', 'generate-blueprint.md'), `# Generate Blueprint\nGenerate a BLUEPRINT.md from the DESIGN.md.\n`);
+    await fs.writeFile(path.join(outputDir, '.cursor', 'commands', 'execute-task.md'), `# Execute Task\nExecute the specified task from TASKS.md.\n`);
   }
 
-  // Create frontend structure
-  if (structure !== 'backend' && frontend) {
-    const frontendDir = structure === 'monorepo' ? path.join(outputDir, 'frontend') : outputDir;
-    await generateFrontendTemplate(frontendDir, frontend);
+  if (ide === 'antigravity' || ide === 'hybrid') {
+    const antigravityContent = structure === 'mcp-server'
+      ? generateMcpAntigravityRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
+      : generateAntigravityRules({ backend, frontend, graphrag, mcp });
+
+    await fs.writeFile(path.join(outputDir, '.antigravityrules'), antigravityContent);
+    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-design'));
+    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-blueprint'));
+    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-execute'));
+    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-tasks'));
+    await fs.ensureDir(path.join(outputDir, '.agents', 'workflows'));
+  }
+}
+
+async function generateMcpTemplate(dir: string, config: ProjectConfig): Promise<void> {
+  const { mcpLanguage = 'node-ts', mcpTransport = 'stdio', mcpFeatures = ['tools'] } = config;
+  await fs.ensureDir(path.join(dir, 'src'));
+
+  if (mcpLanguage === 'node-ts') {
+    const hasResources = mcpFeatures.includes('resources');
+    const hasPrompts = mcpFeatures.includes('prompts');
+
+    const capabilities: string[] = [];
+    if (mcpFeatures.includes('tools')) capabilities.push('tools: {}');
+    if (hasResources) capabilities.push('resources: {}');
+    if (hasPrompts) capabilities.push('prompts: {}');
+
+    const transportImport = mcpTransport === 'stdio'
+      ? `import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';`
+      : `import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';\nimport express from 'express';`;
+
+    const transportSetup = mcpTransport === 'stdio'
+      ? `const transport = new StdioServerTransport();\nawait server.connect(transport);`
+      : `const app = express();\napp.get('/sse', async (req, res) => {\n  const transport = new SSEServerTransport('/messages', res);\n  await server.connect(transport);\n});\napp.post('/messages', express.json(), (req, res) => { /* message handler */ });\napp.listen(3000, () => console.error('MCP SSE server running on :3000'));`;
+
+    const resourceSection = hasResources ? `
+import {
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: [
+    {
+      uri: 'resource://example',
+      name: 'Example Resource',
+      description: 'An example resource',
+      mimeType: 'text/plain',
+    },
+  ],
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === 'resource://example') {
+    return { contents: [{ uri: request.params.uri, mimeType: 'text/plain', text: 'Example content' }] };
+  }
+  throw new Error(\`Unknown resource: \${request.params.uri}\`);
+});
+` : '';
+
+    const promptSection = hasPrompts ? `
+import {
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+
+server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+  prompts: [
+    {
+      name: 'example-prompt',
+      description: 'An example prompt template',
+      arguments: [{ name: 'topic', description: 'Topic to write about', required: true }],
+    },
+  ],
+}));
+
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  if (request.params.name === 'example-prompt') {
+    const topic = request.params.arguments?.topic ?? 'general';
+    return {
+      description: 'Example prompt',
+      messages: [{ role: 'user', content: { type: 'text', text: \`Write about: \${topic}\` } }],
+    };
+  }
+  throw new Error(\`Unknown prompt: \${request.params.name}\`);
+});
+` : '';
+
+    const indexContent = `import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+${transportImport}
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+
+const server = new Server(
+  { name: '${config.name}', version: '0.1.0' },
+  { capabilities: { ${capabilities.join(', ')} } }
+);
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: 'hello',
+      description: 'Says hello to a given name',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Name to greet' },
+        },
+        required: ['name'],
+      },
+    },
+  ],
+}));
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === 'hello') {
+    const { name } = request.params.arguments as { name: string };
+    return { content: [{ type: 'text', text: \`Hello, \${name}!\` }] };
+  }
+  throw new Error(\`Unknown tool: \${request.params.name}\`);
+});
+${resourceSection}${promptSection}
+${transportSetup}
+`;
+
+    await fs.writeFile(path.join(dir, 'src', 'index.ts'), indexContent);
+
+    const extraDeps: Record<string, string> = mcpTransport !== 'stdio' ? { express: '^4.18.0' } : {};
+    const extraDevDeps: Record<string, string> = mcpTransport !== 'stdio' ? { '@types/express': '^4.17.0' } : {};
+
+    await fs.writeJSON(
+      path.join(dir, 'package.json'),
+      {
+        name: config.name,
+        version: '0.1.0',
+        type: 'module',
+        scripts: {
+          build: 'tsc',
+          start: 'node dist/index.js',
+          dev: 'tsx src/index.ts',
+          test: 'vitest',
+          inspect: `npx @modelcontextprotocol/inspector node dist/index.js`,
+        },
+        dependencies: {
+          '@modelcontextprotocol/sdk': '^1.0.0',
+          ...extraDeps,
+        },
+        devDependencies: {
+          typescript: '^5.0.0',
+          tsx: '^4.0.0',
+          vitest: '^1.0.0',
+          '@types/node': '^20.0.0',
+          ...extraDevDeps,
+        },
+      },
+      { spaces: 2 }
+    );
+
+    await fs.writeJSON(
+      path.join(dir, 'tsconfig.json'),
+      {
+        compilerOptions: {
+          target: 'ES2022',
+          module: 'Node16',
+          moduleResolution: 'Node16',
+          outDir: 'dist',
+          rootDir: 'src',
+          strict: true,
+          esModuleInterop: true,
+          skipLibCheck: true,
+        },
+        include: ['src'],
+      },
+      { spaces: 2 }
+    );
+
+  } else {
+    // Python MCP
+    const hasResources = mcpFeatures.includes('resources');
+    const hasPrompts = mcpFeatures.includes('prompts');
+
+    const resourceSection = hasResources ? `
+
+@mcp.resource("resource://example")
+def example_resource() -> str:
+    """An example resource."""
+    return "Example content"
+` : '';
+
+    const promptSection = hasPrompts ? `
+
+@mcp.prompt()
+def example_prompt(topic: str) -> str:
+    """An example prompt template."""
+    return f"Write about: {topic}"
+` : '';
+
+    const transportLine = mcpTransport === 'stdio' ? '' : '\n# For SSE transport:\n# mcp.run(transport="sse", host="0.0.0.0", port=8000)\n';
+
+    await fs.writeFile(
+      path.join(dir, 'main.py'),
+      `from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("${config.name}")
+
+
+@mcp.tool()
+def hello(name: str) -> str:
+    """Says hello to a given name."""
+    return f"Hello, {name}!"
+${resourceSection}${promptSection}
+
+if __name__ == "__main__":
+    mcp.run()${transportLine}
+`
+    );
+
+    await fs.writeFile(
+      path.join(dir, 'requirements.txt'),
+      `mcp>=1.0.0\n`
+    );
+
+    await fs.writeFile(
+      path.join(dir, 'pyproject.toml'),
+      `[project]
+name = "${config.name}"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.0.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+`
+    );
   }
 }
 
@@ -114,21 +420,17 @@ async function generateBackendTemplate(dir: string, stack: string): Promise<void
     case 'rust-axum':
       await fs.writeFile(path.join(dir, 'Cargo.toml'), `[package]\nname = "api"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\naxum = "0.7"\ntokio = { version = "1", features = ["full"] }\nserde = { version = "1", features = ["derive"] }\nserde_json = "1"\n`);
       await fs.writeFile(path.join(dir, 'src', 'main.rs'), `use axum::{routing::get, Router};\n\n#[tokio::main]\nasync fn main() {\n    let app = Router::new().route("/health", get(health));\n    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();\n    axum::serve(listener, app).await.unwrap();\n}\n\nasync fn health() -> &'static str { "OK" }\n`);
-      await fs.writeFile(path.join(dir, '.cursorrules'), `# Rust/Axum Rules\n- Use Rust idioms and patterns\n- Prefer async/await with Tokio\n- Use Axum for HTTP routing\n- Handle errors with thiserror/anyhow\n- Run clippy before committing\n`);
       break;
     case 'node-nestjs':
       await fs.writeJSON(path.join(dir, 'package.json'), { name: 'api', version: '0.1.0', scripts: { start: 'nest start', build: 'nest build', test: 'jest' }, dependencies: { '@nestjs/core': '^10.0.0', '@nestjs/common': '^10.0.0', '@nestjs/platform-express': '^10.0.0' } }, { spaces: 2 });
       await fs.writeFile(path.join(dir, 'src', 'main.ts'), `import { NestFactory } from '@nestjs/core';\nimport { AppModule } from './app.module';\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  await app.listen(3000);\n}\nbootstrap();\n`);
-      await fs.writeFile(path.join(dir, '.cursorrules'), `# Node.js/NestJS Rules\n- Use NestJS decorators and DI\n- Define DTOs with class-validator\n- Use TypeORM or Prisma for DB\n- Write Jest tests for all services\n`);
       break;
     case 'python-fastapi':
       await fs.writeFile(path.join(dir, 'main.py'), `from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get("/health")\ndef health():\n    return {"status": "ok"}\n`);
       await fs.writeFile(path.join(dir, 'requirements.txt'), `fastapi>=0.100.0\nuvicorn>=0.23.0\npydantic>=2.0.0\n`);
-      await fs.writeFile(path.join(dir, '.cursorrules'), `# Python/FastAPI Rules\n- Use Pydantic v2 for validation\n- Type all functions with PEP 484\n- Use async/await for IO operations\n- Follow PEP 8 style guide\n`);
       break;
     case 'php-laravel':
       await fs.writeJSON(path.join(dir, 'composer.json'), { name: 'app/api', require: { php: '^8.2', 'laravel/framework': '^11.0' }, scripts: { 'post-install-cmd': ['@php artisan key:generate'] } }, { spaces: 2 });
-      await fs.writeFile(path.join(dir, '.cursorrules'), `# PHP/Laravel Rules\n- Follow PSR-12 coding standards\n- Use FormRequests for validation\n- Use API Resources for responses\n- Write PHPUnit tests\n- Use Eloquent ORM\n`);
       break;
   }
 }
@@ -140,14 +442,38 @@ async function generateFrontendTemplate(dir: string, stack: string): Promise<voi
     case 'react':
       await fs.writeJSON(path.join(dir, 'package.json'), { name: 'frontend', version: '0.1.0', scripts: { dev: 'vite', build: 'vite build', test: 'vitest' }, dependencies: { react: '^18.0.0', 'react-dom': '^18.0.0' }, devDependencies: { vite: '^5.0.0', '@vitejs/plugin-react': '^4.0.0', typescript: '^5.0.0' } }, { spaces: 2 });
       await fs.writeFile(path.join(dir, 'src', 'App.tsx'), `import React from 'react';\n\nexport default function App() {\n  return <div><h1>DARE Framework - React App</h1></div>;\n}\n`);
-      await fs.writeFile(path.join(dir, '.cursorrules'), `# React Rules\n- Use functional components with hooks\n- Use TypeScript for all components\n- Prefer React Query for server state\n- Use Zustand or Context for client state\n- Write Vitest tests\n`);
       break;
     case 'vue':
       await fs.writeJSON(path.join(dir, 'package.json'), { name: 'frontend', version: '0.1.0', scripts: { dev: 'vite', build: 'vite build', test: 'vitest' }, dependencies: { vue: '^3.0.0' }, devDependencies: { vite: '^5.0.0', '@vitejs/plugin-vue': '^5.0.0', typescript: '^5.0.0' } }, { spaces: 2 });
       await fs.writeFile(path.join(dir, 'src', 'App.vue'), `<template>\n  <div><h1>DARE Framework - Vue App</h1></div>\n</template>\n\n<script setup lang="ts">\n// Composition API\n</script>\n`);
-      await fs.writeFile(path.join(dir, '.cursorrules'), `# Vue Rules\n- Use Composition API with <script setup>\n- Use TypeScript for all components\n- Use Pinia for state management\n- Use Vue Router for navigation\n- Write Vitest tests\n`);
       break;
   }
+}
+
+function generateMcpStackSkill(language: string): string {
+  if (language === 'python') {
+    return `---
+description: Python MCP server development skill
+---
+# Python MCP Skill
+- Use FastMCP for rapid server development
+- Decorate tools with @mcp.tool(), resources with @mcp.resource(), prompts with @mcp.prompt()
+- Use type hints — FastMCP derives the JSON schema automatically
+- Test with: npx @modelcontextprotocol/inspector python main.py
+- Use mcp.run() for stdio, mcp.run(transport="sse") for SSE
+`;
+  }
+  return `---
+description: Node.js/TypeScript MCP server development skill
+---
+# TypeScript MCP Skill
+- Import Server from @modelcontextprotocol/sdk/server/index.js
+- Use StdioServerTransport for CLI tools, SSEServerTransport for web integrations
+- Define tools with ListToolsRequestSchema + CallToolRequestSchema handlers
+- Keep inputSchema strict — Claude uses it to call your tools correctly
+- Test with: npm run inspect (uses @modelcontextprotocol/inspector)
+- Build before shipping: npm run build
+`;
 }
 
 function generateStackSkill(stack: string): string {

@@ -5,6 +5,7 @@ import { initCommand } from '../commands/init.js';
 import { designCommand } from '../commands/design.js';
 import { blueprintCommand } from '../commands/blueprint.js';
 import { executeCommand } from '../commands/execute.js';
+import { discoverCommand } from '../commands/discover.js';
 
 const program = new Command();
 
@@ -14,6 +15,7 @@ program
   .version('0.1.0');
 
 program.addCommand(initCommand);
+program.addCommand(discoverCommand);
 program.addCommand(designCommand);
 program.addCommand(blueprintCommand);
 program.addCommand(executeCommand);

@@ -2,7 +2,6 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import fs from 'fs-extra';
 import path from 'path';
 import { generateProjectStructure } from '../utils/project-generator.js';
 
@@ -33,13 +32,51 @@ export const initCommand = new Command('init')
           { name: '🏗️  Monorepo (backend + frontend)', value: 'monorepo' },
           { name: '⚙️  Backend only', value: 'backend' },
           { name: '🎨 Frontend only', value: 'frontend' },
+          { name: '🔌 MCP Server', value: 'mcp-server' },
+        ],
+      },
+
+      // ── MCP Server questions ──────────────────────────────────────────────
+      {
+        type: 'list',
+        name: 'mcpLanguage',
+        message: 'MCP server language:',
+        when: (ans) => ans.structure === 'mcp-server',
+        choices: [
+          { name: '🟦 TypeScript / Node.js', value: 'node-ts' },
+          { name: '🐍 Python', value: 'python' },
         ],
       },
       {
         type: 'list',
+        name: 'mcpTransport',
+        message: 'Transport type:',
+        when: (ans) => ans.structure === 'mcp-server',
+        choices: [
+          { name: '📟 stdio  (CLI tools, local agents)', value: 'stdio' },
+          { name: '🌐 SSE   (web integrations, remote)', value: 'sse' },
+          { name: '⚡ HTTP Stream (streamable HTTP)', value: 'http-stream' },
+        ],
+      },
+      {
+        type: 'checkbox',
+        name: 'mcpFeatures',
+        message: 'MCP capabilities to include:',
+        when: (ans) => ans.structure === 'mcp-server',
+        choices: [
+          { name: '🔧 Tools     (callable functions)', value: 'tools', checked: true },
+          { name: '📦 Resources (readable context)', value: 'resources', checked: false },
+          { name: '💬 Prompts   (prompt templates)', value: 'prompts', checked: false },
+        ],
+        validate: (selected: string[]) => selected.length > 0 || 'Select at least one capability',
+      },
+
+      // ── Standard backend / frontend questions ─────────────────────────────
+      {
+        type: 'list',
         name: 'backend',
         message: 'Backend stack:',
-        when: (ans) => ans.structure !== 'frontend',
+        when: (ans) => ans.structure !== 'frontend' && ans.structure !== 'mcp-server',
         choices: [
           { name: '🦀 Rust / Axum', value: 'rust-axum' },
           { name: '🟢 Node.js / NestJS', value: 'node-nestjs' },
@@ -51,12 +88,14 @@ export const initCommand = new Command('init')
         type: 'list',
         name: 'frontend',
         message: 'Frontend stack:',
-        when: (ans) => ans.structure !== 'backend',
+        when: (ans) => ans.structure !== 'backend' && ans.structure !== 'mcp-server',
         choices: [
           { name: '⚛️  React 18+', value: 'react' },
           { name: '💚 Vue 3+', value: 'vue' },
         ],
       },
+
+      // ── Common questions ──────────────────────────────────────────────────
       {
         type: 'list',
         name: 'ide',
@@ -80,7 +119,7 @@ export const initCommand = new Command('init')
       {
         type: 'confirm',
         name: 'mcp',
-        message: 'Enable MCP Server for context queries?',
+        message: 'Enable DARE MCP Server for context queries?',
         default: true,
       },
     ]);
@@ -94,6 +133,9 @@ export const initCommand = new Command('init')
         structure: answers.structure,
         backend: answers.backend,
         frontend: answers.frontend,
+        mcpTransport: answers.mcpTransport,
+        mcpLanguage: answers.mcpLanguage,
+        mcpFeatures: answers.mcpFeatures,
         ide: answers.ide,
         graphrag: answers.graphrag,
         mcp: answers.mcp,
@@ -104,9 +146,24 @@ export const initCommand = new Command('init')
 
       console.log(chalk.cyan('\n📋 Next steps:\n'));
       console.log(`  ${chalk.gray('1.')} cd ${name}`);
-      console.log(`  ${chalk.gray('2.')} dare design "Describe your project here"`);
-      console.log(`  ${chalk.gray('3.')} dare blueprint`);
-      console.log(`  ${chalk.gray('4.')} dare execute --parallel\n`);
+
+      if (answers.structure === 'mcp-server') {
+        const installCmd = answers.mcpLanguage === 'python' ? 'pip install -r requirements.txt' : 'npm install';
+        const devCmd = answers.mcpLanguage === 'python' ? 'python main.py' : 'npm run dev';
+        const inspectCmd = answers.mcpLanguage === 'python'
+          ? 'npx @modelcontextprotocol/inspector python main.py'
+          : 'npm run inspect';
+        console.log(`  ${chalk.gray('2.')} ${installCmd}`);
+        console.log(`  ${chalk.gray('3.')} dare design "Describe what this MCP server exposes"`);
+        console.log(`  ${chalk.gray('4.')} dare blueprint`);
+        console.log(`  ${chalk.gray('5.')} dare execute --parallel`);
+        console.log(`  ${chalk.gray('6.')} ${inspectCmd}  ${chalk.gray('← test with MCP Inspector')}`);
+        console.log(`  ${chalk.gray('7.')} ${devCmd}\n`);
+      } else {
+        console.log(`  ${chalk.gray('2.')} dare design "Describe your project here"`);
+        console.log(`  ${chalk.gray('3.')} dare blueprint`);
+        console.log(`  ${chalk.gray('4.')} dare execute --parallel\n`);
+      }
     } catch (err) {
       spinner.fail(chalk.red('Failed to create project'));
       console.error(err);
