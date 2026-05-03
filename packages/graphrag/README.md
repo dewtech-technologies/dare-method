@@ -1,13 +1,13 @@
 # @dewtech/dare-graphrag
 
-Knowledge graph engine for DARE Framework with SQLite persistence and FTS5 semantic search.
+Knowledge graph engine for DARE Framework with SQLite persistence (via sql.js) and semantic search.
 
 ## Features
 
-- **SQLite persistence** with WAL mode for performance
+- **SQLite persistence** via pure JavaScript (sql.js) without native compilation
 - **7 node types**: task, file, schema, endpoint, component, entity, concept
 - **7 edge types**: depends_on, implements, uses, references, related_to, contains, extends
-- **FTS5 full-text search** for semantic queries
+- **LIKE-based full-text search** for semantic queries
 - **Graph traversal** for dependency analysis
 - **Import/export** to JSON format
 
@@ -23,6 +23,7 @@ npm install @dewtech/dare-graphrag
 import { GraphRAG } from '@dewtech/dare-graphrag';
 
 const graph = new GraphRAG('.dare/graph.db');
+await graph.init();
 
 // Add nodes
 graph.addNode({
@@ -93,7 +94,7 @@ graph.close();
 
 ## Performance
 
-- WAL mode: concurrent reads while writing
-- FTS5: full-text search in ~10ms
+- sql.js: pure JavaScript, no C compiler required
+- LIKE-based search for cross-platform compatibility
 - Indexes: type/label queries in O(log n)
 - Cache: 10k pages in memory

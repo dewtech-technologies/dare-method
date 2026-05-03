@@ -26,6 +26,12 @@ importers:
       '@dewtech/dare-core':
         specifier: workspace:*
         version: link:../core
+      '@dewtech/dare-graphrag':
+        specifier: workspace:*
+        version: link:../graphrag
+      '@dewtech/dare-mcp-server':
+        specifier: workspace:*
+        version: link:../mcp-server
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
