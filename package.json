@@ -40,6 +40,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dewtech-technologies/dare-method.git"
+    "url": "git+https://github.com/dewtech-technologies/dare-method.git"
   }
 }
