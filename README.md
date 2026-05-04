@@ -35,6 +35,7 @@ npm install -g @dewtech/dare-cli
 
 # 2. Inicialize seu projeto de forma interativa
 dare init meu-projeto
+# → Escolha: Estrutura (Monorepo / Backend / Frontend / MCP Server)
 # → Escolha: IDE (Cursor / Antigravity / Hybrid)
 # → Escolha: Backend (Rust/Axum, Node/NestJS, Python/FastAPI, PHP/Laravel)
 # → Escolha: Frontend (React, Vue)
@@ -44,6 +45,12 @@ dare init meu-projeto
 cd meu-projeto
 dare design "Quero uma API de autenticação JWT"
 ```
+
+> **Projeto já existe?** Use `dare discover` para instalar o DARE sem tocar no código existente:
+> ```bash
+> cd meu-projeto-existente
+> dare discover
+> ```
 
 ### Opção 2 — Manual (Cursor)
 
@@ -197,6 +204,24 @@ Cada implementação tem README próprio com setup detalhado.
 
 ---
 
+## 🔌 dare discover — projetos existentes
+
+Instalou o DARE em um projeto que já existe? Use `dare discover`:
+
+```bash
+cd meu-projeto-existente
+dare discover
+```
+
+O CLI detecta automaticamente a stack (NestJS, FastAPI, Laravel, React, Vue, MCP Server…), confirma com você e instala apenas os arquivos DARE — sem tocar no código existente.
+
+```bash
+dare discover --check   # só mostra o que detectou, sem instalar
+dare discover --dir ./outro-projeto
+```
+
+---
+
 ## 📦 DARE CLI — Pacote npm
 
 O DARE Method agora está disponível como um **pacote npm instalável**, com suporte a múltiplos stacks e IDEs.
@@ -205,15 +230,18 @@ O DARE Method agora está disponível como um **pacote npm instalável**, com su
 
 | Pacote | Descrição | Status |
 |--------|-----------|--------|
-| [`@dewtech/dare-cli`](packages/cli) | CLI interativo com `dare init`, `dare design`, `dare blueprint`, `dare execute` | ✅ MVP |
-| [`@dewtech/dare-mcp-server`](packages/mcp-server) | Servidor MCP local para queries de contexto (90% menos tokens) | ✅ MVP |
-| [`@dewtech/dare-graphrag`](packages/graphrag) | Motor de conhecimento gráfico com SQLite + FTS5 | ✅ MVP |
+| [`@dewtech/dare-cli`](packages/cli) | CLI interativo com `dare init`, `dare discover`, `dare design`, `dare blueprint`, `dare execute` | ✅ v0.3.0 |
+| [`@dewtech/dare-mcp-server`](packages/mcp-server) | Servidor MCP local para queries de contexto (90% menos tokens) | ✅ v0.3.0 |
+| [`@dewtech/dare-graphrag`](packages/graphrag) | Motor de conhecimento gráfico com SQLite + FTS5 | ✅ v0.3.0 |
+| [`@dewtech/dare-core`](packages/core) | Tipos e utilitários compartilhados entre os packages | ✅ v0.3.0 |
 
 ### Stacks suportados
 
 **Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel
 
 **Frontend:** React 18+ · Vue 3+
+
+**MCP Server:** TypeScript/Node.js · Python — transports `stdio`, `SSE`, `HTTP Stream`
 
 ### Execução paralela com DAG Task Runner
 
@@ -349,18 +377,17 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 ### Concluído ✅
 
 - [x] CLI standalone (`dare init`, `dare design`, `dare blueprint`, `dare execute`)
+- [x] **`dare discover`** — detecta e instala DARE em projetos existentes sem tocar no código
+- [x] **Tipo de projeto `mcp-server`** — templates TypeScript e Python com stdio/SSE/HTTP Stream
 - [x] Templates por linguagem: Rust/Axum, Node.js/NestJS, Python/FastAPI, PHP/Laravel
 - [x] Templates frontend: React 18+, Vue 3+
 - [x] Execução paralela de tasks com DAG Task Runner
 - [x] MCP Server local para economia de tokens (90% de redução)
 - [x] GraphRAG com SQLite para contexto persistente
+- [x] Pacote `@dewtech/dare-core` (tipos compartilhados)
+- [x] Publicação no npm registry (`@dewtech/dare-cli`)
+- [x] GitHub Actions para CI/CD (build, test, release)
 - [x] Monorepo com pnpm workspaces e TypeScript strict
-
-### Em andamento 🔄
-
-- [ ] Publicação dos pacotes no npm registry
-- [ ] GitHub Actions para CI/CD e publish automático
-- [ ] Pacote `@dewtech/dare-core` (lógica compartilhada)
 
 ### Próximos passos 🔜
 
