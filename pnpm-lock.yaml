@@ -24,14 +24,14 @@ importers:
   packages/cli:
     dependencies:
       '@dewtech/dare-core':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.3.5
+        version: 0.3.5
       '@dewtech/dare-graphrag':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.3.5
+        version: 0.3.5
       '@dewtech/dare-mcp-server':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.3.5
+        version: 0.3.5
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -112,8 +112,8 @@ importers:
   packages/graphrag:
     dependencies:
       '@dewtech/dare-core':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.3.5
+        version: 0.3.5
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -158,8 +158,8 @@ importers:
   packages/mcp-server:
     dependencies:
       '@dewtech/dare-core':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.3.5
+        version: 0.3.5
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -227,16 +227,16 @@ importers:
 
 packages:
 
-  '@dewtech/dare-core@0.3.3':
-    resolution: {integrity: sha512-x6tB453wgedVgkEd0S2fxBGjp1UKgQHKmLhu2rPRFntL3imi8hnkkydg95J63g2tqpQatuMNiTOawn2kY4KsJg==}
+  '@dewtech/dare-core@0.3.5':
+    resolution: {integrity: sha512-aYYeh7gexY2WrMmdfmNhwViI8lhbeK/d4C0w6S3QNCxKi7x3PcD3GHtZroZZlFLCMRPyA6uc32IjCAIB++aYQg==}
     engines: {node: '>=18.0.0'}
 
-  '@dewtech/dare-graphrag@0.3.3':
-    resolution: {integrity: sha512-jPrWJHdmzrDvaVGFGlU6bXMZT3UGCfoCNWaa3m8Ts7xbhAiHLAv7X80Mn6RuV3D0bdBfIF60O7CWqxIzpzit+Q==}
+  '@dewtech/dare-graphrag@0.3.5':
+    resolution: {integrity: sha512-NXLI3PlpcboVh6IoqZEvhYuEsQHoy7jVuieSwWrj4H5PB9W1NGsNm+gwWTq/G7mo+7gnLMGOhrOzlq5+wbdCMQ==}
     engines: {node: '>=18.0.0'}
 
-  '@dewtech/dare-mcp-server@0.3.3':
-    resolution: {integrity: sha512-DdQoT5V52G3HnaNiiUJN1cNMNc66T1fdFwF+mtalr0NxWjcbsPOAs+V8yeB0ym3dOkbtdfrQ/zJjWWUFE0gSmQ==}
+  '@dewtech/dare-mcp-server@0.3.5':
+    resolution: {integrity: sha512-7yPDMkm2caEaXq6sHgHkbOC9dwpzGfSh/dzQRcaV4KOeyXB0F9U6iDnUylI6DcnE3NZwu3OQ4+8b6KQj8DfZkQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -2215,18 +2215,18 @@ packages:
 
 snapshots:
 
-  '@dewtech/dare-core@0.3.3': {}
+  '@dewtech/dare-core@0.3.5': {}
 
-  '@dewtech/dare-graphrag@0.3.3':
+  '@dewtech/dare-graphrag@0.3.5':
     dependencies:
-      '@dewtech/dare-core': 0.3.3
+      '@dewtech/dare-core': 0.3.5
       chalk: 5.6.2
       fs-extra: 11.3.4
       sql.js: 1.14.1
 
-  '@dewtech/dare-mcp-server@0.3.3':
+  '@dewtech/dare-mcp-server@0.3.5':
     dependencies:
-      '@dewtech/dare-core': 0.3.3
+      '@dewtech/dare-core': 0.3.5
       chalk: 5.6.2
       cors: 2.8.6
       express: 4.22.1
