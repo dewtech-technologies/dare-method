@@ -101,9 +101,11 @@ export const initCommand = new Command('init')
         name: 'ide',
         message: 'Primary IDE / Agent:',
         choices: [
+          { name: '🤖 Claude Code', value: 'claude-code' },
           { name: '🖱️  Cursor', value: 'cursor' },
           { name: '🚀 Antigravity', value: 'antigravity' },
-          { name: '🔀 Both (Hybrid)', value: 'hybrid' },
+          { name: '🔀 Cursor + Antigravity (Hybrid)', value: 'hybrid' },
+          { name: '🔀 Claude Code + Cursor (Hybrid)', value: 'claude-hybrid' },
         ],
       },
       {
@@ -163,6 +165,11 @@ export const initCommand = new Command('init')
         console.log(`  ${chalk.gray('2.')} dare design "Describe your project here"`);
         console.log(`  ${chalk.gray('3.')} dare blueprint`);
         console.log(`  ${chalk.gray('4.')} dare execute --parallel\n`);
+      }
+
+      const isClaudeCode = answers.ide === 'claude-code' || answers.ide === 'claude-hybrid';
+      if (isClaudeCode) {
+        console.log(chalk.gray(`  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands\n`));
       }
     } catch (err) {
       spinner.fail(chalk.red('Failed to create project'));

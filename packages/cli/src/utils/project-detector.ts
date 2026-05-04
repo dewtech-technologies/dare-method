@@ -9,6 +9,7 @@ export interface DetectedProject {
   mcpTransport?: 'stdio' | 'sse' | 'http-stream';
   name: string;
   hasDare: boolean;
+  hasClaudeCode: boolean;
   dareConfig?: Record<string, unknown>;
   confidence: 'high' | 'medium' | 'low';
   evidence: string[];
@@ -33,6 +34,13 @@ export async function detectProject(dir: string): Promise<DetectedProject> {
   if (hasDare) {
     dareConfig = await fs.readJSON(dareConfigPath);
     evidence.push('dare.config.json found (DARE already installed)');
+  }
+
+  // Detect Claude Code usage
+  const hasClaudeDir = await fs.pathExists(path.join(dir, '.claude'));
+  const hasClaudeMd = await fs.pathExists(path.join(dir, 'CLAUDE.md'));
+  if (hasClaudeDir || hasClaudeMd) {
+    evidence.push(`${hasClaudeMd ? 'CLAUDE.md' : '.claude/'} found → Claude Code project`);
   }
 
   // ── Check for monorepo indicators first ──────────────────────────────────
@@ -206,6 +214,8 @@ export async function detectProject(dir: string): Promise<DetectedProject> {
     evidence.push('No recognizable project files found');
   }
 
+  const hasClaudeCode = await fs.pathExists(path.join(dir, '.claude')) || await fs.pathExists(path.join(dir, 'CLAUDE.md'));
+
   return {
     name,
     structure,
@@ -214,6 +224,7 @@ export async function detectProject(dir: string): Promise<DetectedProject> {
     mcpLanguage,
     mcpTransport,
     hasDare,
+    hasClaudeCode,
     dareConfig,
     confidence,
     evidence,
@@ -230,6 +241,7 @@ export function formatDetectionReport(detected: DetectedProject): string {
   if (detected.mcpLanguage) lines.push(`  MCP Lang:   ${detected.mcpLanguage}`);
   if (detected.mcpTransport) lines.push(`  Transport:  ${detected.mcpTransport}`);
   lines.push(`  DARE:       ${detected.hasDare ? '✅ installed' : '❌ not installed'}`);
+  lines.push(`  Claude Code:${detected.hasClaudeCode ? ' ✅ detected' : ' —'}`);
   lines.push('');
   lines.push('  Evidence:');
   for (const e of detected.evidence) {

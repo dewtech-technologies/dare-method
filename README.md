@@ -36,7 +36,7 @@ npm install -g @dewtech/dare-cli
 # 2. Inicialize seu projeto de forma interativa
 dare init meu-projeto
 # → Escolha: Estrutura (Monorepo / Backend / Frontend / MCP Server)
-# → Escolha: IDE (Cursor / Antigravity / Hybrid)
+# → Escolha: IDE (Claude Code / Cursor / Antigravity / Hybrid)
 # → Escolha: Backend (Rust/Axum, Node/NestJS, Python/FastAPI, PHP/Laravel)
 # → Escolha: Frontend (React, Vue)
 # → Escolha: GraphRAG (SQLite, JSON, Neo4j)
@@ -194,9 +194,9 @@ Porque a IA, igual ao Ralph Wiggum, **persiste confiante** mesmo errando. Não d
 
 | IDE / Agente | Status | Pasta |
 |---|---|---|
+| **Claude Code** | ✅ Production-ready | via `dare init` / `dare discover` |
 | **Cursor IDE** | ✅ Production-ready | [`implementations/cursor/`](implementations/cursor) |
 | **Antigravity** | ✅ Production-ready | [`implementations/antigravity/`](implementations/antigravity) |
-| Claude Code | 🔜 Roadmap | — |
 | VS Code + Continue | 🔜 Roadmap | — |
 | JetBrains AI Assistant | 🔜 Roadmap | — |
 
@@ -379,6 +379,7 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 - [x] CLI standalone (`dare init`, `dare design`, `dare blueprint`, `dare execute`)
 - [x] **`dare discover`** — detecta e instala DARE em projetos existentes sem tocar no código
 - [x] **Tipo de projeto `mcp-server`** — templates TypeScript e Python com stdio/SSE/HTTP Stream
+- [x] **Suporte ao Claude Code** — `CLAUDE.md`, `.claude/commands/`, `.claude/settings.json` com hooks
 - [x] Templates por linguagem: Rust/Axum, Node.js/NestJS, Python/FastAPI, PHP/Laravel
 - [x] Templates frontend: React 18+, Vue 3+
 - [x] Execução paralela de tasks com DAG Task Runner
@@ -391,7 +392,6 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 
 ### Próximos passos 🔜
 
-- [ ] Implementação para **Claude Code**
 - [ ] Implementação para **VS Code + Continue**
 - [ ] Templates para Go e Kotlin
 - [ ] Site dedicado em `dare-method.dev`

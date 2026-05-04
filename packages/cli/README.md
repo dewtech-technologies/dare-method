@@ -28,15 +28,16 @@ Prompts:
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
 - **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel
 - **Frontend stack:** React 18+ · Vue 3+
-- **IDE / Agent:** Cursor · Antigravity · Hybrid
+- **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
 - **GraphRAG backend:** SQLite · JSON · Neo4j
 - **DARE MCP Server:** context query server (saves ~95% tokens)
 
 Generates:
 - `dare.config.json` — project config
-- `.cursorrules` / `.antigravityrules` — global IDE rules
+- `CLAUDE.md` + `.claude/commands/` + `.claude/settings.json` — Claude Code rules and slash commands
+- `.cursorrules` / `.antigravityrules` — Cursor / Antigravity rules
 - `.cursor/rules/*.mdc` — stack-specific skills
-- `.cursor/commands/` — DARE slash commands
+- `.cursor/commands/` — Cursor slash commands
 - `.agents/skills/` — Antigravity agent skills
 - `DARE/` — methodology directory (DESIGN, BLUEPRINT, TASKS, dag)
 - Full project template ready to run (MCP server, backend or frontend)
@@ -120,6 +121,35 @@ dare blueprint
 dare execute --parallel
 ```
 
+## Claude Code Workflow
+
+```bash
+dare init my-project
+# → IDE: Claude Code
+# → Structure: Backend / Frontend / MCP Server
+
+cd my-project
+# Claude Code slash commands available:
+# /dare-design   → generates DARE/DESIGN.md
+# /dare-blueprint → generates BLUEPRINT.md + DAG
+# /dare-execute task-001 → implements with Ralph Loop
+# /dare-tasks    → shows task status table
+```
+
+Files generated for Claude Code:
+```
+CLAUDE.md                    ← main context (stack rules + DARE methodology)
+.claude/
+  settings.json              ← permissions + Ralph Loop hook
+  commands/
+    dare-design.md           ← /dare-design
+    dare-blueprint.md        ← /dare-blueprint
+    dare-execute.md          ← /dare-execute
+    dare-tasks.md            ← /dare-tasks
+```
+
+---
+
 ## MCP Server Workflow
 
 ```bash
@@ -158,6 +188,7 @@ npm run inspect
 | **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel |
 | **Frontend** | React 18+ · Vue 3+ |
 | **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
+| **IDE / Agent** | Claude Code · Cursor · Antigravity · Hybrid |
 
 ---
 

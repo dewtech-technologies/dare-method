@@ -1,6 +1,16 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { generateCursorRules, generateAntigravityRules, generateSharedConfig, generateMcpCursorRules, generateMcpAntigravityRules } from './templates.js';
+import {
+  generateCursorRules,
+  generateAntigravityRules,
+  generateSharedConfig,
+  generateMcpCursorRules,
+  generateMcpAntigravityRules,
+  generateClaudeCodeRules,
+  generateMcpClaudeCodeRules,
+  generateClaudeCommands,
+  generateClaudeSettings,
+} from './templates.js';
 
 export interface ProjectConfig {
   name: string;
@@ -10,7 +20,7 @@ export interface ProjectConfig {
   mcpTransport?: 'stdio' | 'sse' | 'http-stream';
   mcpLanguage?: 'node-ts' | 'python';
   mcpFeatures?: ('tools' | 'resources' | 'prompts')[];
-  ide: 'cursor' | 'antigravity' | 'hybrid';
+  ide: 'cursor' | 'antigravity' | 'hybrid' | 'claude-code' | 'claude-hybrid';
   graphrag: 'sqlite' | 'json' | 'neo4j';
   mcp: boolean;
   outputDir: string;
@@ -85,6 +95,11 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
       path.join(outputDir, '.cursor', 'commands', 'execute-task.md'),
       `# Execute Task\nExecute the specified task from TASKS.md.\n`
     );
+  }
+
+  // Claude Code files
+  if (ide === 'claude-code' || ide === 'claude-hybrid') {
+    await generateClaudeFiles(outputDir, config);
   }
 
   // Antigravity rules
@@ -184,6 +199,10 @@ export async function installDareToExistingProject(
     await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-execute'));
     await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-tasks'));
     await fs.ensureDir(path.join(outputDir, '.agents', 'workflows'));
+  }
+
+  if (ide === 'claude-code' || ide === 'claude-hybrid') {
+    await generateClaudeFiles(outputDir, { ...config, outputDir });
   }
 }
 
@@ -411,6 +430,30 @@ build-backend = "hatchling.build"
 `
     );
   }
+}
+
+async function generateClaudeFiles(dir: string, config: ProjectConfig): Promise<void> {
+  const { structure, backend, frontend, graphrag, mcp } = config;
+
+  // CLAUDE.md — principal arquivo de contexto do Claude Code
+  const claudeMdContent = structure === 'mcp-server'
+    ? generateMcpClaudeCodeRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
+    : generateClaudeCodeRules({ backend, frontend, graphrag, mcp });
+
+  await fs.writeFile(path.join(dir, 'CLAUDE.md'), claudeMdContent);
+
+  // .claude/commands/ — slash commands
+  await fs.ensureDir(path.join(dir, '.claude', 'commands'));
+  const commands = generateClaudeCommands(structure);
+  for (const [filename, content] of Object.entries(commands)) {
+    await fs.writeFile(path.join(dir, '.claude', 'commands', filename), content);
+  }
+
+  // .claude/settings.json — permissões e hooks
+  await fs.writeFile(
+    path.join(dir, '.claude', 'settings.json'),
+    generateClaudeSettings({ backend, frontend, structure })
+  );
 }
 
 async function generateBackendTemplate(dir: string, stack: string): Promise<void> {

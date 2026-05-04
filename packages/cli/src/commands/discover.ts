@@ -158,10 +158,13 @@ export const discoverCommand = new Command('discover')
         type: 'list',
         name: 'ide',
         message: 'Primary IDE / Agent:',
+        default: detected.hasClaudeCode ? 'claude-code' : 'cursor',
         choices: [
+          { name: '🤖 Claude Code', value: 'claude-code' },
           { name: '🖱️  Cursor', value: 'cursor' },
           { name: '🚀 Antigravity', value: 'antigravity' },
-          { name: '🔀 Both (Hybrid)', value: 'hybrid' },
+          { name: '🔀 Cursor + Antigravity (Hybrid)', value: 'hybrid' },
+          { name: '🔀 Claude Code + Cursor (Hybrid)', value: 'claude-hybrid' },
         ],
       },
       {
@@ -224,6 +227,10 @@ export const discoverCommand = new Command('discover')
           ? 'npx @modelcontextprotocol/inspector python main.py'
           : 'npx @modelcontextprotocol/inspector node dist/index.js';
         console.log(chalk.gray(`  Tip: test your MCP server with: ${inspectCmd}\n`));
+      }
+
+      if (answers.ide === 'claude-code' || answers.ide === 'claude-hybrid') {
+        console.log(chalk.gray(`  Claude Code: use /dare-design, /dare-blueprint, /dare-execute como slash commands\n`));
       }
     } catch (err) {
       installSpinner.fail(chalk.red('Failed to install DARE'));
