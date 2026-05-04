@@ -1,63 +1,96 @@
 # @dewtech/dare-cli
 
-CLI tool for DARE Framework - AI-assisted software development with parallel task execution.
+CLI tool for the **DARE Framework** — Design, Architect, Review, Execute.
+
+A structured methodology for AI-assisted software development with mandatory human-in-the-loop reviews and parallel task execution.
+
+[![npm](https://img.shields.io/npm/v/@dewtech/dare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dewtech-technologies/dare-method/blob/main/LICENSE)
 
 ## Installation
 
 ```bash
 npm install -g @dewtech/dare-cli
-# or
-npx @dewtech/dare-cli init my-project
 ```
 
 ## Commands
 
 ### `dare init`
 
-Interactive project initialization with stack selection.
+Interactive project initialization — creates the full project structure with DARE methodology files, IDE rules and stack templates.
 
 ```bash
 dare init my-project
 ```
 
 Prompts:
-- Project structure (Monorepo / Backend only / Frontend only)
-- Backend stack (Rust/Axum, Node/NestJS, Python/FastAPI, PHP/Laravel)
-- Frontend stack (React, Vue)
-- IDE (Cursor, Antigravity, Hybrid)
-- GraphRAG backend (SQLite, JSON, Neo4j)
-- Enable MCP Server
+- **Structure:** Monorepo · Backend only · Frontend only · **MCP Server** ← new
+- **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
+- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel
+- **Frontend stack:** React 18+ · Vue 3+
+- **IDE / Agent:** Cursor · Antigravity · Hybrid
+- **GraphRAG backend:** SQLite · JSON · Neo4j
+- **DARE MCP Server:** context query server (saves ~95% tokens)
 
 Generates:
-- `.cursorrules` / `.antigravityrules` (global rules)
-- `.cursor/rules/*.mdc` (stack-specific skills)
-- `.cursor/commands/` (DARE commands)
-- `.agents/skills/` (Antigravity skills)
-- `dare.config.json` (project config)
-- `DARE/README.md` (methodology guide)
+- `dare.config.json` — project config
+- `.cursorrules` / `.antigravityrules` — global IDE rules
+- `.cursor/rules/*.mdc` — stack-specific skills
+- `.cursor/commands/` — DARE slash commands
+- `.agents/skills/` — Antigravity agent skills
+- `DARE/` — methodology directory (DESIGN, BLUEPRINT, TASKS, dag)
+- Full project template ready to run (MCP server, backend or frontend)
+
+---
+
+### `dare discover` ← new in v0.3.0
+
+Detects an existing project's stack automatically and installs DARE files without touching your source code.
+
+```bash
+# Run inside an existing project
+cd my-existing-project
+dare discover
+
+# Inspect only, no changes
+dare discover --check
+
+# Target a specific directory
+dare discover --dir ./path/to/project
+```
+
+Auto-detects from: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `composer.json`.
+
+Recognizes: NestJS · React · Vue · Nuxt · Rust/Axum · FastAPI · Laravel · **MCP Server** (`@modelcontextprotocol/sdk`, `FastMCP`).
+
+---
 
 ### `dare design`
 
-Generate DESIGN.md from a project description.
+Generate `DARE/DESIGN.md` from a project description.
 
 ```bash
 dare design "Build a REST API for user authentication with JWT"
 ```
 
+---
+
 ### `dare blueprint`
 
-Generate BLUEPRINT.md, dare-dag.yaml, and TASKS.md from DESIGN.md.
+Generate `DARE/BLUEPRINT.md`, `dare-dag.yaml` and `TASKS.md` from `DESIGN.md`.
 
 ```bash
 dare blueprint
 ```
 
+---
+
 ### `dare execute`
 
-Execute tasks using DAG Task Runner.
+Execute tasks from the DAG with optional parallel execution.
 
 ```bash
-# Execute all tasks in parallel
+# Execute all tasks in parallel (75% faster)
 dare execute --parallel --runner cursor
 
 # Execute a specific task
@@ -67,38 +100,79 @@ dare execute task-001
 dare execute
 ```
 
-## Workflow
+---
+
+## Full Workflow
 
 ```bash
-# 1. Initialize project
-dare init my-api
-
-# 2. Define requirements
-dare design "Build a REST API for user management"
-
-# 3. Generate blueprint and task graph
+# New project
+dare init my-project
+cd my-project
+dare design "Describe what you're building"
 dare blueprint
+dare execute --parallel
 
-# 4. Execute tasks in parallel (75% faster)
-dare execute --parallel --runner cursor
+# Existing project
+cd my-existing-project
+dare discover
+dare design "Describe what you're building"
+dare blueprint
+dare execute --parallel
 ```
+
+## MCP Server Workflow
+
+```bash
+dare init my-mcp-server
+# → Structure: MCP Server
+# → Language: TypeScript
+# → Transport: stdio
+# → Capabilities: Tools, Resources
+
+cd my-mcp-server
+npm install
+dare design "MCP server that exposes ZIP code lookup tools"
+dare blueprint
+dare execute --parallel
+
+# Test with MCP Inspector
+npm run inspect
+```
+
+---
 
 ## Performance
 
 | Mode | Estimated Time |
-|------|---------------|
-| Sequential (old) | ~280 minutes |
+|------|----------------|
+| Sequential | ~280 minutes |
 | Parallel DAG | ~70 minutes |
 | **Improvement** | **75% faster** |
 
+---
+
 ## Supported Stacks
 
-### Backend
-- Rust/Axum
-- Node.js/NestJS
-- Python/FastAPI
-- PHP/Laravel
+| Type | Options |
+|------|---------|
+| **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel |
+| **Frontend** | React 18+ · Vue 3+ |
+| **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
 
-### Frontend
-- React 18+
-- Vue 3+
+---
+
+## Related packages
+
+| Package | Description |
+|---------|-------------|
+| [`@dewtech/dare-mcp-server`](https://www.npmjs.com/package/@dewtech/dare-mcp-server) | Local MCP context server (~95% token savings) |
+| [`@dewtech/dare-graphrag`](https://www.npmjs.com/package/@dewtech/dare-graphrag) | Knowledge graph engine (SQLite + FTS5) |
+| [`@dewtech/dare-core`](https://www.npmjs.com/package/@dewtech/dare-core) | Shared types and utilities |
+
+---
+
+## Links
+
+- [GitHub](https://github.com/dewtech-technologies/dare-method)
+- [DARE Methodology](https://github.com/dewtech-technologies/dare-method#-o-método)
+- [Dewtech](https://dewtech.tech)
