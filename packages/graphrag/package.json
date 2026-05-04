@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-graphrag",
-  "version": "0.3.3",
+  "version": "0.3.5",
   "description": "DARE Framework GraphRAG - Knowledge graph with SQLite persistence and FTS5 search",
   "type": "module",
   "main": "./dist/index.js",
