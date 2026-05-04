@@ -10,6 +10,10 @@ import {
   generateMcpClaudeCodeRules,
   generateClaudeCommands,
   generateClaudeSettings,
+  getCursorCommands,
+  getCursorRules,
+  getAntigravitySkills,
+  getDareTemplates,
 } from './templates.js';
 
 export interface ProjectConfig {
@@ -60,41 +64,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
       : generateCursorRules({ backend, frontend, graphrag, mcp });
 
     await fs.writeFile(path.join(outputDir, '.cursorrules'), cursorRulesContent);
-    await fs.ensureDir(path.join(outputDir, '.cursor', 'rules'));
-    await fs.ensureDir(path.join(outputDir, '.cursor', 'commands'));
-
-    if (structure === 'mcp-server') {
-      await fs.writeFile(
-        path.join(outputDir, '.cursor', 'rules', 'skill-mcp-server.mdc'),
-        generateMcpStackSkill(config.mcpLanguage || 'node-ts')
-      );
-    } else {
-      if (backend) {
-        await fs.writeFile(
-          path.join(outputDir, '.cursor', 'rules', `skill-${backend}.mdc`),
-          generateStackSkill(backend)
-        );
-      }
-      if (frontend) {
-        await fs.writeFile(
-          path.join(outputDir, '.cursor', 'rules', `skill-${frontend}.mdc`),
-          generateStackSkill(frontend)
-        );
-      }
-    }
-
-    await fs.writeFile(
-      path.join(outputDir, '.cursor', 'commands', 'generate-design.md'),
-      `# Generate Design\nGenerate a DESIGN.md for the described feature.\n`
-    );
-    await fs.writeFile(
-      path.join(outputDir, '.cursor', 'commands', 'generate-blueprint.md'),
-      `# Generate Blueprint\nGenerate a BLUEPRINT.md from the DESIGN.md.\n`
-    );
-    await fs.writeFile(
-      path.join(outputDir, '.cursor', 'commands', 'execute-task.md'),
-      `# Execute Task\nExecute the specified task from TASKS.md.\n`
-    );
+    await writeCursorFiles(outputDir, config);
   }
 
   // Claude Code files
@@ -109,15 +79,12 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
       : generateAntigravityRules({ backend, frontend, graphrag, mcp });
 
     await fs.writeFile(path.join(outputDir, '.antigravityrules'), antigravityContent);
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-design'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-blueprint'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-execute'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-tasks'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'workflows'));
+    await writeAntigravityFiles(outputDir, config);
   }
 
-  // Write shared DARE README
+  // Write shared DARE README and templates
   await fs.writeFile(path.join(outputDir, 'DARE', 'README.md'), generateSharedConfig(name));
+  await writeDareTemplates(outputDir);
 
   // Generate project templates
   if (structure === 'mcp-server') {
@@ -153,6 +120,7 @@ export async function installDareToExistingProject(
   await fs.writeJSON(path.join(outputDir, 'dare.config.json'), configData, { spaces: 2 });
 
   await fs.writeFile(path.join(outputDir, 'DARE', 'README.md'), generateSharedConfig(name));
+  await writeDareTemplates(outputDir);
 
   if (ide === 'cursor' || ide === 'hybrid') {
     const cursorRulesContent = structure === 'mcp-server'
@@ -160,32 +128,7 @@ export async function installDareToExistingProject(
       : generateCursorRules({ backend, frontend, graphrag, mcp });
 
     await fs.writeFile(path.join(outputDir, '.cursorrules'), cursorRulesContent);
-    await fs.ensureDir(path.join(outputDir, '.cursor', 'rules'));
-    await fs.ensureDir(path.join(outputDir, '.cursor', 'commands'));
-
-    if (structure === 'mcp-server') {
-      await fs.writeFile(
-        path.join(outputDir, '.cursor', 'rules', 'skill-mcp-server.mdc'),
-        generateMcpStackSkill(config.mcpLanguage || 'node-ts')
-      );
-    } else {
-      if (backend) {
-        await fs.writeFile(
-          path.join(outputDir, '.cursor', 'rules', `skill-${backend}.mdc`),
-          generateStackSkill(backend)
-        );
-      }
-      if (frontend) {
-        await fs.writeFile(
-          path.join(outputDir, '.cursor', 'rules', `skill-${frontend}.mdc`),
-          generateStackSkill(frontend)
-        );
-      }
-    }
-
-    await fs.writeFile(path.join(outputDir, '.cursor', 'commands', 'generate-design.md'), `# Generate Design\nGenerate a DESIGN.md for the described feature.\n`);
-    await fs.writeFile(path.join(outputDir, '.cursor', 'commands', 'generate-blueprint.md'), `# Generate Blueprint\nGenerate a BLUEPRINT.md from the DESIGN.md.\n`);
-    await fs.writeFile(path.join(outputDir, '.cursor', 'commands', 'execute-task.md'), `# Execute Task\nExecute the specified task from TASKS.md.\n`);
+    await writeCursorFiles(outputDir, { ...config, outputDir });
   }
 
   if (ide === 'antigravity' || ide === 'hybrid') {
@@ -194,11 +137,7 @@ export async function installDareToExistingProject(
       : generateAntigravityRules({ backend, frontend, graphrag, mcp });
 
     await fs.writeFile(path.join(outputDir, '.antigravityrules'), antigravityContent);
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-design'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-blueprint'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-execute'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'skills', 'dare-tasks'));
-    await fs.ensureDir(path.join(outputDir, '.agents', 'workflows'));
+    await writeAntigravityFiles(outputDir, { ...config, outputDir });
   }
 
   if (ide === 'claude-code' || ide === 'claude-hybrid') {
@@ -429,6 +368,81 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 `
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: write all real Cursor command and rule files
+// ─────────────────────────────────────────────────────────────────────────────
+async function writeCursorFiles(dir: string, config: ProjectConfig): Promise<void> {
+  const { structure, backend, frontend } = config;
+
+  await fs.ensureDir(path.join(dir, '.cursor', 'rules'));
+  await fs.ensureDir(path.join(dir, '.cursor', 'commands'));
+
+  // ── Real commands (all 9) ──────────────────────────────────────────────────
+  const commands = getCursorCommands();
+  for (const [filename, content] of Object.entries(commands)) {
+    await fs.writeFile(path.join(dir, '.cursor', 'commands', filename), content);
+  }
+
+  // ── Core rules (always written for every project) ─────────────────────────
+  const rules = getCursorRules();
+  const coreRules = ['skill-security.mdc', 'skill-docker.mdc', 'skill-bugfix-design.mdc', 'skill-feature-design.mdc', 'skill-telemetry.mdc'];
+  for (const ruleName of coreRules) {
+    await fs.writeFile(path.join(dir, '.cursor', 'rules', ruleName), rules[ruleName]);
+  }
+
+  // ── Stack-specific rules ───────────────────────────────────────────────────
+  if (structure === 'mcp-server') {
+    await fs.writeFile(
+      path.join(dir, '.cursor', 'rules', 'skill-mcp-server.mdc'),
+      generateMcpStackSkill(config.mcpLanguage || 'node-ts')
+    );
+  } else {
+    if (backend === 'php-laravel') {
+      // Use real Laravel skill from implementations
+      await fs.writeFile(path.join(dir, '.cursor', 'rules', 'skill-laravel-api.mdc'), rules['skill-laravel-api.mdc']);
+    } else if (backend) {
+      await fs.writeFile(
+        path.join(dir, '.cursor', 'rules', `skill-${backend}.mdc`),
+        generateStackSkill(backend)
+      );
+    }
+    if (frontend) {
+      await fs.writeFile(
+        path.join(dir, '.cursor', 'rules', `skill-${frontend}.mdc`),
+        generateStackSkill(frontend)
+      );
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: write all real Antigravity SKILL.md files
+// ─────────────────────────────────────────────────────────────────────────────
+async function writeAntigravityFiles(dir: string, _config: ProjectConfig): Promise<void> {
+  const skills = getAntigravitySkills();
+
+  for (const [skillName, content] of Object.entries(skills)) {
+    const skillDir = path.join(dir, '.agents', 'skills', skillName);
+    await fs.ensureDir(skillDir);
+    await fs.writeFile(path.join(skillDir, 'SKILL.md'), content);
+  }
+
+  await fs.ensureDir(path.join(dir, '.agents', 'workflows'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: write all DARE template files into templates/
+// ─────────────────────────────────────────────────────────────────────────────
+async function writeDareTemplates(dir: string): Promise<void> {
+  const templatesDir = path.join(dir, 'templates');
+  await fs.ensureDir(templatesDir);
+
+  const templates = getDareTemplates();
+  for (const [filename, content] of Object.entries(templates)) {
+    await fs.writeFile(path.join(templatesDir, filename), content);
   }
 }
 
