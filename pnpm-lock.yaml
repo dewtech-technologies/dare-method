@@ -24,14 +24,14 @@ importers:
   packages/cli:
     dependencies:
       '@dewtech/dare-core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.3.3
+        version: 0.3.3
       '@dewtech/dare-graphrag':
-        specifier: workspace:*
-        version: link:../graphrag
+        specifier: ^0.3.3
+        version: 0.3.3
       '@dewtech/dare-mcp-server':
-        specifier: workspace:*
-        version: link:../mcp-server
+        specifier: ^0.3.3
+        version: 0.3.3
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -112,8 +112,8 @@ importers:
   packages/graphrag:
     dependencies:
       '@dewtech/dare-core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.3.3
+        version: 0.3.3
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -158,8 +158,8 @@ importers:
   packages/mcp-server:
     dependencies:
       '@dewtech/dare-core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.3.3
+        version: 0.3.3
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -226,6 +226,19 @@ importers:
         version: 1.6.1(@types/node@20.19.39)
 
 packages:
+
+  '@dewtech/dare-core@0.3.3':
+    resolution: {integrity: sha512-x6tB453wgedVgkEd0S2fxBGjp1UKgQHKmLhu2rPRFntL3imi8hnkkydg95J63g2tqpQatuMNiTOawn2kY4KsJg==}
+    engines: {node: '>=18.0.0'}
+
+  '@dewtech/dare-graphrag@0.3.3':
+    resolution: {integrity: sha512-jPrWJHdmzrDvaVGFGlU6bXMZT3UGCfoCNWaa3m8Ts7xbhAiHLAv7X80Mn6RuV3D0bdBfIF60O7CWqxIzpzit+Q==}
+    engines: {node: '>=18.0.0'}
+
+  '@dewtech/dare-mcp-server@0.3.3':
+    resolution: {integrity: sha512-DdQoT5V52G3HnaNiiUJN1cNMNc66T1fdFwF+mtalr0NxWjcbsPOAs+V8yeB0ym3dOkbtdfrQ/zJjWWUFE0gSmQ==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -2201,6 +2214,28 @@ packages:
     engines: {node: '>=18'}
 
 snapshots:
+
+  '@dewtech/dare-core@0.3.3': {}
+
+  '@dewtech/dare-graphrag@0.3.3':
+    dependencies:
+      '@dewtech/dare-core': 0.3.3
+      chalk: 5.6.2
+      fs-extra: 11.3.4
+      sql.js: 1.14.1
+
+  '@dewtech/dare-mcp-server@0.3.3':
+    dependencies:
+      '@dewtech/dare-core': 0.3.3
+      chalk: 5.6.2
+      cors: 2.8.6
+      express: 4.22.1
+      fs-extra: 11.3.4
+      js-yaml: 4.1.1
+      pino: 8.21.0
+      pino-pretty: 10.3.1
+    transitivePeerDependencies:
+      - supports-color
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
