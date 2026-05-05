@@ -26,7 +26,7 @@ dare init my-project
 Prompts:
 - **Structure:** Monorepo · Backend only · Frontend only · **MCP Server** ← new
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
-- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel
+- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin
 - **Frontend stack:** React 18+ · Vue 3+
 - **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
 - **GraphRAG backend:** SQLite · JSON · Neo4j
@@ -127,6 +127,27 @@ dare execute --next                                # → next rank
 The skills shipped by `dare init` (`.cursor/rules/skill-dag-runner.mdc`,
 `.agents/skills/dare-dag-runner/SKILL.md`, `.claude/commands/dare-dag-run.md`)
 guide the IDE agent through this loop.
+
+### `dare bootstrap`
+
+Run the official scaffold for a project's stack on **an existing project**
+(created in older versions or with `--skip-bootstrap`). Reads
+`dare.config.json` and dispatches to:
+
+- `composer create-project laravel/laravel` for `php-laravel`
+- `npx @nestjs/cli new` for `node-nestjs`
+- `npm create vite` for `react` / `vue`
+- `python -m venv` + `pip install` for `python-fastapi`
+- `cargo init` + axum-ready `Cargo.toml` for `rust-axum`
+- `npm init` + `@modelcontextprotocol/sdk` for `mcp-server-node`
+
+```bash
+dare bootstrap          # refuses if vendor/ or node_modules/ already exist
+dare bootstrap --force  # runs anyway (may overwrite framework files)
+```
+
+Your DARE artifacts (`.cursor/`, `DARE/`, `dare.config.json`, `dare-graph.yml`)
+are preserved.
 
 ### `dare info`
 
@@ -284,7 +305,7 @@ npm run inspect
 
 | Type | Options |
 |------|---------|
-| **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel |
+| **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin |
 | **Frontend** | React 18+ · Vue 3+ |
 | **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
 | **IDE / Agent** | Claude Code · Cursor · Antigravity · Hybrid |

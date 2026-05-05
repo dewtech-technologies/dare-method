@@ -29,6 +29,19 @@ executável pelo CLI) e `EXECUTION/task-<id>.md` (specs detalhadas por task).
   ter tasks específicas ou estar explícitas nas tasks relevantes.
 - Atribua `complexity` a cada task: LOW / MED / HIGH.
 
+#### Regras inegociáveis de ordenação
+
+1. **A primeira task deve preparar o ambiente local** — Dockerfile +
+   `docker-compose.yml` + healthcheck. Sem isso o Ralph Loop não tem onde
+   rodar build/test/lint. Exceção: projeto que já vive em monorepo
+   containerizado.
+2. **Não crie task "Ralph Loop final" / "Hardening final"** — o Ralph Loop
+   roda automático em cada `dare execute --complete`. Não é uma task; é um
+   gate por task.
+3. **Tests devem ter assertions reais** desde a task que os escreve.
+   Placeholders (`assertTrue(true)` etc.) fazem o gate `test` falhar e a
+   task vai para FAILED.
+
 ### 3. Gerar `DARE/TASKS.md` (visão humana)
 
 Tabela com todas as tasks e dependências em formato legível:

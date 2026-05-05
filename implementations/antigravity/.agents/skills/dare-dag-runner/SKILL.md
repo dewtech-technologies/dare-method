@@ -81,11 +81,19 @@ tasks:
 2. Para cada prompt:
      - leia spec_file se houver
      - implemente
-     - rode build/test/lint (Ralph Loop)
 3. dare execute --complete <id> --output "<resumo + arquivos tocados>"
-   (ou --fail <id> --reason "..." se falhou)
+     ↓ o CLI roda o RALPH LOOP automático (build → test → lint)
+     ↓ se passar: task vira DONE
+     ↓ se falhar: task vira FAILED com stderr capturado; corrija e retente
 4. Volte ao passo 1 até não haver mais tasks ready
 ```
+
+> **Ralph Loop é AUTOMÁTICO e OBRIGATÓRIO.** Você NÃO roda build/test/lint
+> manualmente — o `dare execute --complete` faz isso. Se algum gate falhar,
+> a task NÃO vai para DONE; vai para FAILED. Corrija e retente.
+>
+> **Não existe flag para pular o Ralph Loop.** Toda task passa pelos 3 gates
+> da stack do projeto.
 
 Comandos úteis:
 
@@ -164,6 +172,23 @@ O CLI reescreve a cada `--complete`/`--fail`:
 | Tudo em rank 0 | Adicione deps reais quando há contenção |
 | Cadeia linear | Reveja se as deps são necessárias |
 
+## Antipatterns que você NÃO deve criar
+
+- ❌ Task **"Ralph Loop final"** / **"Hardening"** / **"QA"** — gate é por task
+- ❌ Tests com `assertTrue(true)` — o gate `test` roda de verdade
+- ❌ "Setup project structure" antes de containerizar o app
+
+## Ordem recomendada das primeiras tasks
+
+1. **Containerize app** (Dockerfile + docker-compose + healthcheck)
+2. **Database schema** (migrations + factories)
+3. **Core endpoints / componentes**
+4. **Auth / autorização**
+5. **Test suite real** (assertions de verdade)
+
+A task de container/compose pode estar em outra ordem para projetos sem
+DB ou em monorepo já containerizado. Mas quase sempre é uma das primeiras.
+
 ## Checklist antes de aprovar
 
 - [ ] Pelo menos 2 tasks no rank 0
@@ -172,4 +197,7 @@ O CLI reescreve a cada `--complete`/`--fail`:
 - [ ] `complexity` reflete o esforço real
 - [ ] `id` em kebab-case e único
 - [ ] Sem ciclos
+- [ ] **Sem task de "Ralph Loop final"** — gate é por task
+- [ ] **Tests com assertions reais** — placeholder quebra o gate
+- [ ] Container/runtime resolvido cedo
 - [ ] Os 3 artefatos consistentes

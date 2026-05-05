@@ -76,11 +76,21 @@ tasks:
 2. Para cada prompt:
      - leia spec_file se houver
      - implemente
-     - rode build/test/lint (Ralph Loop)
 3. dare execute --complete <id> --output "<resumo + arquivos tocados>"
-   (ou --fail <id> --reason "..." se falhou)
+     ↓ o CLI roda o RALPH LOOP automático (build → test → lint)
+     ↓ se passar: task vira DONE
+     ↓ se falhar: task vira FAILED com stderr capturado; corrija e retente
 4. Volte ao passo 1 até não haver mais tasks ready
 ```
+
+> **Ralph Loop é AUTOMÁTICO e OBRIGATÓRIO.** Você NÃO roda build/test/lint
+> manualmente — o `dare execute --complete` faz isso. Se algum gate falhar,
+> a task NÃO vai para DONE; vai para FAILED. Você corrige o código e tenta
+> de novo (`dare execute --complete <id>` outra vez, ou `--reset` antes se
+> precisar zerar histórico).
+>
+> **Não existe flag para pular o Ralph Loop.** Toda task passa pelos 3 gates
+> da stack do projeto.
 
 Comandos úteis:
 
@@ -175,6 +185,28 @@ nada; o CLI cuida do cascade.
 | Tudo em rank 0 | Conflito de escrita no mesmo arquivo | Adicione `depends_on` quando há contenção |
 | Cadeia linear longa | Sem ganho de paralelismo | Reveja se as deps são reais |
 
+## Antipatterns que você NÃO deve criar
+
+- ❌ Task chamada **"Ralph Loop final"**, **"Hardening final"**, **"QA final"**
+  — Ralph Loop roda automaticamente em cada `--complete`. Não é uma task.
+- ❌ Tests com `assertTrue(true)` ou equivalentes — o gate `test` vai rodar
+  de verdade. Placeholder não engana o CLI; só atrasa o ciclo.
+- ❌ "Setup project structure" como primeira task quando o ambiente ainda
+  não foi containerizado — sem container/runtime, o Ralph Loop não roda.
+
+## Ordem recomendada das primeiras tasks
+
+1. **Containerize app** (Dockerfile + docker-compose + healthcheck) — sem
+   isso o Ralph Loop não tem onde rodar
+2. **Database schema** (migrations + factories)
+3. **Core endpoints / componentes**
+4. **Auth / autorização**
+5. **Test suite real** (com assertions de verdade)
+
+A task de container/compose pode estar em **outra ordem** se o projeto já
+vive em um container do monorepo, ou se a stack não precisa de DB. Mas
+quase sempre é uma das primeiras — nunca a última.
+
 ## Checklist antes de aprovar um DAG
 
 - [ ] Pelo menos 2 tasks no rank 0
@@ -183,4 +215,7 @@ nada; o CLI cuida do cascade.
 - [ ] `complexity` reflete o esforço real (não tudo HIGH)
 - [ ] `id` em kebab-case e único
 - [ ] Sem ciclos
+- [ ] **Sem task de "Ralph Loop final"** — Ralph Loop é gate por task
+- [ ] **Tests com assertions reais** — placeholder quebra o gate `test`
+- [ ] Container/runtime resolvido cedo, não na última task
 - [ ] `TASKS.md` + `dare-dag.yaml` + `EXECUTION/task-*.md` consistentes

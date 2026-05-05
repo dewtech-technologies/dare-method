@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import chalk from 'chalk';
 import {
   generateCursorRules,
   generateAntigravityRules,
@@ -11,6 +12,14 @@ import {
   generateClaudeCommands,
   generateClaudeSettings,
 } from './templates.js';
+import {
+  bootstrapBackend,
+  bootstrapFrontend,
+  bootstrapMcp,
+  type BackendStack,
+  type FrontendStack,
+  type McpLanguage,
+} from './stack-bootstrap.js';
 
 export interface ProjectConfig {
   name: string;
@@ -24,12 +33,24 @@ export interface ProjectConfig {
   graphrag: 'sqlite' | 'json' | 'neo4j';
   mcp: boolean;
   outputDir: string;
+  /**
+   * Skip the official scaffold step (composer create-project, npm create vite,
+   * etc.). Useful in tests and CI where the toolchains are not installed.
+   * Defaults to false — i.e., scaffolding is the normal path.
+   */
+  skipBootstrap?: boolean;
 }
 
 export async function generateProjectStructure(config: ProjectConfig): Promise<void> {
   const { outputDir, name, structure, backend, frontend, ide, graphrag, mcp } = config;
 
   await fs.ensureDir(outputDir);
+
+  // 0) Run the official scaffold for the chosen stack BEFORE laying down DARE
+  //    artifacts. The scaffold needs an empty (or near-empty) directory.
+  if (!config.skipBootstrap) {
+    await runStackBootstrap(config);
+  }
 
   // Create DARE directory
   await fs.ensureDir(path.join(outputDir, 'DARE'));
@@ -44,14 +65,45 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   }
   await fs.writeJSON(path.join(outputDir, 'dare.config.json'), configData, { spaces: 2 });
 
-  // Write .gitignore
-  const gitignoreExtras = structure === 'mcp-server' && config.mcpLanguage === 'python'
-    ? '\n__pycache__/\n*.py[cod]\n.venv/\n'
-    : '';
-  await fs.writeFile(
-    path.join(outputDir, '.gitignore'),
-    `node_modules/\ndist/\nbuild/\n*.db\n*.db-shm\n*.db-wal\n.env\n.env.local\n.dare/\nlogs/\n*.log\n${gitignoreExtras}`
-  );
+  // Merge .gitignore — preserves whatever the official scaffold wrote and
+  // appends DARE-specific entries (avoids losing framework-aware rules like
+  // /vendor, /node_modules variants, /storage/*.key, etc).
+  const dareExtras = [
+    '',
+    '# DARE Framework',
+    '.dare/',
+    '*.db',
+    '*.db-shm',
+    '*.db-wal',
+    'DARE/.canvas.md',
+    structure === 'mcp-server' && config.mcpLanguage === 'python'
+      ? '.venv/\n__pycache__/\n*.py[cod]'
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const gitignorePath = path.join(outputDir, '.gitignore');
+  if (await fs.pathExists(gitignorePath)) {
+    const existing = await fs.readFile(gitignorePath, 'utf-8');
+    if (!existing.includes('# DARE Framework')) {
+      await fs.writeFile(gitignorePath, existing.replace(/\s+$/, '') + '\n' + dareExtras + '\n');
+    }
+  } else {
+    await fs.writeFile(
+      gitignorePath,
+      [
+        'node_modules/',
+        'dist/',
+        'build/',
+        '.env',
+        '.env.local',
+        'logs/',
+        '*.log',
+        dareExtras,
+      ].join('\n') + '\n',
+    );
+  }
 
   // Cursor rules
   if (ide === 'cursor' || ide === 'hybrid') {
@@ -85,18 +137,30 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   // Write graphrag config
   await writeGraphragConfig(outputDir, config);
 
-  // Generate project templates
-  if (structure === 'mcp-server') {
+  // Project source code is now produced by the official scaffold (run earlier
+  // in `runStackBootstrap`). The legacy fake templates are only used when
+  // bootstrap is explicitly skipped (tests / CI without toolchains) or for
+  // the MCP server, which has no widely-adopted scaffold to defer to.
+  if (config.skipBootstrap) {
+    if (structure === 'mcp-server') {
+      await generateMcpTemplate(outputDir, config);
+    } else {
+      if (structure !== 'frontend' && backend) {
+        const backendDir =
+          structure === 'monorepo' ? path.join(outputDir, 'backend') : outputDir;
+        await generateBackendTemplate(backendDir, backend);
+      }
+      if (structure !== 'backend' && frontend) {
+        const frontendDir =
+          structure === 'monorepo' ? path.join(outputDir, 'frontend') : outputDir;
+        await generateFrontendTemplate(frontendDir, frontend);
+      }
+    }
+  } else if (structure === 'mcp-server') {
+    // Even with bootstrap, the MCP server still needs the DARE-flavored
+    // starter (server.ts / main.py with the right transport wired up). The
+    // bootstrap step only ran `npm init` / `python -m venv`, no source code.
     await generateMcpTemplate(outputDir, config);
-  } else {
-    if (structure !== 'frontend' && backend) {
-      const backendDir = structure === 'monorepo' ? path.join(outputDir, 'backend') : outputDir;
-      await generateBackendTemplate(backendDir, backend);
-    }
-    if (structure !== 'backend' && frontend) {
-      const frontendDir = structure === 'monorepo' ? path.join(outputDir, 'frontend') : outputDir;
-      await generateFrontendTemplate(frontendDir, frontend);
-    }
   }
 }
 
@@ -697,9 +761,65 @@ description: Node.js/TypeScript MCP server development skill
 `;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stack bootstrap orchestration
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BACKEND_STACKS = new Set<BackendStack>([
+  'php-laravel',
+  'node-nestjs',
+  'python-fastapi',
+  'rust-axum',
+  'go-gin',
+]);
+const FRONTEND_STACKS = new Set<FrontendStack>(['react', 'vue']);
+
+async function runStackBootstrap(config: ProjectConfig): Promise<void> {
+  const { outputDir, name, structure, backend, frontend, mcpLanguage } = config;
+
+  // Backend / monorepo backend
+  if ((structure === 'backend' || structure === 'monorepo') && backend) {
+    if (!BACKEND_STACKS.has(backend as BackendStack)) {
+      throw new Error(`Unsupported backend stack: ${backend}`);
+    }
+    const backendDir =
+      structure === 'monorepo' ? path.join(outputDir, 'backend') : outputDir;
+    await fs.ensureDir(backendDir);
+    await bootstrapBackend({
+      stack: backend as BackendStack,
+      dir: backendDir,
+      projectName: name,
+    });
+  }
+
+  // Frontend / monorepo frontend
+  if ((structure === 'frontend' || structure === 'monorepo') && frontend) {
+    if (!FRONTEND_STACKS.has(frontend as FrontendStack)) {
+      throw new Error(`Unsupported frontend stack: ${frontend}`);
+    }
+    const frontendDir =
+      structure === 'monorepo' ? path.join(outputDir, 'frontend') : outputDir;
+    await fs.ensureDir(frontendDir);
+    await bootstrapFrontend({
+      stack: frontend as FrontendStack,
+      dir: frontendDir,
+      projectName: name,
+    });
+  }
+
+  // MCP Server
+  if (structure === 'mcp-server') {
+    const lang = (mcpLanguage ?? 'node-ts') as McpLanguage;
+    await bootstrapMcp({ language: lang, dir: outputDir, projectName: name });
+  }
+
+  console.log(chalk.green('\n✓ Stack scaffold complete.\n'));
+}
+
 function generateStackSkill(stack: string): string {
   const skills: Record<string, string> = {
     'rust-axum': `---\ndescription: Rust/Axum API development skill\n---\n# Rust/Axum Skill\n- Use Axum for HTTP routing\n- Use Tokio for async runtime\n- Use SQLx for database\n- Run clippy and cargo test\n`,
+    'go-gin': `---\ndescription: Go/Gin API development skill\n---\n# Go + Gin Skill\n- Use Gin for HTTP routing (github.com/gin-gonic/gin)\n- Project layout: cmd/api/main.go (entrypoint), internal/handlers, internal/middleware, internal/services, internal/repository\n- Use context.Context propagation in every handler/service\n- Use struct tags for binding/validation (binding:"required" on DTOs)\n- For SQL: prefer database/sql + sqlx, parametrize ALL queries, no string concat\n- Errors: return wrapped errors (fmt.Errorf("...: %w", err)), not panics\n- Tests: use net/http/httptest + table-driven tests; place *_test.go alongside the package\n- Ralph Loop: \`go build ./...\`, \`go test ./...\`, \`go vet ./...\`\n`,
     'node-nestjs': `---\ndescription: Node.js/NestJS development skill\n---\n# NestJS Skill\n- Use NestJS modules and DI\n- Use DTOs with class-validator\n- Write Jest tests\n`,
     'python-fastapi': `---\ndescription: Python/FastAPI development skill\n---\n# FastAPI Skill\n- Use Pydantic for validation\n- Use async endpoints\n- Write pytest tests\n`,
     'php-laravel': `---\ndescription: PHP/Laravel development skill\n---\n# Laravel Skill\n- Use FormRequests\n- Use API Resources\n- Write PHPUnit tests\n`,

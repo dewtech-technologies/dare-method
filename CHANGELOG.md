@@ -11,6 +11,110 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.5.0] — 2026-05
+
+Versão que fecha 3 lacunas estruturais identificadas em uso real:
+
+### Adicionado — Stack `go-gin`
+Nova stack de backend para APIs em Go com Gin Web Framework. Vem com:
+- Estrutura `cmd/api/main.go` + `internal/handlers/` + `internal/middleware/`
+- Endpoint `/healthz` funcionando + teste básico (`health_test.go`)
+- Dependências: `gin-gonic/gin`, `joho/godotenv`
+- Ralph Loop: `go build ./...` → `go test ./...` → `go vet ./...`
+
+### Mudado (BREAKING) — `dare init` agora roda o scaffold oficial da stack
+Em vez de copiar um template fake mínimo, `dare init` invoca o scaffold
+oficial da stack escolhida. Quando o comando termina, você tem um projeto
+**executável** — com `vendor/`, `node_modules/`, `target/` e tudo o mais
+que o framework precisa.
+
+| Stack | Comando |
+|-------|---------|
+| `php-laravel` | `composer create-project laravel/laravel:^11 .` + `sanctum` + `jwt-auth` + `pint`/`larastan` |
+| `node-nestjs` | `npx @nestjs/cli new . --strict --skip-git --package-manager npm` |
+| `react` | `npm create vite@latest . -- --template react-ts` + `npm install` |
+| `vue` | `npm create vite@latest . -- --template vue-ts` + `npm install` |
+| `python-fastapi` | `python -m venv .venv` + `pip install -r requirements.txt` |
+| `rust-axum` | `cargo init` + `Cargo.toml` com axum/sqlx/tokio + `cargo fetch` |
+| `go-gin` | `go mod init` + `go get gin/godotenv` + starter `cmd/api/main.go` + `internal/handlers/` + `go mod tidy` |
+| `mcp-server-node` | `npm init` + `@modelcontextprotocol/sdk` |
+| `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
+
+Detecção pré-vôo: se a ferramenta não está no PATH (`composer`/`npm`/`cargo`/
+`python`), `dare init` falha **com erro claro** apontando para o link de
+instalação. Não há fallback para template fake.
+
+Flag `--skip-bootstrap` (e `skipBootstrap: true` na API programática) para
+usar em CI/testes sem toolchain. O `.gitignore` agora **mescla** os entries
+DARE com os gerados pelo scaffold em vez de sobrescrever.
+
+### Adicionado — `dare bootstrap`
+Comando para rodar o scaffold em projeto **existente** (criado em versões
+anteriores ou com `--skip-bootstrap`). Lê `dare.config.json`, recusa rodar
+se detectar artefatos do framework já no diretório (`vendor/`,
+`composer.lock`, `node_modules/`, `Cargo.lock`, etc) — `--force` para
+forçar.
+
+### Mudado (BREAKING) — Ralph Loop é executado **em toda task**
+`dare execute --complete <id>` agora roda **automaticamente** os 3 gates
+da stack do projeto **antes** de marcar a task como DONE:
+
+```
+build  → composer dump-autoload  /  npm run build  /  cargo build
+test   → php artisan test         /  npm test       /  cargo test
+lint   → ./vendor/bin/pint --test /  npm run lint   /  cargo clippy
+```
+
+- Se **todos** passarem → task vira DONE.
+- Se **algum** falhar → task vira FAILED com `task.error` contendo o gate
+  que falhou + stderr capturado (até 4000 chars). Exit code 1.
+- **Não há flag para pular** o Ralph Loop. Não há config para customizar
+  os comandos. É hardcoded por stack.
+- Tasks legítimas que falham (ex.: ainda sem ambiente, ou tests
+  intencionalmente quebrados) ficam visíveis como FAILED — você corrige
+  o código e chama `--complete` de novo, ou `--reset` antes para zerar
+  o histórico do graph.
+
+A stack vem de `dare.config.json`. MCP server tem mapeamento próprio
+(`mcp-server-node-ts` / `mcp-server-python`).
+
+### Mudado — Template default das tasks
+- `task-001` agora é **"Containerize app (Dockerfile + docker-compose)"** —
+  sem container/runtime, o Ralph Loop não tem onde rodar.
+- A última task **deixa de ser "Ralph Loop final"**. Esse antipattern foi
+  removido — Ralph Loop é gate por task, não fase final.
+- Tasks de teste agora prompts explícitos: "tests com assertions reais —
+  `assertTrue(true)` quebra o gate".
+
+### Mudado — Skills nos 3 IDEs
+Cursor (`skill-dag-runner.mdc`, `generate-tasks.md`), Antigravity
+(`dare-dag-runner/SKILL.md`) e Claude (`dare-blueprint.md`) ganharam:
+
+- Seção explícita "Ralph Loop é AUTOMÁTICO e OBRIGATÓRIO".
+- Antipatterns proibidos: "Ralph Loop final", `assertTrue(true)`, "Setup
+  project" antes de containerizar.
+- Ordem recomendada: Container → Schema → Endpoints → Auth → Tests reais.
+
+### Adicionado — testes
+- `ralph-loop.test.ts`: 11 testes (gates por stack, resolveStackFromConfig
+  com mcp/backend/frontend, error path).
+- E2E valida: scaffold em modo `skipBootstrap`; novo template de tasks
+  (Containerize, sem Ralph Loop final); Ralph Loop bloqueia DONE quando
+  ambiente não está pronto; `dare bootstrap` registrado.
+- **Total: 109 testes passando** (era 97, +12).
+
+### Como migrar projetos existentes (criados em ≤ v2.4.x)
+Em vez de recriar com `dare init`, use o novo `dare bootstrap`:
+
+```bash
+cd seu-projeto
+dare bootstrap     # scaffolda Laravel/Nest/Vite por cima dos arquivos DARE
+```
+
+A skill `dare-tasks` também foi atualizada — re-rode `/generate-tasks`
+para o agente regenerar `dare-dag.yaml` sem `Ralph Loop final` e com
+`Containerize app` como `task-001`.
+
 ## [2.4.1] — 2026-05
 
 ### Adicionado — `dare dag viz` (visualização do DAG estático)

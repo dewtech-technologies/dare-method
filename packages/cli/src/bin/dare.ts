@@ -11,6 +11,7 @@ import { graphCommand } from '../commands/graph.js';
 import { dagCommand } from '../commands/dag.js';
 import { infoCommand } from '../commands/info.js';
 import { validateCommand } from '../commands/validate.js';
+import { bootstrapCommand } from '../commands/bootstrap.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -23,6 +24,7 @@ program
   .version(version);
 
 program.addCommand(initCommand);
+program.addCommand(bootstrapCommand);
 program.addCommand(discoverCommand);
 program.addCommand(designCommand);
 program.addCommand(blueprintCommand);

@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-cli",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "DARE Framework - CLI, GraphRAG engine, MCP server and shared types in a single package",
   "type": "module",
   "main": "./dist/index.js",

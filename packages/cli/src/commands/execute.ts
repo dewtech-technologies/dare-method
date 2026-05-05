@@ -23,6 +23,11 @@ import {
   loadAndApplyState,
   saveState,
 } from '../dag-runner/state-store.js';
+import {
+  resolveStackFromConfig,
+  runRalphLoop,
+  type GateName,
+} from '../dag-runner/ralph-loop.js';
 
 /**
  * `dare execute` — orchestrate DAG execution.
@@ -162,18 +167,78 @@ async function handleComplete(
 ): Promise<void> {
   const taskId = options.complete!;
   const tokens = options.tokens ? parseInt(options.tokens, 10) : undefined;
-  const duration = options.duration ? parseInt(options.duration, 10) : undefined;
+  const reportedDuration = options.duration
+    ? parseInt(options.duration, 10)
+    : undefined;
 
+  // Locate the task before running gates so we fail fast if the id is wrong.
+  const target = dag.tasks.find((t) => t.id === taskId);
+  if (!target) {
+    console.error(chalk.red(`❌ Task "${taskId}" not found in DAG.`));
+    process.exit(1);
+  }
+
+  // Resolve stack and run Ralph Loop. There is no opt-out: a task only
+  // becomes DONE after build → test → lint pass for the project's stack.
+  const cwd = process.cwd();
+  let stack: string;
+  try {
+    stack = await resolveStackFromConfig(cwd);
+  } catch (err) {
+    console.error(chalk.red(`❌ ${err instanceof Error ? err.message : String(err)}`));
+    process.exit(1);
+  }
+
+  console.log(chalk.cyan(`🔧 Ralph Loop (${stack}) — build → test → lint`));
+  const ralphStart = Date.now();
+  const result = await runRalphLoop({
+    stack,
+    cwd,
+    onProgress: ({ gate, phase }) => {
+      const icon = phase === 'start' ? '▸' : phase === 'pass' ? '✓' : '✗';
+      const color = phase === 'fail' ? chalk.red : phase === 'pass' ? chalk.green : chalk.gray;
+      console.log(color(`  ${icon} ${gate}`));
+    },
+  });
+  const ralphMs = Date.now() - ralphStart;
+
+  if (!result.passed) {
+    const errorBody = [
+      `Ralph Loop failed at gate: ${result.failedAt}`,
+      `Command: ${result.failedCommand ?? '(unknown)'}`,
+      `--- stderr ---`,
+      (result.stderr ?? '').trim(),
+    ].join('\n');
+
+    markFailed(dag, taskId, {
+      error: errorBody,
+      durationMs: reportedDuration ?? ralphMs,
+      graph,
+    });
+
+    console.log(chalk.red.bold(`\n❌ ${taskId} FAILED — Ralph Loop blocked DONE.`));
+    console.log(chalk.gray(`   gate: ${result.failedAt}`));
+    console.log(chalk.gray(`   cmd : ${result.failedCommand}`));
+    if (result.stderr) {
+      console.log(chalk.gray(`   --- stderr (truncated) ---`));
+      console.log(chalk.gray(result.stderr.trim().split('\n').slice(0, 30).join('\n')));
+    }
+    console.log(chalk.yellow(`\nFix the failure, then either re-run completion or use \`dare execute --reset ${taskId}\` first.\n`));
+
+    await persist(dag, stateFile, canvasPath);
+    process.exit(1);
+  }
+
+  // Gates passed — mark DONE
   const task = markDone(dag, taskId, {
     output: options.output,
     tokens,
-    durationMs: duration,
+    durationMs: reportedDuration ?? ralphMs,
     graph,
   });
 
-  console.log(chalk.green(`✅ ${task.id} marked as DONE.`));
+  console.log(chalk.green.bold(`\n✅ ${task.id} DONE — Ralph Loop passed in ${ralphMs}ms.`));
   if (task.tokens) console.log(chalk.gray(`   tokens: ${task.tokens}`));
-  if (task.duration) console.log(chalk.gray(`   duration: ${task.duration}ms`));
 
   await persist(dag, stateFile, canvasPath);
 }

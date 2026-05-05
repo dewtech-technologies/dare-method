@@ -43,53 +43,61 @@ export const blueprintCommand = new Command('blueprint')
     const sampleTasks: SampleTask[] = [
       {
         id: 'task-001',
-        title: 'Setup project structure',
+        title: 'Containerize app (Dockerfile + docker-compose)',
         deps: [],
         complexity: 'LOW',
         prompt:
-          'Setup the base project structure following DARE/BLUEPRINT.md.\n' +
-          'Create directories, package files, and base dependencies. No business logic yet.\n' +
-          'Validation gate: project builds without errors.',
+          'Prepare the local runtime so subsequent tasks can be validated by the Ralph Loop.\n' +
+          'Create a multi-stage Dockerfile for the chosen stack and a docker-compose.yml\n' +
+          'wiring the app + database (+ cache, if applicable). Add a /healthz endpoint that\n' +
+          '`docker compose up -d` followed by `curl localhost:<port>/healthz` returns 200.\n' +
+          'Document the bring-up in README.md.\n' +
+          'Validation gate (Ralph Loop): build/test/lint pass on the chosen stack.',
       },
       {
         id: 'task-002',
-        title: 'Implement database schema',
-        deps: [],
+        title: 'Database schema (migrations)',
+        deps: ['task-001'],
         complexity: 'MED',
         prompt:
-          'Implement the database schema as defined in DARE/BLUEPRINT.md.\n' +
-          'Create migrations, models, and seed data with appropriate indexes and FKs.\n' +
-          'Validation gate: migrations run cleanly forward and backward.',
+          'Implement the database schema defined in DARE/BLUEPRINT.md as migrations.\n' +
+          'Include indexes, foreign keys, and the corresponding model factories.\n' +
+          'Validation gate (Ralph Loop): migrations run forward and tests can spin\n' +
+          'a fresh schema.',
       },
       {
         id: 'task-003',
-        title: 'Implement core API endpoints',
-        deps: ['task-001', 'task-002'],
+        title: 'Core API endpoints',
+        deps: ['task-002'],
         complexity: 'HIGH',
         prompt:
-          'Implement the core API endpoints as defined in DARE/BLUEPRINT.md.\n' +
-          'Follow the API contracts, validate inputs, and ensure proper error handling.\n' +
-          'Validation gate: all endpoint integration tests pass.',
+          'Implement the core API endpoints from DARE/BLUEPRINT.md with proper\n' +
+          'request validation, error handling, and response shaping.\n' +
+          'Validation gate (Ralph Loop): integration tests cover happy + error paths.',
       },
       {
         id: 'task-004',
-        title: 'Implement authentication',
-        deps: ['task-001', 'task-002'],
+        title: 'Authentication',
+        deps: ['task-002'],
         complexity: 'HIGH',
         prompt:
-          'Implement authentication and authorization following security best practices.\n' +
-          'Use bcrypt for password hashing, JWT with refresh tokens, and rate limiting.\n' +
-          'Validation gate: security tests pass (no plaintext passwords, tokens expire).',
+          'Implement authentication/authorization following security best practices:\n' +
+          'bcrypt or argon2, short-lived access tokens with refresh, rate limiting on\n' +
+          'login. Tests must include negative cases.\n' +
+          'Validation gate (Ralph Loop): security tests pass (no plaintext passwords,\n' +
+          'tokens expire, brute force is rate-limited).',
       },
       {
         id: 'task-005',
-        title: 'Write tests',
+        title: 'Real test suite (unit + integration)',
         deps: ['task-003', 'task-004'],
         complexity: 'MED',
         prompt:
-          'Write unit and integration tests for all implemented features.\n' +
-          'Aim for >=80% code coverage. Include security tests for auth and validation.\n' +
-          'Validation gate: full test suite passes; coverage threshold met.',
+          'Write real unit and integration tests with assertions — not placeholders.\n' +
+          'Cover happy path, validation errors, and security boundaries (e.g. cross-tenant\n' +
+          'access). Aim for >=80% coverage on services and controllers.\n' +
+          'Validation gate (Ralph Loop): the test gate is the test gate; assertTrue(true)\n' +
+          'is forbidden and will be flagged in review.',
       },
     ];
 

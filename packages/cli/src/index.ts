@@ -20,6 +20,30 @@ export { graphCommand } from './commands/graph.js';
 export { dagCommand, renderDagMermaid, renderDagDot } from './commands/dag.js';
 export { validateCommand } from './commands/validate.js';
 export { infoCommand } from './commands/info.js';
+export { bootstrapCommand } from './commands/bootstrap.js';
+
+// Stack bootstrap + Ralph Loop
+export {
+  bootstrapBackend,
+  bootstrapFrontend,
+  bootstrapMcp,
+} from './utils/stack-bootstrap.js';
+export type {
+  BackendStack,
+  FrontendStack,
+  McpLanguage,
+} from './utils/stack-bootstrap.js';
+export {
+  gatesFor,
+  resolveStackFromConfig,
+  runRalphLoop,
+} from './dag-runner/ralph-loop.js';
+export type {
+  GateName,
+  RalphLoopGate,
+  RalphLoopResult,
+  RunRalphLoopOptions,
+} from './dag-runner/ralph-loop.js';
 
 // DAG Runner (orchestration)
 export {

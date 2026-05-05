@@ -82,6 +82,7 @@ export const initCommand = new Command('init')
           { name: '🟢 Node.js / NestJS', value: 'node-nestjs' },
           { name: '🐍 Python / FastAPI', value: 'python-fastapi' },
           { name: '🐘 PHP / Laravel', value: 'php-laravel' },
+          { name: '🐹 Go / Gin', value: 'go-gin' },
         ],
       },
       {

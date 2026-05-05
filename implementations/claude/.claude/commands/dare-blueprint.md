@@ -71,6 +71,12 @@ tasks:
 - `complexity` honesta: `HIGH` só para lógica crítica/segurança
 - Output cap de 4000 chars: se a task gera muito, escreva em arquivo e
   retorne só resumo + caminhos
+- **A primeira task deve containerizar a aplicação** (Dockerfile + compose
+  + healthcheck) — sem isso o Ralph Loop automático não tem onde rodar
+- **NÃO crie task "Ralph Loop final" / "Hardening" / "QA final"** — o
+  Ralph Loop roda em CADA `dare execute --complete`, automaticamente
+- **Tests com assertions reais** — `assertTrue(true)` quebra o gate `test`
+  e a task vai para FAILED
 
 ### 4. Gerar `DARE/TASKS.md` (visão humana)
 
