@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { convertYamlToDag, convertDagToYaml } from '../utils/dag-converter.js';
+import { DEFAULT_DAG_LIMITS } from '../dag-runner/run_dag.js';
 
 // DAG types
 interface DAGTask {
@@ -163,5 +165,128 @@ describe('DAG Converter', () => {
       expect(rank0Tasks).toContain('task-002');
       expect(rank0Tasks).toHaveLength(2);
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Real converter tests (v2.1 schema with limits + per-runner models)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('convertYamlToDag (v2.1 schema)', () => {
+  const v21Yaml = `title: "Sample"
+version: "1.0.0"
+
+limits:
+  parent_context_chars: 1500
+  task_output_chars: 3000
+  timeout_seconds: 300
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: task-001
+    title: "Setup"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-001.md
+    subtask_prompt: |
+      Do the setup.
+  - id: task-002
+    title: "Implement"
+    depends_on: [task-001]
+    complexity: HIGH
+    subtask_prompt: |
+      Build the thing.
+`;
+
+  it('parses limits block', () => {
+    const dag = convertYamlToDag(v21Yaml);
+    expect(dag.limits).toEqual({
+      parent_context_chars: 1500,
+      task_output_chars: 3000,
+      timeout_seconds: 300,
+    });
+  });
+
+  it('parses per-runner models', () => {
+    const dag = convertYamlToDag(v21Yaml);
+    expect(dag.models.cursor?.HIGH).toBe('gpt-5.3-codex');
+    expect(dag.models.claude?.MED).toBe('claude-haiku-4');
+    expect(dag.models.antigravity?.LOW).toBe('gemini-2.5-flash');
+  });
+
+  it('parses spec_file when present', () => {
+    const dag = convertYamlToDag(v21Yaml);
+    expect(dag.tasks[0].spec_file).toBe('EXECUTION/task-001.md');
+    expect(dag.tasks[1].spec_file).toBeUndefined();
+  });
+
+  it('initializes status as PENDING for every task', () => {
+    const dag = convertYamlToDag(v21Yaml);
+    for (const t of dag.tasks) {
+      expect(t.status).toBe('PENDING');
+    }
+  });
+});
+
+describe('convertYamlToDag (legacy flat models)', () => {
+  const legacyYaml = `title: "Old"
+version: "1.0.0"
+models:
+  HIGH: "gpt-4"
+  MED: "gpt-4o-mini"
+  LOW: "gpt-4o-mini"
+tasks:
+  - id: task-1
+    depends_on: []
+    complexity: MED
+    subtask_prompt: "noop"
+`;
+
+  it('replicates flat models under each known runner', () => {
+    const dag = convertYamlToDag(legacyYaml);
+    expect(dag.models.cursor?.HIGH).toBe('gpt-4');
+    expect(dag.models.claude?.MED).toBe('gpt-4o-mini');
+    expect(dag.models.antigravity?.LOW).toBe('gpt-4o-mini');
+  });
+
+  it('falls back to default limits when block is absent', () => {
+    const dag = convertYamlToDag(legacyYaml);
+    expect(dag.limits).toEqual(DEFAULT_DAG_LIMITS);
+  });
+});
+
+describe('convertDagToYaml round-trip', () => {
+  it('preserves limits, models and spec_file across YAML → Dag → YAML → Dag', () => {
+    const original = `title: "RT"
+version: "1.0.0"
+limits:
+  parent_context_chars: 1234
+  task_output_chars: 5678
+  timeout_seconds: 90
+models:
+  cursor:      { HIGH: a, MED: b, LOW: c }
+  claude:      { HIGH: d, MED: e, LOW: f }
+  antigravity: { HIGH: g, MED: h, LOW: i }
+tasks:
+  - id: t1
+    title: "First"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION/t1.md
+    subtask_prompt: |
+      go.
+`;
+    const dag1 = convertYamlToDag(original);
+    const yaml2 = convertDagToYaml(dag1);
+    const dag2 = convertYamlToDag(yaml2);
+
+    expect(dag2.limits).toEqual(dag1.limits);
+    expect(dag2.models).toEqual(dag1.models);
+    expect(dag2.tasks[0].spec_file).toBe('EXECUTION/t1.md');
+    expect(dag2.tasks[0].complexity).toBe('HIGH');
   });
 });

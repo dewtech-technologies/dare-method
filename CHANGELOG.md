@@ -11,6 +11,50 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-05
+
+### Adicionado — Skills DAG nos 3 IDEs
+- **Cursor:** `.cursor/rules/skill-dag-runner.mdc` — regras de construção do
+  grafo (depends_on mínimo, complexity, prompt self-contained, limites
+  2000/4000/600s, canvas).
+- **Cursor:** `.cursor/commands/run-dag.md` — slash `/run-dag` que orquestra
+  `dare execute --parallel`.
+- **Antigravity:** `.agents/skills/dare-dag-runner/SKILL.md` — equivalente.
+- **Claude:** `.claude/commands/dare-dag-build.md` — regenera só o
+  `dare-dag.yaml` a partir do BLUEPRINT.
+- **Claude:** `.claude/commands/dare-dag-run.md` — slash `/dare-dag-run`.
+
+### Mudado — `/generate-tasks` agora gera 3 artefatos
+As skills de geração de tasks (Cursor `generate-tasks.md`, Antigravity
+`dare-tasks/SKILL.md`, Claude `dare-blueprint.md`) passam a produzir
+**simultaneamente**:
+
+1. `DARE/TASKS.md` — tabela master humana
+2. `DARE/dare-dag.yaml` — grafo executável pelo CLI
+3. `DARE/EXECUTION/task-<id>.md` — uma spec detalhada por task
+
+### Mudado — schema canônico do `dare-dag.yaml`
+- Novo bloco `limits` com `parent_context_chars` (2000), `task_output_chars`
+  (4000), `timeout_seconds` (600).
+- `models` agora é mapeado **por runner** (`cursor`, `claude`, `antigravity`),
+  cada um com `HIGH/MED/LOW`.
+- Tasks aceitam `spec_file: EXECUTION/task-<id>.md` apontando para a spec
+  detalhada.
+- Schema legado (flat `models: {HIGH,MED,LOW}`) ainda é aceito pelo parser
+  e normalizado automaticamente.
+
+### Mudado — `dare blueprint` (CLI)
+- Agora gera os 4 artefatos como esqueleto (BLUEPRINT, dare-dag.yaml com
+  schema novo, TASKS.md, 5 specs em EXECUTION/).
+- Por padrão **preserva arquivos existentes** (use `--force` para sobrescrever).
+- O preenchimento real do conteúdo continua sendo do agente IA via slash
+  commands / skills.
+
+### Adicionado — testes
+- 7 novos testes para `convertYamlToDag` / `convertDagToYaml` cobrindo schema
+  novo (limits, per-runner models, spec_file), schema legado (flat models)
+  e round-trip. **34/34 testes passando.**
+
 ## [2.0.0] — 2026-05
 
 ### Mudado (BREAKING)

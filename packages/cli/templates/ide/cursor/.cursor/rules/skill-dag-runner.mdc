@@ -1,0 +1,176 @@
+---
+description: Como construir e executar grafos de tasks (DAG) do método DARE com paralelismo real via dare-dag.yaml
+globs: DARE/dare-dag.yaml,DARE/EXECUTION/**,DARE/.canvas.md
+alwaysApply: false
+---
+
+# Skill: DAG Task Runner
+
+## Quando usar
+
+- O `BLUEPRINT.md` foi aprovado e você precisa decompor em tasks executáveis
+- O usuário pediu execução paralela (`dare execute --parallel`)
+- Existe `DARE/dare-dag.yaml` e você precisa entender ou modificar o grafo
+- Aparece o canvas `DARE/.canvas.md` e você precisa interpretar os status
+
+## O que é o DAG do DARE
+
+`DARE/dare-dag.yaml` é o **plano de execução**: um grafo direcionado acíclico
+em que cada nó é uma task atômica e as arestas são `depends_on`. O DAG runner
+do CLI (`dare execute --parallel`) lê o YAML, ordena topologicamente
+(Kahn's algorithm) e roda em paralelo todas as tasks do mesmo rank via
+`Promise.all`.
+
+```
+rank 0:  task-001    task-002      ←  rodam juntas (sem depends_on)
+rank 1:  task-003 (deps: 001, 002) ←  só após rank 0
+rank 2:  task-004 (deps: 003)
+```
+
+## Schema canônico do `dare-dag.yaml`
+
+```yaml
+title: "<Nome do projeto> - Development Tasks"
+version: "1.0.0"
+
+# Limites de contexto/output (alinhados com Cursor SDK DAG runner)
+limits:
+  parent_context_chars: 2000   # snippet de cada output de pai injetado no filho
+  task_output_chars: 4000      # cap do output capturado por task
+  timeout_seconds: 600         # AbortController por task
+
+# Mapeamento complexity → modelo, por runner
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  - id: task-001
+    title: "Setup project structure"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-001.md   # opcional; fallback é subtask_prompt
+    subtask_prompt: |
+      <prompt completamente self-contained>
+```
+
+## Regras inegociáveis ao construir o DAG
+
+### 1. `id` em kebab-case e único
+Use prefixo + número (`task-001`, `auth-jwt`, `db-migrations`). Sem espaços, sem
+maiúsculas. O ID aparece no canvas e nos logs do runner.
+
+### 2. `depends_on` mínimo — maximize paralelismo
+Só adicione uma dependência quando a task filha **literalmente não pode começar**
+sem o output da pai (arquivo, schema, constante exportada).
+
+| Situação | `depends_on`? |
+|----------|---------------|
+| Task B precisa do arquivo que A cria | ✅ sim |
+| Task B precisa de uma decisão tomada em A | ✅ sim |
+| Task B faz coisa parecida com A mas independente | ❌ não |
+| Tasks de pesquisa/leitura sem efeito colateral | ❌ raramente — fan out wide |
+| Testes para módulo X | ✅ depende da implementação de X |
+| Documentação de módulo X | ✅ depende da implementação de X |
+
+**Antipattern:** cadeia linear `001 → 002 → 003 → 004 → ...`. Se virar isso, você
+está adicionando dependências falsas. Reanalise.
+
+### 3. `complexity` define qual modelo executa
+| Nível | Quando usar | Modelo Cursor |
+|-------|-------------|---------------|
+| `LOW`  | Setup, scaffolding, docs simples, leitura/pesquisa | `auto-low` |
+| `MED`  | Implementação direta, refactors, testes unitários | `composer-2` |
+| `HIGH` | Lógica de negócio crítica, segurança, integrações | `gpt-5.3-codex` |
+
+Não force `HIGH` em tudo — encarece e gasta contexto.
+
+### 4. `subtask_prompt` totalmente self-contained
+A task vai rodar como subagente isolado. Ele recebe apenas:
+- O próprio `subtask_prompt`
+- Snippets de até **2000 chars** dos outputs de cada pai
+- Acesso ao filesystem do projeto
+
+Não dá para referenciar "como combinamos antes" ou "use o padrão da task-001".
+Tudo o que o subagente precisa saber tem que estar no prompt ou virá pelos pais.
+
+### 5. Output cap de 4000 chars
+Se a task vai produzir muita coisa, escreva em arquivo (ele permanece no FS) e
+faça o output da task ser um resumo curto + caminhos dos arquivos criados.
+
+### 6. Cada task vira também `EXECUTION/task-<id>.md`
+Spec detalhada com: objetivo, arquivos a criar/modificar, validation gates,
+testes esperados. O `subtask_prompt` no YAML pode referenciar
+`spec_file: EXECUTION/task-001.md` para que o agente leia a spec na hora de
+executar.
+
+## Geração: o que o `/generate-tasks` deve produzir
+
+Sempre os **três artefatos juntos**:
+
+1. **`DARE/TASKS.md`** — tabela master legível por humano
+2. **`DARE/dare-dag.yaml`** — grafo executável pelo CLI
+3. **`DARE/EXECUTION/task-<id>.md`** — uma spec por task
+
+O `TASKS.md` é a fonte de leitura humana; o `dare-dag.yaml` é a fonte de
+execução; os `EXECUTION/task-*.md` são as specs detalhadas. Os três precisam
+estar consistentes (mesmo `id`, mesmo `depends_on`, mesma `complexity`).
+
+## Execução: como rodar o DAG
+
+```bash
+# Paralelo (recomendado) — runner padrão é cursor
+dare execute --parallel
+
+# Sequencial (debug)
+dare execute
+
+# Task única
+dare execute --task task-003
+
+# Resume — só PENDING/FAILED
+dare execute --parallel --resume
+```
+
+Variáveis de ambiente:
+- `CURSOR_API_KEY` — necessário para runner cursor
+- `ANTHROPIC_API_KEY` — runner claude
+- `ANTIGRAVITY_API_KEY` — runner antigravity
+
+## Canvas ao vivo (`DARE/.canvas.md`)
+
+O runner reescreve `DARE/.canvas.md` a cada transição de status:
+
+```
+| ID       | Title              | Status        | Duration | Tokens |
+|----------|--------------------|---------------|----------|--------|
+| task-001 | Setup structure    | ✅ DONE       | 1240ms   | 850    |
+| task-002 | DB schema          | 🔄 RUNNING    | -        | -      |
+| task-003 | Core endpoints     | ⏳ PENDING    | -        | -      |
+```
+
+Status possíveis: `PENDING` ⏳, `RUNNING` 🔄, `DONE` ✅, `FAILED` ❌, `SKIPPED` ⏭️.
+
+`SKIPPED` significa que uma dependência falhou — você não precisa intervir, o
+runner pula automaticamente.
+
+## Erros comuns ao construir DAG
+
+| Erro | Sintoma | Como corrigir |
+|------|---------|---------------|
+| Ciclo em `depends_on` | `Circular dependency detected: <id>` | Reveja o grafo, retire a aresta cíclica |
+| `id` duplicado | Comportamento indefinido no runner | Renomeie para únicos |
+| `depends_on` aponta para `id` inexistente | `Task not found: <id>` | Corrija o nome ou adicione a task |
+| Tudo em rank 0 (sem dependências reais) | Conflito de escrita no mesmo arquivo | Adicione `depends_on` quando há contenção |
+| Cadeia linear longa | Sem ganho de paralelismo | Reveja se as dependências são reais |
+
+## Checklist antes de aprovar um DAG
+
+- [ ] Pelo menos 2 tasks no rank 0 (caso contrário não há paralelismo)
+- [ ] Cada `subtask_prompt` é executável sem contexto adicional
+- [ ] Tasks de teste/doc dependem da implementação correspondente
+- [ ] `complexity` reflete o esforço real (não tudo HIGH)
+- [ ] `id` em kebab-case e único
+- [ ] Sem ciclos
+- [ ] `TASKS.md` + `dare-dag.yaml` + `EXECUTION/task-*.md` consistentes

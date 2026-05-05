@@ -7,24 +7,62 @@
 import fs from 'fs-extra';
 import chalk from 'chalk';
 
+export type Complexity = 'LOW' | 'MED' | 'HIGH';
+export type RunnerName = 'cursor' | 'claude' | 'antigravity';
+export type TaskStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'SKIPPED';
+
 export interface DagTask {
   id: string;
   title: string;
   depends_on: string[];
-  complexity: 'LOW' | 'MED' | 'HIGH';
+  complexity: Complexity;
   subtask_prompt: string;
-  status?: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'SKIPPED';
+  /** Optional path (relative to project root) to a spec file with detailed instructions. */
+  spec_file?: string;
+  status?: TaskStatus;
   output?: string;
   tokens?: number;
   duration?: number;
 }
 
+/** Hard limits applied per task during execution. */
+export interface DagLimits {
+  /** Snippet (in chars) of each parent's output injected into a child's context. */
+  parent_context_chars: number;
+  /** Cap (in chars) on the captured output of a single task. */
+  task_output_chars: number;
+  /** Per-task timeout, used by AbortController. */
+  timeout_seconds: number;
+}
+
+/** complexity → model mapping. */
+export type DagModelMap = Record<Complexity, string>;
+
+/**
+ * Full models block. New schema is per-runner (cursor / claude / antigravity).
+ * Legacy flat schema (HIGH/MED/LOW directly) is also accepted by the parser
+ * and normalized to the runner-keyed form on read.
+ */
+export type DagModels = Partial<Record<RunnerName, DagModelMap>>;
+
 export interface Dag {
   title: string;
   version: string;
-  models: Record<string, string>;
+  /** Optional ISO timestamp set when the YAML was generated. */
+  generated?: string;
+  /** Optional execution limits (defaults applied if missing). */
+  limits?: DagLimits;
+  /** Per-runner model mapping. */
+  models: DagModels;
   tasks: DagTask[];
 }
+
+/** Defaults used when a YAML omits the `limits` block. */
+export const DEFAULT_DAG_LIMITS: DagLimits = {
+  parent_context_chars: 2000,
+  task_output_chars: 4000,
+  timeout_seconds: 600,
+};
 
 export interface RunDagOptions {
   parallel: boolean;
