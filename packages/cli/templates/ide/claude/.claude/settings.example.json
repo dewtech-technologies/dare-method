@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(npm run build)",
+      "Bash(npm test)",
+      "Bash(npx eslint src)",
+      "Bash(dare:*)",
+      "Read(DARE/**)",
+      "Write(DARE/**)",
+      "Read(src/**)",
+      "Write(src/**)",
+      "Read(.claude/**)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Write(.env)",
+      "Write(.env.local)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'File saved. Remember to run Ralph Loop: build && test && lint before marking task DONE'"
+          }
+        ]
+      }
+    ]
+  }
+}

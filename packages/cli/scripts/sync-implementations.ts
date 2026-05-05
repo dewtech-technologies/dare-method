@@ -48,6 +48,24 @@ const entries: SyncEntry[] = [
     src: path.join(IMPL_DIR, 'antigravity', 'templates'),
     dest: path.join(IDE_TEMPLATES, 'antigravity', 'templates'),
   },
+
+  // ── Claude Code ───────────────────────────────────────────────────────────
+  {
+    src: path.join(IMPL_DIR, 'claude', 'CLAUDE.md'),
+    dest: path.join(IDE_TEMPLATES, 'claude', 'CLAUDE.md'),
+  },
+  {
+    src: path.join(IMPL_DIR, 'claude', '.claude', 'commands'),
+    dest: path.join(IDE_TEMPLATES, 'claude', '.claude', 'commands'),
+  },
+  {
+    src: path.join(IMPL_DIR, 'claude', '.claude', 'settings.example.json'),
+    dest: path.join(IDE_TEMPLATES, 'claude', '.claude', 'settings.example.json'),
+  },
+  {
+    src: path.join(IMPL_DIR, 'claude', 'templates'),
+    dest: path.join(IDE_TEMPLATES, 'claude', 'templates'),
+  },
 ];
 
 async function sync(): Promise<void> {
@@ -61,7 +79,12 @@ async function sync(): Promise<void> {
       continue;
     }
 
-    await fs.ensureDir(dest);
+    const stat = await fs.stat(src);
+    if (stat.isDirectory()) {
+      await fs.ensureDir(dest);
+    } else {
+      await fs.ensureDir(path.dirname(dest));
+    }
     await fs.copy(src, dest, { overwrite: true });
 
     const rel = path.relative(REPO_ROOT, src);

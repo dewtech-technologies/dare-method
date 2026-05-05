@@ -82,6 +82,9 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   await fs.writeFile(path.join(outputDir, 'DARE', 'README.md'), generateSharedConfig(name));
   await writeDareTemplates(outputDir);
 
+  // Write graphrag config
+  await writeGraphragConfig(outputDir, config);
+
   // Generate project templates
   if (structure === 'mcp-server') {
     await generateMcpTemplate(outputDir, config);
@@ -117,6 +120,7 @@ export async function installDareToExistingProject(
 
   await fs.writeFile(path.join(outputDir, 'DARE', 'README.md'), generateSharedConfig(name));
   await writeDareTemplates(outputDir);
+  await writeGraphragConfig(outputDir, { ...config, outputDir });
 
   if (ide === 'cursor' || ide === 'hybrid') {
     const cursorRulesContent = structure === 'mcp-server'
@@ -444,6 +448,107 @@ async function writeAntigravityFiles(dir: string, _config: ProjectConfig): Promi
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helper: write dare-graph.yml — graphrag configuration
+// ─────────────────────────────────────────────────────────────────────────────
+async function writeGraphragConfig(dir: string, config: ProjectConfig): Promise<void> {
+  const { graphrag } = config;
+
+  let content: string;
+
+  if (graphrag === 'sqlite') {
+    content = `# DARE Knowledge Graph — SQLite
+backend: sqlite
+
+sqlite:
+  path: .dare/graph.db
+
+# Node types tracked in the graph
+nodes:
+  - task
+  - file
+  - schema
+  - endpoint
+  - component
+  - entity
+  - concept
+
+# Relationship types
+edges:
+  - depends_on
+  - implements
+  - uses
+  - references
+  - related_to
+  - contains
+  - extends
+`;
+  } else if (graphrag === 'neo4j') {
+    content = `# DARE Knowledge Graph — Neo4j
+backend: neo4j
+
+neo4j:
+  url: bolt://localhost:7687
+  username: neo4j
+  password: password
+  database: dare
+
+# Node types tracked in the graph
+nodes:
+  - task
+  - file
+  - schema
+  - endpoint
+  - component
+  - entity
+  - concept
+
+# Relationship types
+edges:
+  - depends_on
+  - implements
+  - uses
+  - references
+  - related_to
+  - contains
+  - extends
+`;
+  } else {
+    // json
+    content = `# DARE Knowledge Graph — JSON
+backend: json
+
+json:
+  path: .dare/graph.json
+
+# Node types tracked in the graph
+nodes:
+  - task
+  - file
+  - schema
+  - endpoint
+  - component
+  - entity
+  - concept
+
+# Relationship types
+edges:
+  - depends_on
+  - implements
+  - uses
+  - references
+  - related_to
+  - contains
+  - extends
+`;
+  }
+
+  const destPath = path.join(dir, 'dare-graph.yml');
+  if (!await fs.pathExists(destPath)) {
+    await fs.writeFile(destPath, content);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Helper: write all DARE template files into templates/
 // Source of truth: implementations/cursor/templates/ (or antigravity/templates/)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -460,22 +565,32 @@ async function writeDareTemplates(dir: string): Promise<void> {
 
 async function generateClaudeFiles(dir: string, config: ProjectConfig): Promise<void> {
   const { structure, backend, frontend, graphrag, mcp } = config;
+  const ideTemplatesDir = path.join(getTemplatesDir(), 'ide', 'claude');
 
-  // CLAUDE.md — principal arquivo de contexto do Claude Code
-  const claudeMdContent = structure === 'mcp-server'
-    ? generateMcpClaudeCodeRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
-    : generateClaudeCodeRules({ backend, frontend, graphrag, mcp });
-
-  await fs.writeFile(path.join(dir, 'CLAUDE.md'), claudeMdContent);
-
-  // .claude/commands/ — slash commands
-  await fs.ensureDir(path.join(dir, '.claude', 'commands'));
-  const commands = generateClaudeCommands(structure);
-  for (const [filename, content] of Object.entries(commands)) {
-    await fs.writeFile(path.join(dir, '.claude', 'commands', filename), content);
+  // CLAUDE.md — copiar de implementations/claude/ (com fallback para gerar dinâmico)
+  const claudeMdSrc = path.join(ideTemplatesDir, 'CLAUDE.md');
+  if (await fs.pathExists(claudeMdSrc)) {
+    await fs.copy(claudeMdSrc, path.join(dir, 'CLAUDE.md'), { overwrite: true });
+  } else {
+    const claudeMdContent = structure === 'mcp-server'
+      ? generateMcpClaudeCodeRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
+      : generateClaudeCodeRules({ backend, frontend, graphrag, mcp });
+    await fs.writeFile(path.join(dir, 'CLAUDE.md'), claudeMdContent);
   }
 
-  // .claude/settings.json — permissões e hooks
+  // .claude/commands/ — copiar de implementations/claude/.claude/commands/
+  const commandsSrc = path.join(ideTemplatesDir, '.claude', 'commands');
+  await fs.ensureDir(path.join(dir, '.claude', 'commands'));
+  if (await fs.pathExists(commandsSrc)) {
+    await fs.copy(commandsSrc, path.join(dir, '.claude', 'commands'), { overwrite: true });
+  } else {
+    const commands = generateClaudeCommands(structure);
+    for (const [filename, content] of Object.entries(commands)) {
+      await fs.writeFile(path.join(dir, '.claude', 'commands', filename), content);
+    }
+  }
+
+  // .claude/settings.json — sempre dinâmico (depende do stack)
   await fs.writeFile(
     path.join(dir, '.claude', 'settings.json'),
     generateClaudeSettings({ backend, frontend, structure })
