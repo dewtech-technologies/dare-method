@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { extractFilePaths, ingestTask } from '../../dag-runner/graph-ingest.js';
+import {
+  extractComponents,
+  extractEndpoints,
+  extractFilePaths,
+  extractSchemas,
+  ingestTask,
+} from '../../dag-runner/graph-ingest.js';
 import { JsonGraph } from '../../graphrag/json-graph.js';
 import path from 'path';
 import os from 'os';
@@ -136,5 +142,99 @@ describe('ingestTask', () => {
     expect(graph.getNode('task:t1')).toBeNull();
     // file node remains because reset doesn't necessarily mean files vanished
     expect(graph.getNode('file:src/auth.ts')).toBeDefined();
+  });
+
+  it('extracts endpoint nodes when output mentions HTTP routes', () => {
+    const dag = sampleDag();
+    const task = dag.tasks[0];
+    task.status = 'DONE';
+    task.output =
+      'Implemented routes:\n' +
+      '  POST /api/auth/login\n' +
+      '  GET /api/auth/me\n' +
+      '  DELETE /api/auth/logout';
+    ingestTask(graph, task, dag);
+
+    expect(graph.getNode('endpoint:POST:/api/auth/login')).toBeDefined();
+    expect(graph.getNode('endpoint:GET:/api/auth/me')).toBeDefined();
+    expect(graph.getNode('endpoint:DELETE:/api/auth/logout')).toBeDefined();
+  });
+
+  it('extracts schema nodes from migration phrasing', () => {
+    const dag = sampleDag();
+    const task = dag.tasks[0];
+    task.status = 'DONE';
+    task.output =
+      'Migration applied:\n' +
+      'CREATE TABLE users (id uuid primary key);\n' +
+      "Schema::create('refresh_tokens', function (Blueprint $t) { ... })";
+    ingestTask(graph, task, dag);
+
+    expect(graph.getNode('schema:users')).toBeDefined();
+    expect(graph.getNode('schema:refresh_tokens')).toBeDefined();
+  });
+
+  it('extracts component nodes from JSX/class usage', () => {
+    const dag = sampleDag();
+    const task = dag.tasks[0];
+    task.status = 'DONE';
+    task.output =
+      'Built two components:\n' +
+      'class UserForm extends React.Component { ... }\n' +
+      'Used <ProfileCard userId={id} /> inside the dashboard.';
+    ingestTask(graph, task, dag);
+
+    expect(graph.getNode('component:UserForm')).toBeDefined();
+    expect(graph.getNode('component:ProfileCard')).toBeDefined();
+  });
+});
+
+describe('extractEndpoints', () => {
+  it('captures method + path pairs', () => {
+    const out = extractEndpoints('Implemented POST /api/users and GET /api/users/:id today.');
+    expect(out).toEqual([
+      { method: 'POST', path: '/api/users' },
+      { method: 'GET', path: '/api/users/:id' },
+    ]);
+  });
+
+  it('deduplicates equal endpoints', () => {
+    const out = extractEndpoints('POST /a/b\nWe wrote POST /a/b again.');
+    expect(out).toHaveLength(1);
+  });
+});
+
+describe('extractSchemas', () => {
+  it('finds CREATE TABLE names', () => {
+    const out = extractSchemas('Now CREATE TABLE products (id int);');
+    expect(out).toContain('products');
+  });
+
+  it('finds Schema::create names (Laravel)', () => {
+    const out = extractSchemas("Schema::create('orders', function () { });");
+    expect(out).toContain('orders');
+  });
+
+  it('ignores stop words', () => {
+    const out = extractSchemas('CREATE TABLE the (id int);');
+    expect(out).not.toContain('the');
+  });
+});
+
+describe('extractComponents', () => {
+  it('captures class components', () => {
+    const out = extractComponents('class LoginForm extends Component { }');
+    expect(out).toContain('LoginForm');
+  });
+
+  it('captures JSX usage', () => {
+    const out = extractComponents('Use <UserCard userId={id} /> here.');
+    expect(out).toContain('UserCard');
+  });
+
+  it('ignores known framework primitives', () => {
+    const out = extractComponents('Wrapped in <Provider><Router>...</Router></Provider>');
+    expect(out).not.toContain('Provider');
+    expect(out).not.toContain('Router');
   });
 });

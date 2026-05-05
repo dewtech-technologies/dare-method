@@ -12,6 +12,7 @@ import fs from 'fs-extra';
 import { parse as parseYaml } from 'yaml';
 import { GraphRAG } from './graph-rag.js';
 import { JsonGraph } from './json-graph.js';
+import { Neo4jGraph, type Neo4jConfig } from './neo4j-graph.js';
 import type { KnowledgeGraph } from './knowledge-graph.js';
 
 export type GraphBackend = 'sqlite' | 'json' | 'neo4j';
@@ -20,6 +21,8 @@ export interface GraphConfig {
   backend: GraphBackend;
   /** Path to the persistence target, relative to the project root. */
   path?: string;
+  /** Required when backend === 'neo4j'. */
+  neo4j?: Neo4jConfig;
 }
 
 const DEFAULTS: Record<GraphBackend, string | undefined> = {
@@ -53,6 +56,18 @@ export async function loadGraphConfig(opts: {
   const parsed = (parseYaml(raw) ?? {}) as Record<string, unknown>;
   const backend = (parsed.backend as GraphBackend) ?? 'sqlite';
   const subBlock = (parsed[backend] as Record<string, unknown> | undefined) ?? {};
+
+  if (backend === 'neo4j') {
+    const neo4j: Neo4jConfig = {
+      url: typeof subBlock.url === 'string' ? subBlock.url : 'http://localhost:7474',
+      database: typeof subBlock.database === 'string' ? subBlock.database : 'neo4j',
+      username: typeof subBlock.username === 'string' ? subBlock.username : undefined,
+      password: typeof subBlock.password === 'string' ? subBlock.password : undefined,
+      auth: typeof subBlock.auth === 'string' ? subBlock.auth : undefined,
+    };
+    return { backend, neo4j };
+  }
+
   const filePath =
     typeof subBlock.path === 'string' ? subBlock.path : DEFAULTS[backend];
 
@@ -68,14 +83,19 @@ export async function createGraph(
   opts: { cwd?: string } = {},
 ): Promise<KnowledgeGraph> {
   const cwd = opts.cwd ?? process.cwd();
-  const cfg = normalize(config);
 
-  if (cfg.backend === 'neo4j') {
-    throw new Error(
-      'Neo4j backend is not yet implemented in @dewtech/dare-cli. Use `backend: sqlite` or `backend: json` in dare-graph.yml. (PRs welcome.)',
-    );
+  if (config.backend === 'neo4j') {
+    if (!config.neo4j?.url) {
+      throw new Error(
+        'dare-graph.yml `neo4j.url` is required for the neo4j backend (e.g. http://localhost:7474).',
+      );
+    }
+    const graph = new Neo4jGraph(config.neo4j);
+    await graph.init();
+    return graph;
   }
 
+  const cfg = normalize(config);
   if (!cfg.path) {
     throw new Error(`dare-graph.yml is missing the storage path for backend=${cfg.backend}.`);
   }

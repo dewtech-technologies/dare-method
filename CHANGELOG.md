@@ -11,6 +11,73 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-05
+
+### Adicionado — `dare info`
+Comando read-only que reúne diagnóstico do projeto DARE em uma tela:
+versão do CLI, plataforma, presença/ausência de cada artefato canônico
+(`dare.config.json`, `DARE/DESIGN.md`, `BLUEPRINT.md`, `dare-dag.yaml`,
+`TASKS.md`, `.canvas.md`, `dare-graph.yml`, `.dare/state.json`), backend
+ativo do GraphRAG e progresso por status das tasks.
+
+### Adicionado — `dare validate`
+Checagem estática do `dare-dag.yaml` adequada para pre-commit hooks e CI:
+- ids únicos e em kebab-case
+- `depends_on` referenciando ids existentes
+- detecção de ciclos (Kahn's traversal)
+- subtask_prompt não vazio (warning)
+- ao menos 2 tasks no rank 0 (warning)
+- `--strict` faz warnings virarem erros
+
+Template de hook em `templates/hooks/pre-commit-dare-validate` para copiar
+para `.git/hooks/pre-commit` ou usar com husky.
+
+### Adicionado — Parser de `endpoint`/`schema`/`component`
+A ingestão automática do graph agora detecta no `--output` da task:
+- **Endpoints HTTP:** `POST /api/...`, `GET /api/...`, etc. → nó `endpoint`
+- **Schemas SQL/migration:** `CREATE TABLE x`, `Schema::create('x', ...)` → nó `schema`
+- **Componentes UI:** `<UserForm />`, `class UserForm extends Component`,
+  `export default function UserForm` → nó `component`
+
+Heurísticas conservadoras para reduzir false positives. Cada nó detectado
+recebe aresta `implements` da task que o criou.
+
+### Adicionado — Backend Neo4j
+`Neo4jGraph` que fala com Neo4j via HTTP API (`/db/{database}/tx/commit`)
+— **sem driver Bolt externo**, usa apenas `fetch` nativo do Node 18+.
+Configure em `dare-graph.yml`:
+
+```yaml
+backend: neo4j
+neo4j:
+  url: http://localhost:7474
+  database: dare
+  username: neo4j
+  password: secret
+  # auth: "Bearer <token>"   # alternativa
+```
+
+`MERGE` por id em vez de duplicar — re-execução é idempotente.
+
+### Adicionado — `dare execute --watch`
+Modo loop interativo: o CLI fica observando `.dare/state.json` e re-imprime
+as próximas tasks ready toda vez que o estado muda. Combina bem com o
+agente da IDE — basta deixar o `--watch` rodando em um terminal lateral
+enquanto o agente dispara `--complete`/`--fail`.
+
+### Mudado
+- Template de `dare-graph.yml` para Neo4j atualizado: HTTP em vez de Bolt
+  (usa porta 7474, não 7687).
+
+### Testes
+- `validate.test.ts` — 5 cenários (válido, ids duplicados, depends_on
+  inexistente, ciclo, kebab-case).
+- `factory.test.ts` — 6 cenários (defaults, sqlite custom, json, neo4j
+  básico/bearer, validação de URL ausente).
+- `graph-ingest.test.ts` — +9 testes para endpoints, schemas, componentes
+  e os parsers individuais.
+- **Total: 88 testes passando** (era 66, +22).
+
 ## [2.3.1] — 2026-05
 
 ### Adicionado

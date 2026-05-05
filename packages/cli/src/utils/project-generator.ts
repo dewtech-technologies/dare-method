@@ -487,10 +487,11 @@ edges:
 backend: neo4j
 
 neo4j:
-  url: bolt://localhost:7687
+  url: http://localhost:7474   # Neo4j HTTP API endpoint (not Bolt)
+  database: dare               # database name
   username: neo4j
   password: password
-  database: dare
+  # auth: "Bearer <token>"     # alternative to username/password
 
 # Node types tracked in the graph
 nodes:

@@ -128,6 +128,40 @@ The skills shipped by `dare init` (`.cursor/rules/skill-dag-runner.mdc`,
 `.agents/skills/dare-dag-runner/SKILL.md`, `.claude/commands/dare-dag-run.md`)
 guide the IDE agent through this loop.
 
+### `dare info`
+
+Read-only diagnostic of the current project: CLI version, platform, presence
+of each canonical DARE artifact, active GraphRAG backend, and task progress.
+
+```bash
+dare info
+```
+
+### `dare validate`
+
+Static checks on `dare-dag.yaml` — ideal for pre-commit hooks and CI.
+Verifies unique kebab-case ids, valid `depends_on`, absence of cycles,
+non-empty prompts, and parallelism (warning when only one task at rank 0).
+
+```bash
+dare validate                # errors fail; warnings printed
+dare validate --strict       # warnings also fail (CI-friendly)
+```
+
+A pre-commit hook template is shipped at
+`templates/hooks/pre-commit-dare-validate` — copy to `.git/hooks/pre-commit`
+(or use with husky) to validate the DAG before every commit.
+
+### `dare execute --watch`
+
+Interactive loop: the CLI watches `.dare/state.json` and re-prints the next
+ready tasks every time the state changes. Pair with the IDE agent firing
+`--complete`/`--fail` from another terminal.
+
+```bash
+dare execute --watch
+```
+
 ### `dare graph`
 
 Inspect the project's knowledge graph. The graph is populated automatically

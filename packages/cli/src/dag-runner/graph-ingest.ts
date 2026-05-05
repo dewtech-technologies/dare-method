@@ -60,6 +60,7 @@ export function ingestTask(
 
   // 3) file nodes + implements edges (only for DONE tasks)
   if (task.status !== 'DONE' || !task.output) return;
+
   const files = extractFilePaths(task.output);
   for (const filePath of files) {
     const normalized = filePath.replace(/\\/g, '/');
@@ -74,6 +75,58 @@ export function ingestTask(
       id: edgeId('implements', task.id, normalized),
       sourceId: nodeId('task', task.id),
       targetId: nodeId('file', normalized),
+      type: 'implements',
+    });
+  }
+
+  // 4) endpoints (HTTP routes detected in the output)
+  for (const endpoint of extractEndpoints(task.output)) {
+    const id = `${endpoint.method}:${endpoint.path}`;
+    graph.addNode({
+      id: nodeId('endpoint', id),
+      type: 'endpoint',
+      label: id,
+      description: `${endpoint.method} ${endpoint.path}`,
+      metadata: { method: endpoint.method, path: endpoint.path },
+    });
+    graph.addEdge({
+      id: edgeId('implements', task.id, `endpoint:${id}`),
+      sourceId: nodeId('task', task.id),
+      targetId: nodeId('endpoint', id),
+      type: 'implements',
+    });
+  }
+
+  // 5) schemas (database tables / migrations detected in the output)
+  for (const schema of extractSchemas(task.output)) {
+    graph.addNode({
+      id: nodeId('schema', schema),
+      type: 'schema',
+      label: schema,
+      description: `table: ${schema}`,
+      metadata: { tableName: schema },
+    });
+    graph.addEdge({
+      id: edgeId('implements', task.id, `schema:${schema}`),
+      sourceId: nodeId('task', task.id),
+      targetId: nodeId('schema', schema),
+      type: 'implements',
+    });
+  }
+
+  // 6) components (UI components detected in the output)
+  for (const component of extractComponents(task.output)) {
+    graph.addNode({
+      id: nodeId('component', component),
+      type: 'component',
+      label: component,
+      description: `component: ${component}`,
+      metadata: { name: component },
+    });
+    graph.addEdge({
+      id: edgeId('implements', task.id, `component:${component}`),
+      sourceId: nodeId('task', task.id),
+      targetId: nodeId('component', component),
       type: 'implements',
     });
   }
@@ -129,6 +182,97 @@ export function extractFilePaths(text: string): string[] {
   return [...found];
 }
 
+// ─── Endpoints ─────────────────────────────────────────────────────────────
+
+const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
+type HttpMethod = (typeof HTTP_METHODS)[number];
+
+const ENDPOINT_RE = /\b(GET|POST|PUT|PATCH|DELETE)\s+(\/[A-Za-z0-9_/:{}.\-]+)/g;
+
+export interface ExtractedEndpoint {
+  method: HttpMethod;
+  path: string;
+}
+
+export function extractEndpoints(text: string): ExtractedEndpoint[] {
+  const found = new Map<string, ExtractedEndpoint>();
+  ENDPOINT_RE.lastIndex = 0;
+  for (let m: RegExpExecArray | null; (m = ENDPOINT_RE.exec(text)); ) {
+    const method = m[1] as HttpMethod;
+    const path = m[2].replace(/[.,;:!?)\]]+$/, '');
+    if (path.length < 2) continue;
+    const key = `${method} ${path}`;
+    if (!found.has(key)) found.set(key, { method, path });
+  }
+  return [...found.values()];
+}
+
+// ─── Schemas (database tables) ─────────────────────────────────────────────
+
+// Captures table names from common migration / SQL phrasing:
+//   CREATE TABLE users (...)
+//   Schema::create('users', ...)
+//   ALTER TABLE refresh_tokens ...
+//   Created table: products
+const SCHEMA_PATTERNS: RegExp[] = [
+  /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`']?(\w+)["`']?/gi,
+  /\bALTER\s+TABLE\s+["`']?(\w+)["`']?/gi,
+  /Schema::create\(\s*['"](\w+)['"]/g,
+  /(?:Created|Created table|Migration created|table)\s*[:\-]?\s*[`'"]?(\w+)[`'"]?\s+(?:table|migration)/gi,
+];
+
+export function extractSchemas(text: string): string[] {
+  const found = new Set<string>();
+  for (const re of SCHEMA_PATTERNS) {
+    re.lastIndex = 0;
+    for (let m: RegExpExecArray | null; (m = re.exec(text)); ) {
+      const name = m[1].toLowerCase();
+      if (looksLikeIdentifier(name) && !STOP_WORDS.has(name)) found.add(name);
+    }
+  }
+  return [...found];
+}
+
+// ─── Components (UI / class components) ────────────────────────────────────
+
+// Detects PascalCase identifiers in JSX-like usage or class declarations:
+//   <UserForm /> or <UserForm>
+//   class UserForm extends Component
+//   export default function UserForm(...)
+//   const UserForm = (...)
+const COMPONENT_PATTERNS: RegExp[] = [
+  /<([A-Z][A-Za-z0-9]+)(?:\s|\/?>)/g,
+  /\bclass\s+([A-Z][A-Za-z0-9]+)\s+extends\s+(?:React\.)?Component\b/g,
+  /\bexport\s+default\s+function\s+([A-Z][A-Za-z0-9]+)\s*\(/g,
+  /\bfunction\s+([A-Z][A-Za-z0-9]+)\s*\([^)]*\)\s*(?::\s*[^{]+)?\{\s*return\s*</g,
+];
+
+const COMPONENT_STOP = new Set([
+  'React', 'Component', 'Fragment', 'Suspense', 'StrictMode', 'Provider',
+  'Router', 'Route', 'Link', 'Outlet', 'NavLink',
+]);
+
+export function extractComponents(text: string): string[] {
+  const found = new Set<string>();
+  for (const re of COMPONENT_PATTERNS) {
+    re.lastIndex = 0;
+    for (let m: RegExpExecArray | null; (m = re.exec(text)); ) {
+      const name = m[1];
+      if (!COMPONENT_STOP.has(name)) found.add(name);
+    }
+  }
+  return [...found];
+}
+
+const STOP_WORDS = new Set([
+  'if', 'as', 'on', 'is', 'or', 'do', 'in', 'to', 'a', 'an', 'the',
+  'table', 'database', 'index', 'column', 'row', 'sql',
+]);
+
+function looksLikeIdentifier(s: string): boolean {
+  return /^[a-z_][a-z0-9_]{1,63}$/i.test(s);
+}
+
 function looksLikePath(p: string): boolean {
   if (p.length === 0 || p.length > 200) return false;
   if (p.startsWith('http://') || p.startsWith('https://')) return false;
@@ -160,7 +304,10 @@ function detectLanguage(filePath: string): string | undefined {
   return map[ext];
 }
 
-function nodeId(type: 'task' | 'file', id: string): string {
+function nodeId(
+  type: 'task' | 'file' | 'endpoint' | 'schema' | 'component' | 'entity' | 'concept',
+  id: string,
+): string {
   return `${type}:${id}`;
 }
 

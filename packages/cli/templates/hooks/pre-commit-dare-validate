@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+# DARE — pre-commit hook
+#
+# Validates DARE/dare-dag.yaml when it (or any task spec) changes.
+# Install: copy this file to .git/hooks/pre-commit and make it executable:
+#
+#   cp packages/cli/templates/hooks/pre-commit-dare-validate .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Or, with husky:
+#   echo "dare validate --strict" > .husky/pre-commit
+#   chmod +x .husky/pre-commit
+
+set -e
+
+# Only run when DARE artifacts are staged
+if git diff --cached --name-only | grep -qE '^(DARE/dare-dag\.yaml|DARE/EXECUTION/.*\.md|DARE/TASKS\.md)$'; then
+  if ! command -v dare >/dev/null 2>&1; then
+    echo "⚠  dare CLI not found in PATH. Install with: npm i -g @dewtech/dare-cli"
+    exit 0
+  fi
+  echo "→ Running: dare validate --strict"
+  dare validate --strict
+fi

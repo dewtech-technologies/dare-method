@@ -44,6 +44,7 @@ interface ExecuteOptions {
   dag: string;
   next: boolean;
   status: boolean;
+  watch: boolean;
   complete?: string;
   fail?: string;
   reset?: string;
@@ -60,6 +61,7 @@ export const executeCommand = new Command('execute')
   .option('--dag <file>', 'Path to dare-dag.yaml', 'DARE/dare-dag.yaml')
   .option('--next', 'Print the next executable tasks (with composed prompts)', false)
   .option('--status', 'Render canvas and show summary (default action)', false)
+  .option('--watch', 'Stream task readiness (re-print on every state change). Implies --next.', false)
   .option('--complete <id>', 'Mark a task DONE (use with --output)')
   .option('--fail <id>', 'Mark a task FAILED (use with --reason)')
   .option('--reset <id>', 'Reset a task back to PENDING')
@@ -93,6 +95,8 @@ export const executeCommand = new Command('execute')
         await handleFail(dag, options, stateFile, canvasPath, graph);
       } else if (options.reset) {
         await handleReset(dag, options.reset, stateFile, canvasPath, graph);
+      } else if (options.watch) {
+        await handleWatch(dagPath, stateFile, canvasPath, options);
       } else if (options.next) {
         await handleNext(dag, options, stateFile, canvasPath);
       } else {
@@ -250,6 +254,57 @@ async function handleStatus(dag: Dag, canvasPath: string): Promise<void> {
   console.log(`  ❌ FAILED   : ${counts.FAILED}`);
   console.log(`  ⏭️  SKIPPED  : ${counts.SKIPPED}`);
   console.log(chalk.cyan(`\n  📄 Canvas: ${canvasPath}\n`));
+}
+
+async function handleWatch(
+  dagPath: string,
+  stateFile: string,
+  canvasPath: string,
+  options: ExecuteOptions,
+): Promise<void> {
+  const cwd = process.cwd();
+  await fs.ensureDir(path.dirname(stateFile));
+  console.log(
+    chalk.blue.bold(`\n👀 Watching ${path.relative(cwd, stateFile)} — Ctrl+C to exit\n`),
+  );
+
+  const renderOnce = async (): Promise<void> => {
+    const fresh = await loadDag(dagPath);
+    await loadAndApplyState(fresh, stateFile);
+    process.stdout.write(`\n${chalk.gray('━'.repeat(60))}\n`);
+    process.stdout.write(`${chalk.gray(new Date().toISOString())}\n`);
+    await handleNext(fresh, options, stateFile, canvasPath);
+  };
+
+  await renderOnce();
+
+  // Coalesce bursts of fs events.
+  let pending: NodeJS.Timeout | null = null;
+  const schedule = (): void => {
+    if (pending) return;
+    pending = setTimeout(() => {
+      pending = null;
+      void renderOnce().catch((err) => {
+        console.error(chalk.red(`watch error: ${err instanceof Error ? err.message : String(err)}`));
+      });
+    }, 150);
+  };
+
+  // Watch the directory containing state.json — fs.watch on a non-existent
+  // file would throw on some platforms, so we watch its parent.
+  const watcher = fs.watch(path.dirname(stateFile), { persistent: true }, (_event, filename) => {
+    if (filename && filename.toString().endsWith('state.json')) schedule();
+  });
+
+  await new Promise<void>((resolve) => {
+    const stop = (): void => {
+      watcher.close();
+      console.log(chalk.gray('\n  Watcher stopped.\n'));
+      resolve();
+    };
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+  });
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
