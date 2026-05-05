@@ -182,14 +182,28 @@ Antes de entregar, confirme:
 - [ ] Pelo menos 2 tasks no rank 0
 - [ ] Cada `subtask_prompt` é executável sem contexto adicional
 
-### Passo 7: Pedir aprovação
+### Passo 7: Regenerar a visualização do DAG
 
-> Gerados os 3 artefatos da fase de execução:
+Depois de salvar o `dare-dag.yaml`, rode:
+
+```bash
+dare dag viz -o DARE/dag-graph.mmd
+```
+
+Isso reescreve `DARE/dag-graph.mmd` (Mermaid) refletindo o grafo atualizado.
+O usuário pode abrir o arquivo no Antigravity para visualizar o grafo
+estático com cores por status antes de executar.
+
+### Passo 8: Pedir aprovação
+
+> Gerados os 4 artefatos da fase de execução:
 > - `DARE/TASKS.md` ([N] tasks)
 > - `DARE/dare-dag.yaml` ([N] ranks paralelos)
 > - `DARE/EXECUTION/task-*.md` ([N] specs)
+> - `DARE/dag-graph.mmd` (visualização Mermaid do DAG)
 >
-> Revise. Quando aprovar, execute: `dare execute --parallel --runner antigravity`.
+> Revise (abra `dag-graph.mmd` para ver o grafo). Quando aprovar:
+> `dare execute --next` para iniciar a execução.
 
 ## Boas práticas
 

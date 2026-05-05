@@ -115,9 +115,22 @@ Antes de entregar:
 - [ ] Pelo menos 2 tasks no rank 0
 - [ ] Cada `subtask_prompt` executável sem contexto adicional
 
-### 7. Aguardar aprovação humana
+### 7. Regenerar a visualização do DAG
 
-**Não execute nenhuma task** até o usuário revisar e aprovar os 4 artefatos.
+Depois de salvar o `dare-dag.yaml`, rode:
+
+```bash
+dare dag viz -o DARE/dag-graph.mmd
+```
+
+Isso reescreve `DARE/dag-graph.mmd` (Mermaid) refletindo o grafo atualizado.
+O usuário pode abrir no editor com Markdown Preview Mermaid para ver o
+grafo estático com cores por status antes de executar.
+
+### 8. Aguardar aprovação humana
+
+**Não execute nenhuma task** até o usuário revisar e aprovar os 5 artefatos
+(BLUEPRINT, TASKS, dare-dag.yaml, EXECUTION/task-*, dag-graph.mmd).
 
 ## Templates disponíveis
 

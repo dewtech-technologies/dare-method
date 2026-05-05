@@ -162,6 +162,25 @@ ready tasks every time the state changes. Pair with the IDE agent firing
 dare execute --watch
 ```
 
+### `dare dag`
+
+Inspect and visualize the **static task DAG** declared in `dare-dag.yaml` —
+distinct from `dare graph`, which inspects the populated knowledge graph
+(only contains tasks already executed).
+
+```bash
+dare dag viz                              # Mermaid to stdout
+dare dag viz -o DARE/dag-graph.mmd        # Mermaid file
+dare dag viz -f dot -o DARE/dag-graph.dot # DOT (Graphviz)
+```
+
+The Mermaid output groups tasks into rank subgraphs and colors nodes by
+status (`PENDING` / `RUNNING` / `DONE` / `FAILED` / `SKIPPED`), so you can
+**see the execution plan before running any task**.
+
+> `dare blueprint` writes `DARE/dag-graph.mmd` automatically — open it in
+> your editor with a Mermaid preview to see the static graph immediately.
+
 ### `dare graph`
 
 Inspect the project's knowledge graph. The graph is populated automatically

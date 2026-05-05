@@ -11,6 +11,47 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.4.1] — 2026-05
+
+### Adicionado — `dare dag viz` (visualização do DAG estático)
+Renderiza `dare-dag.yaml` como diagrama Mermaid ou DOT, **agrupado por
+rank** (subgraphs) e **colorido por status** das tasks (PENDING / RUNNING /
+DONE / FAILED / SKIPPED). Permite visualizar o plano de execução **antes**
+de executar qualquer task.
+
+```bash
+dare dag viz                              # Mermaid no stdout
+dare dag viz -o DARE/dag-graph.mmd        # arquivo Mermaid
+dare dag viz -f dot -o DARE/dag-graph.dot # DOT (Graphviz)
+```
+
+Como renderizar:
+- **Mermaid:** Cursor / VS Code com extensão "Markdown Preview Mermaid
+  Support", GitHub renderiza nativo, ou cole em https://mermaid.live
+- **DOT:** `dot -Tsvg DARE/dag-graph.dot -o graph.svg` (Graphviz local)
+  ou cole em https://dreampuf.github.io/GraphvizOnline
+
+### Mudado — `dare blueprint` agora gera `DARE/dag-graph.mmd` automaticamente
+O scaffold do `dare blueprint` cria/atualiza `DARE/dag-graph.mmd` (Mermaid)
+junto com os outros artefatos. Esse arquivo **é regenerado a cada execução**
+do blueprint (ao contrário dos outros, que são preservados se já existirem)
+— afinal, ele tem que refletir o estado atual do YAML.
+
+### Mudado — Skills atualizadas
+- Cursor `generate-tasks.md`, Antigravity `dare-tasks/SKILL.md` e
+  Claude `dare-blueprint.md` ganharam uma instrução explícita: depois de
+  preencher o `dare-dag.yaml` real, rodar `dare dag viz -o DARE/dag-graph.mmd`
+  para o usuário visualizar o grafo antes de executar.
+
+### Testes
+- 9 novos testes cobrindo `renderDagMermaid` (subgraphs, edges, classes
+  de status, ícones) e `renderDagDot` (digraph, nós, arestas, fillcolor
+  por status).
+- E2E valida que `dare blueprint --force` cria `dag-graph.mmd`, que
+  `dare dag viz` aceita `--format`/`--output`, e que o Mermaid reflete
+  o status atualizado depois de um `--complete`.
+- **Total: 97 testes passando** (era 88, +9).
+
 ## [2.4.0] — 2026-05
 
 ### Adicionado — `dare info`

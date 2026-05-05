@@ -106,12 +106,24 @@ de executar.
 - Mesmas `complexity`.
 - Sem ciclos.
 
-### 7. Mensagem final ao usuário
+### 7. Regenerar a visualização do DAG
 
-> Gerados 3 artefatos da fase de execução:
+Depois de salvar o `dare-dag.yaml`, rode:
+
+```bash
+dare dag viz -o DARE/dag-graph.mmd
+```
+
+Isso reescreve `DARE/dag-graph.mmd` (Mermaid) refletindo o grafo atualizado.
+O usuário pode abrir o arquivo no Cursor com a extensão Mermaid Preview.
+
+### 8. Mensagem final ao usuário
+
+> Gerados 4 artefatos da fase de execução:
 > - `DARE/TASKS.md` ([N] tasks, visão humana)
 > - `DARE/dare-dag.yaml` (grafo executável, [N] ranks paralelos)
 > - `DARE/EXECUTION/task-*.md` ([N] specs detalhadas)
+> - `DARE/dag-graph.mmd` (visualização Mermaid do DAG)
 >
-> Revise. Para executar tudo em paralelo: `/run-dag` ou `dare execute --parallel`.
-> Para uma task isolada: `/execute-task task-001`.
+> Revise (abra `dag-graph.mmd` para ver o grafo). Para executar:
+> `/run-dag` ou `dare execute --next`.

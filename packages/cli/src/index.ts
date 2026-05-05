@@ -17,6 +17,7 @@ export { designCommand } from './commands/design.js';
 export { blueprintCommand } from './commands/blueprint.js';
 export { executeCommand } from './commands/execute.js';
 export { graphCommand } from './commands/graph.js';
+export { dagCommand, renderDagMermaid, renderDagDot } from './commands/dag.js';
 export { validateCommand } from './commands/validate.js';
 export { infoCommand } from './commands/info.js';
 

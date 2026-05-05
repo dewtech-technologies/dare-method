@@ -8,6 +8,7 @@ import { blueprintCommand } from '../commands/blueprint.js';
 import { executeCommand } from '../commands/execute.js';
 import { discoverCommand } from '../commands/discover.js';
 import { graphCommand } from '../commands/graph.js';
+import { dagCommand } from '../commands/dag.js';
 import { infoCommand } from '../commands/info.js';
 import { validateCommand } from '../commands/validate.js';
 
@@ -27,6 +28,7 @@ program.addCommand(designCommand);
 program.addCommand(blueprintCommand);
 program.addCommand(executeCommand);
 program.addCommand(graphCommand);
+program.addCommand(dagCommand);
 program.addCommand(validateCommand);
 program.addCommand(infoCommand);
 

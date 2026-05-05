@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
+import { renderDagMermaid } from './dag.js';
+import { convertYamlToDag } from '../utils/dag-converter.js';
 
 /**
  * `dare blueprint` — gera o esqueleto dos 4 artefatos da fase de Architect:
@@ -94,6 +96,7 @@ export const blueprintCommand = new Command('blueprint')
     const blueprintPath = path.join(dareDir, 'BLUEPRINT.md');
     const dagPath = path.join(dareDir, 'dare-dag.yaml');
     const tasksPath = path.join(dareDir, 'TASKS.md');
+    const dagVizPath = path.join(dareDir, 'dag-graph.mmd');
 
     await writeIfMissing(blueprintPath, renderBlueprint(generatedAt), options.force);
     await writeIfMissing(dagPath, renderDag(sampleTasks, generatedAt), options.force);
@@ -104,13 +107,26 @@ export const blueprintCommand = new Command('blueprint')
       await writeIfMissing(specPath, renderTaskSpec(t), options.force);
     }
 
+    // Generate the static DAG visualization (Mermaid). This is regenerated
+    // on every run because it must reflect whatever is currently in the YAML.
+    try {
+      const dag = convertYamlToDag(await fs.readFile(dagPath, 'utf-8'));
+      await fs.writeFile(dagVizPath, renderDagMermaid(dag));
+    } catch (err) {
+      console.log(
+        chalk.gray(`   (dag-graph.mmd skipped: ${err instanceof Error ? err.message : String(err)})`),
+      );
+    }
+
     console.log(chalk.green('✅ Files scaffolded (existing files preserved):'));
     console.log(`   ${chalk.cyan('DARE/BLUEPRINT.md')}             - Architecture specification`);
     console.log(`   ${chalk.cyan('DARE/dare-dag.yaml')}            - Task dependency graph (canonical schema)`);
     console.log(`   ${chalk.cyan('DARE/TASKS.md')}                 - Human-readable task table`);
-    console.log(`   ${chalk.cyan('DARE/EXECUTION/task-*.md')}      - One spec per task (${sampleTasks.length} files)\n`);
+    console.log(`   ${chalk.cyan('DARE/EXECUTION/task-*.md')}      - One spec per task (${sampleTasks.length} files)`);
+    console.log(`   ${chalk.cyan('DARE/dag-graph.mmd')}            - Mermaid visualization of the DAG\n`);
     console.log(chalk.gray('Tip: real content is filled in by the AI agent (use /dare-blueprint, /generate-blueprint or the dare-blueprint skill).'));
-    console.log(chalk.cyan('\nNext: dare execute --parallel\n'));
+    console.log(chalk.gray('Tip: open DARE/dag-graph.mmd in your editor with a Mermaid preview to see the static graph.'));
+    console.log(chalk.cyan('\nNext: dare execute --next\n'));
   });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
