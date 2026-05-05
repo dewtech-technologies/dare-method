@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMcpServer } from '../server.js';
+import { createMcpServer } from '../../mcp-server/server.js';
 import request from 'supertest';
 
 // Mock dependencies

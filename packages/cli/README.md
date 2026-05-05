@@ -192,13 +192,40 @@ npm run inspect
 
 ---
 
-## Related packages
+## Sub-module imports (v2.0+)
 
-| Package | Description |
-|---------|-------------|
-| [`@dewtech/dare-mcp-server`](https://www.npmjs.com/package/@dewtech/dare-mcp-server) | Local MCP context server (~95% token savings) |
-| [`@dewtech/dare-graphrag`](https://www.npmjs.com/package/@dewtech/dare-graphrag) | Knowledge graph engine (SQLite + FTS5) |
-| [`@dewtech/dare-core`](https://www.npmjs.com/package/@dewtech/dare-core) | Shared types and utilities |
+A partir da v2.0 todos os módulos vivem em `@dewtech/dare-cli`. Use sub-path exports
+para importar programaticamente:
+
+```ts
+import { GraphRAG }       from '@dewtech/dare-cli/graphrag';
+import { createMcpServer } from '@dewtech/dare-cli/mcp-server';
+import { runDag, type Dag } from '@dewtech/dare-cli/dag-runner';
+import type { GraphNode, EdgeType } from '@dewtech/dare-cli/core';
+```
+
+| Sub-path | Conteúdo |
+|----------|----------|
+| `@dewtech/dare-cli` | API principal, comandos, gerador de projeto |
+| `@dewtech/dare-cli/core` | Tipos compartilhados (graph, project) |
+| `@dewtech/dare-cli/graphrag` | Engine de grafo de conhecimento (SQLite + FTS5) |
+| `@dewtech/dare-cli/mcp-server` | Servidor MCP local (~95% economia de tokens) |
+| `@dewtech/dare-cli/dag-runner` | DAG Task Runner programático |
+
+> **Migração da v1.x:** os pacotes `@dewtech/dare-core`, `@dewtech/dare-graphrag` e
+> `@dewtech/dare-mcp-server` foram consolidados em `@dewtech/dare-cli`. Substitua
+> `from '@dewtech/dare-core'` por `from '@dewtech/dare-cli/core'` (e equivalentes).
+
+---
+
+## Binaries
+
+Após `npm install -g @dewtech/dare-cli`:
+
+| Comando | Função |
+|---------|--------|
+| `dare` | CLI principal (`init`, `design`, `blueprint`, `execute`, `discover`) |
+| `dare-mcp-server` | Inicia o servidor MCP local |
 
 ---
 

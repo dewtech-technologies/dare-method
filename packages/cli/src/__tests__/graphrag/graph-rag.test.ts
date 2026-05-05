@@ -1,13 +1,22 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { GraphRAG } from '../graph-rag.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import os from 'os';
+import path from 'path';
+import fs from 'fs-extra';
+import { GraphRAG } from '../../graphrag/graph-rag.js';
 
 describe('GraphRAG', () => {
   let graph: GraphRAG;
+  let dbPath: string;
 
   beforeEach(async () => {
-    // Use in-memory DB for tests
-    graph = new GraphRAG(':memory:');
+    // Use a unique temp file per test (sql.js .save() always writes to disk)
+    dbPath = path.join(os.tmpdir(), `dare-graphrag-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+    graph = new GraphRAG(dbPath);
     await graph.init();
+  });
+
+  afterEach(async () => {
+    await fs.remove(dbPath).catch(() => undefined);
   });
 
   it('should add and retrieve a node', async () => {
