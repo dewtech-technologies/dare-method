@@ -10,10 +10,6 @@ import {
   generateMcpClaudeCodeRules,
   generateClaudeCommands,
   generateClaudeSettings,
-  getCursorCommands,
-  getCursorRules,
-  getAntigravitySkills,
-  getDareTemplates,
 } from './templates.js';
 
 export interface ProjectConfig {
@@ -373,24 +369,35 @@ build-backend = "hatchling.build"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: write all real Cursor command and rule files
+// Source of truth: implementations/cursor/ → synced to templates/ide/cursor/
 // ─────────────────────────────────────────────────────────────────────────────
 async function writeCursorFiles(dir: string, config: ProjectConfig): Promise<void> {
   const { structure, backend, frontend } = config;
+  const ideTemplatesDir = path.join(getTemplatesDir(), 'ide', 'cursor');
 
   await fs.ensureDir(path.join(dir, '.cursor', 'rules'));
   await fs.ensureDir(path.join(dir, '.cursor', 'commands'));
 
-  // ── Real commands (all 9) ──────────────────────────────────────────────────
-  const commands = getCursorCommands();
-  for (const [filename, content] of Object.entries(commands)) {
-    await fs.writeFile(path.join(dir, '.cursor', 'commands', filename), content);
+  // ── Commands: copy all from templates/ide/cursor/.cursor/commands/ ─────────
+  const commandsSrc = path.join(ideTemplatesDir, '.cursor', 'commands');
+  if (await fs.pathExists(commandsSrc)) {
+    await fs.copy(commandsSrc, path.join(dir, '.cursor', 'commands'), { overwrite: true });
   }
 
-  // ── Core rules (always written for every project) ─────────────────────────
-  const rules = getCursorRules();
-  const coreRules = ['skill-security.mdc', 'skill-docker.mdc', 'skill-bugfix-design.mdc', 'skill-feature-design.mdc', 'skill-telemetry.mdc'];
-  for (const ruleName of coreRules) {
-    await fs.writeFile(path.join(dir, '.cursor', 'rules', ruleName), rules[ruleName]);
+  // ── Core rules: always copy all except stack-specific ones ─────────────────
+  const rulesSrc = path.join(ideTemplatesDir, '.cursor', 'rules');
+  if (await fs.pathExists(rulesSrc)) {
+    const stackSpecific = new Set(['skill-laravel-api.mdc']);
+    const entries = await fs.readdir(rulesSrc, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (stackSpecific.has(entry.name)) continue; // handled below based on stack
+      await fs.copy(
+        path.join(rulesSrc, entry.name),
+        path.join(dir, '.cursor', 'rules', entry.name),
+        { overwrite: true },
+      );
+    }
   }
 
   // ── Stack-specific rules ───────────────────────────────────────────────────
@@ -401,8 +408,10 @@ async function writeCursorFiles(dir: string, config: ProjectConfig): Promise<voi
     );
   } else {
     if (backend === 'php-laravel') {
-      // Use real Laravel skill from implementations
-      await fs.writeFile(path.join(dir, '.cursor', 'rules', 'skill-laravel-api.mdc'), rules['skill-laravel-api.mdc']);
+      const laravelRule = path.join(rulesSrc, 'skill-laravel-api.mdc');
+      if (await fs.pathExists(laravelRule)) {
+        await fs.copy(laravelRule, path.join(dir, '.cursor', 'rules', 'skill-laravel-api.mdc'), { overwrite: true });
+      }
     } else if (backend) {
       await fs.writeFile(
         path.join(dir, '.cursor', 'rules', `skill-${backend}.mdc`),
@@ -420,14 +429,15 @@ async function writeCursorFiles(dir: string, config: ProjectConfig): Promise<voi
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: write all real Antigravity SKILL.md files
+// Source of truth: implementations/antigravity/ → synced to templates/ide/antigravity/
 // ─────────────────────────────────────────────────────────────────────────────
 async function writeAntigravityFiles(dir: string, _config: ProjectConfig): Promise<void> {
-  const skills = getAntigravitySkills();
+  const ideTemplatesDir = path.join(getTemplatesDir(), 'ide', 'antigravity');
+  const skillsSrc = path.join(ideTemplatesDir, '.agents', 'skills');
 
-  for (const [skillName, content] of Object.entries(skills)) {
-    const skillDir = path.join(dir, '.agents', 'skills', skillName);
-    await fs.ensureDir(skillDir);
-    await fs.writeFile(path.join(skillDir, 'SKILL.md'), content);
+  if (await fs.pathExists(skillsSrc)) {
+    await fs.ensureDir(path.join(dir, '.agents', 'skills'));
+    await fs.copy(skillsSrc, path.join(dir, '.agents', 'skills'), { overwrite: true });
   }
 
   await fs.ensureDir(path.join(dir, '.agents', 'workflows'));
@@ -435,14 +445,16 @@ async function writeAntigravityFiles(dir: string, _config: ProjectConfig): Promi
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: write all DARE template files into templates/
+// Source of truth: implementations/cursor/templates/ (or antigravity/templates/)
 // ─────────────────────────────────────────────────────────────────────────────
 async function writeDareTemplates(dir: string): Promise<void> {
-  const templatesDir = path.join(dir, 'templates');
-  await fs.ensureDir(templatesDir);
+  const destDir = path.join(dir, 'templates');
+  await fs.ensureDir(destDir);
 
-  const templates = getDareTemplates();
-  for (const [filename, content] of Object.entries(templates)) {
-    await fs.writeFile(path.join(templatesDir, filename), content);
+  // Use cursor templates as canonical source (identical to antigravity)
+  const templatesSrc = path.join(getTemplatesDir(), 'ide', 'cursor', 'templates');
+  if (await fs.pathExists(templatesSrc)) {
+    await fs.copy(templatesSrc, destDir, { overwrite: true });
   }
 }
 
@@ -470,40 +482,76 @@ async function generateClaudeFiles(dir: string, config: ProjectConfig): Promise<
   );
 }
 
-async function generateBackendTemplate(dir: string, stack: string): Promise<void> {
-  await fs.ensureDir(path.join(dir, 'src'));
+// Resolve templates directory (works both locally and after npm install)
+function getTemplatesDir(): string {
+  return path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'), '..', '..', '..', 'templates');
+}
 
-  switch (stack) {
-    case 'rust-axum':
-      await fs.writeFile(path.join(dir, 'Cargo.toml'), `[package]\nname = "api"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\naxum = "0.7"\ntokio = { version = "1", features = ["full"] }\nserde = { version = "1", features = ["derive"] }\nserde_json = "1"\n`);
-      await fs.writeFile(path.join(dir, 'src', 'main.rs'), `use axum::{routing::get, Router};\n\n#[tokio::main]\nasync fn main() {\n    let app = Router::new().route("/health", get(health));\n    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();\n    axum::serve(listener, app).await.unwrap();\n}\n\nasync fn health() -> &'static str { "OK" }\n`);
-      break;
-    case 'node-nestjs':
-      await fs.writeJSON(path.join(dir, 'package.json'), { name: 'api', version: '0.1.0', scripts: { start: 'nest start', build: 'nest build', test: 'jest' }, dependencies: { '@nestjs/core': '^10.0.0', '@nestjs/common': '^10.0.0', '@nestjs/platform-express': '^10.0.0' } }, { spaces: 2 });
-      await fs.writeFile(path.join(dir, 'src', 'main.ts'), `import { NestFactory } from '@nestjs/core';\nimport { AppModule } from './app.module';\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  await app.listen(3000);\n}\nbootstrap();\n`);
-      break;
-    case 'python-fastapi':
-      await fs.writeFile(path.join(dir, 'main.py'), `from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get("/health")\ndef health():\n    return {"status": "ok"}\n`);
-      await fs.writeFile(path.join(dir, 'requirements.txt'), `fastapi>=0.100.0\nuvicorn>=0.23.0\npydantic>=2.0.0\n`);
-      break;
-    case 'php-laravel':
-      await fs.writeJSON(path.join(dir, 'composer.json'), { name: 'app/api', require: { php: '^8.2', 'laravel/framework': '^11.0' }, scripts: { 'post-install-cmd': ['@php artisan key:generate'] } }, { spaces: 2 });
-      break;
+async function copyTemplate(templatePath: string, destDir: string, projectName: string): Promise<void> {
+  if (!await fs.pathExists(templatePath)) return;
+
+  await fs.copy(templatePath, destDir, {
+    overwrite: false,
+    filter: () => true,
+  });
+
+  // Replace {{PROJECT_NAME}} placeholder in all text files
+  await replaceProjectName(destDir, projectName);
+}
+
+async function replaceProjectName(dir: string, projectName: string): Promise<void> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const textExts = new Set(['.ts', '.tsx', '.vue', '.js', '.json', '.php', '.py', '.toml', '.yaml', '.yml', '.md', '.env', '.example', '.txt', '.rs', '.html']);
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await replaceProjectName(fullPath, projectName);
+    } else {
+      const ext = path.extname(entry.name);
+      if (textExts.has(ext) || entry.name.startsWith('.')) {
+        try {
+          const content = await fs.readFile(fullPath, 'utf-8');
+          if (content.includes('{{PROJECT_NAME}}')) {
+            await fs.writeFile(fullPath, content.split('{{PROJECT_NAME}}').join(projectName));
+          }
+        } catch {
+          // skip binary files
+        }
+      }
+    }
   }
 }
 
-async function generateFrontendTemplate(dir: string, stack: string): Promise<void> {
-  await fs.ensureDir(path.join(dir, 'src', 'components'));
+async function generateBackendTemplate(dir: string, stack: string, projectName = 'api'): Promise<void> {
+  const templatesDir = getTemplatesDir();
+  const stackMap: Record<string, string> = {
+    'node-nestjs': 'node-nestjs',
+    'python-fastapi': 'python-fastapi',
+    'rust-axum': 'rust-axum',
+    'php-laravel': 'php-laravel',
+  };
+  const templateName = stackMap[stack];
+  if (templateName) {
+    await copyTemplate(path.join(templatesDir, 'backend', templateName), dir, projectName);
+  }
+  // Copy shared docker-compose
+  const sharedCompose = path.join(templatesDir, 'shared', 'docker-compose.yml');
+  if (await fs.pathExists(sharedCompose)) {
+    await fs.copy(sharedCompose, path.join(dir, 'docker-compose.yml'), { overwrite: false });
+    await replaceProjectName(dir, projectName);
+  }
+}
 
-  switch (stack) {
-    case 'react':
-      await fs.writeJSON(path.join(dir, 'package.json'), { name: 'frontend', version: '0.1.0', scripts: { dev: 'vite', build: 'vite build', test: 'vitest' }, dependencies: { react: '^18.0.0', 'react-dom': '^18.0.0' }, devDependencies: { vite: '^5.0.0', '@vitejs/plugin-react': '^4.0.0', typescript: '^5.0.0' } }, { spaces: 2 });
-      await fs.writeFile(path.join(dir, 'src', 'App.tsx'), `import React from 'react';\n\nexport default function App() {\n  return <div><h1>DARE Framework - React App</h1></div>;\n}\n`);
-      break;
-    case 'vue':
-      await fs.writeJSON(path.join(dir, 'package.json'), { name: 'frontend', version: '0.1.0', scripts: { dev: 'vite', build: 'vite build', test: 'vitest' }, dependencies: { vue: '^3.0.0' }, devDependencies: { vite: '^5.0.0', '@vitejs/plugin-vue': '^5.0.0', typescript: '^5.0.0' } }, { spaces: 2 });
-      await fs.writeFile(path.join(dir, 'src', 'App.vue'), `<template>\n  <div><h1>DARE Framework - Vue App</h1></div>\n</template>\n\n<script setup lang="ts">\n// Composition API\n</script>\n`);
-      break;
+async function generateFrontendTemplate(dir: string, stack: string, projectName = 'frontend'): Promise<void> {
+  const templatesDir = getTemplatesDir();
+  const stackMap: Record<string, string> = {
+    react: 'react',
+    vue: 'vue',
+  };
+  const templateName = stackMap[stack];
+  if (templateName) {
+    await copyTemplate(path.join(templatesDir, 'frontend', templateName), dir, projectName);
   }
 }
 

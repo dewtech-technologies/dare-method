@@ -15,10 +15,12 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "templates"
   ],
   "scripts": {
-    "build": "tsc",
+    "sync": "tsx scripts/sync-implementations.ts",
+    "build": "tsx scripts/sync-implementations.ts && tsc",
     "dev": "tsx watch src/bin/dare.ts",
     "test": "vitest run",
     "lint": "eslint src --ext .ts",
