@@ -7,6 +7,7 @@ import { designCommand } from '../commands/design.js';
 import { blueprintCommand } from '../commands/blueprint.js';
 import { executeCommand } from '../commands/execute.js';
 import { discoverCommand } from '../commands/discover.js';
+import { graphCommand } from '../commands/graph.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -23,6 +24,7 @@ program.addCommand(discoverCommand);
 program.addCommand(designCommand);
 program.addCommand(blueprintCommand);
 program.addCommand(executeCommand);
+program.addCommand(graphCommand);
 
 program.parse(process.argv);
 

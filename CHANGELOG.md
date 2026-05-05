@@ -11,52 +11,107 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-05
+
+### Adicionado — comando `dare graph`
+- `dare graph stats` — totais e breakdown por tipo de nó/edge.
+- `dare graph query <termo>` — busca por label/description (LIKE).
+  Suporta `-l/--limit`.
+- `dare graph viz [-f mermaid|dot] [-o file]` — exporta o grafo em Mermaid
+  ou DOT (ideal para colar em Markdown ou rodar com Graphviz).
+- `dare graph ingest` — re-sync explícito a partir do `dare-dag.yaml` +
+  `.dare/state.json` atual.
+
+### Adicionado — backend JSON do GraphRAG (`JsonGraph`)
+Implementação alternativa que persiste o grafo em arquivo JSON único,
+sem dependência nativa (não usa sql.js). Útil para projetos pequenos ou
+ambientes restritos. Selecionado quando `dare-graph.yml` declara
+`backend: json`.
+
+### Adicionado — interface comum `KnowledgeGraph`
+Contrato implementado tanto por `GraphRAG` (SQLite) quanto por `JsonGraph`.
+A factory `createGraph()` lê `dare-graph.yml` e devolve a instância correta.
+
+### Adicionado — ingestão automática do DAG
+Toda vez que `dare execute --complete` ou `--fail` é chamado, o orquestrador:
+- Cria nó `task` com status, complexity, tokens, duration.
+- Cria arestas `depends_on` espelhando o DAG.
+- Para tasks DONE: parseia o `--output` em busca de paths e cria nós
+  `file` + arestas `implements`.
+- Em caso de FAILED, faz cascade-skip e ingere os SKIPPED também.
+
+### Mudado — Neo4j ainda não implementado
+Selecionar `backend: neo4j` em `dare-graph.yml` retorna erro explicativo
+pedindo para usar `sqlite` ou `json`. Implementação completa fica para
+um release futuro.
+
+### Testes
+- 5 testes para `JsonGraph` (upsert, search, edge cleanup, persistência,
+  stats).
+- 6 testes para `extractFilePaths` e `ingestTask` (path detection,
+  task node, depends_on edges, file nodes, FAILED handling, PENDING skip).
+
 ## [2.2.0] — 2026-05
 
-### Adicionado — Adapters reais (substituem o placeholder)
-- **`@anthropic-ai/sdk`** — adapter `claude` chama `messages.create` com
-  `system` prompt do DARE; reporta `tokens` reais.
-- **`@cursor/sdk`** — adapter `cursor` usa `Agent.create()` + `agent.send()`
-  + `run.wait()` (cookbook DAG runner pattern).
-- **`@google/generative-ai`** — adapter `antigravity` usa Gemini com
-  `systemInstruction`; aceita `ANTIGRAVITY_API_KEY` ou `GOOGLE_API_KEY`.
+### Mudado (BREAKING) — `dare execute` virou orquestrador puro
+A versão anterior chegou a embarcar adapters de SDK (`@anthropic-ai/sdk`,
+`@cursor/sdk`, `@google/generative-ai`) que exigiam `ANTHROPIC_API_KEY`,
+`CURSOR_API_KEY` e `ANTIGRAVITY_API_KEY`. **Foi um erro de design.** A IDE
+do usuário (Cursor / Antigravity / Claude Code) já é o executor — está
+autenticada na conta do usuário e lê as skills automaticamente. Não faz
+sentido o CLI duplicar billing chamando outra API.
 
-### Adicionado — Utilitários do runner
-- `dag-runner/utils/stitch-context.ts` — costura snippet (tail) de até
-  `parent_context_chars` chars de cada output de pai no prompt do filho.
-- `dag-runner/utils/cap-output.ts` — cap o output capturado por task em
-  `task_output_chars` com aviso de truncamento.
-- `dag-runner/utils/timeout.ts` — `withTimeout()` baseado em `AbortController`.
-  Lança `TaskTimeoutError` (timeout) ou `TaskAbortedError` (sinal externo).
+A v2.2.0 corrige isso:
 
-### Mudado — `runDag()` agora é dispatcher real
-- Usa o adapter correto via factory `getAdapter(runner)`.
-- Aplica `limits` (defaults: 2000/4000/600s) por task.
-- Cada task recebe `prompt + Upstream context` costurado a partir dos pais.
-- **SIGINT/SIGTERM cleanup global** — Ctrl+C aborta todas as tasks em
-  voo via AbortController.
-- **Cascading skip** — quando um pai falha ou é skipped, descendentes vão
-  direto para SKIPPED.
+- **Removidos:** `@anthropic-ai/sdk`, `@cursor/sdk`, `@google/generative-ai`.
+- **Removidas todas as env vars** (`ANTHROPIC_API_KEY`, `CURSOR_API_KEY`,
+  `ANTIGRAVITY_API_KEY`, `GOOGLE_API_KEY`).
+- `dare execute` deixou de ser executor. Agora é orquestrador:
+  - `dare execute --next` — imprime as tasks ready do rank atual com prompt
+    completo (já com snippets de até 2000 chars dos outputs dos pais).
+  - `dare execute --complete <id> --output "..."` — marca DONE, faz cap do
+    output em 4000 chars e ingere no GraphRAG.
+  - `dare execute --fail <id> --reason "..."` — marca FAILED + cascade-skip
+    automático nos descendentes.
+  - `dare execute --reset <id>` — volta uma task para PENDING (retry).
+  - `dare execute --status` (default) — sumário + canvas.
 
-### Mudado — `dare execute` (CLI)
-- Novas flags:
-  - `--task <id>` — executa apenas a task indicada (bypass paralelismo)
-  - `--resume` — pula tasks já DONE/SKIPPED
-  - `--runner` aceita `cursor | claude | antigravity` (validado antes de iniciar)
-- Exit code 1 quando há FAILED, sugerindo `--resume` após corrigir.
+A IDE faz o trabalho real (lê o prompt de `--next`, executa, registra com
+`--complete`/`--fail`). O CLI atualiza `DARE/.canvas.md` e o `dare-graph`
+automaticamente a cada mudança de estado.
 
-### Adicionado — Erros úteis
-- `MissingApiKeyError` — mensagem clara quando a env var do runner falta.
-- `AdapterCallError` — encapsula erros do SDK preservando a cause.
+### Adicionado — utilitários reaproveitados
+- `dag-runner/utils/stitch-context.ts` — compõe o prompt do filho com
+  snippet (tail) de até `parent_context_chars` chars de cada pai.
+- `dag-runner/utils/cap-output.ts` — cap do output em `task_output_chars`
+  com aviso de truncamento.
 
-### Adicionado — testes
-- 9 testes para `utils/` (cap-output, stitch-context, withTimeout).
-- 8 testes para adapters (mocks dos 3 SDKs + casos de API key faltando).
-- **Total: 51 testes passando.**
+### Adicionado — orquestrador (`dag-runner/run_dag.ts`)
+- `computeRanks()` — Kahn's algorithm.
+- `nextExecutableTasks()` — devolve tasks PENDING cujo `depends_on` está DONE.
+- `applyCascadingSkip()` — propaga SKIPPED para descendentes de FAILED/SKIPPED.
+- `buildTaskPrompt()` — `subtask_prompt` + Upstream context.
+- `markRunning/Done/Failed` — transições idempotentes; `Done`/`Failed`
+  ingerem no GraphRAG quando configurado.
+- `renderCanvas()` — atualiza `DARE/.canvas.md`.
 
-### Documentação
-- README do CLI documenta env vars (`ANTHROPIC_API_KEY`, `CURSOR_API_KEY`,
-  `ANTIGRAVITY_API_KEY`) e exemplos de `dare execute --task` / `--resume`.
+### Mudado — skills nos 3 IDEs
+- `.cursor/rules/skill-dag-runner.mdc`, `.agents/skills/dare-dag-runner/SKILL.md`
+  e `.claude/commands/dare-dag-run.md` foram reescritos para refletir o
+  novo loop: `dare execute --next` → executar → `dare execute --complete/--fail`.
+- Toda menção a env vars de SDK foi removida.
+
+### Removido
+- 3 adapters (`adapters/{claude,cursor,antigravity}.ts`).
+- `dag-runner/utils/timeout.ts` (sem função no fluxo orquestrado).
+- Erros `MissingApiKeyError` e `AdapterCallError`.
+- Testes de adapters.
+
+### Testes
+- Mantidos os utilitários (cap-output, stitch-context).
+- Adicionados testes de orquestração (`orchestrator.test.ts`):
+  ranks, `nextExecutableTasks`, `applyCascadingSkip`, `markDone/markFailed`,
+  cap do output, `buildTaskPrompt`.
 
 ## [2.1.0] — 2026-05
 

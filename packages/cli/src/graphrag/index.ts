@@ -1,4 +1,8 @@
 export { GraphRAG } from './graph-rag.js';
+export { JsonGraph } from './json-graph.js';
+export { createGraph, loadGraphConfig } from './factory.js';
+export type { KnowledgeGraph } from './knowledge-graph.js';
+export type { GraphConfig, GraphBackend } from './factory.js';
 export type {
   GraphNode,
   GraphEdge,

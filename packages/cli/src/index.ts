@@ -2,8 +2,13 @@
  * @dewtech/dare-cli — pacote único do framework DARE.
  *
  * Inclui CLI (`dare`), servidor MCP (`dare-mcp-server`), engine GraphRAG e
- * o DAG Task Runner. Instalar este pacote dá acesso a todas as funcionalidades
- * do método — não há subpacotes para gerenciar separadamente.
+ * o DAG Task Runner (orquestrador). Instalar este pacote dá acesso a todas
+ * as funcionalidades do método — não há subpacotes para gerenciar.
+ *
+ * O CLI **não** chama nenhuma API de LLM diretamente: a execução de tasks
+ * acontece dentro da IDE em que você já está autenticado (Cursor, Antigravity
+ * ou Claude Code). O DAG runner é orquestrador puro — coordena estado,
+ * canvas e ingestão no GraphRAG.
  */
 
 // Commands
@@ -11,35 +16,44 @@ export { initCommand } from './commands/init.js';
 export { designCommand } from './commands/design.js';
 export { blueprintCommand } from './commands/blueprint.js';
 export { executeCommand } from './commands/execute.js';
+export { graphCommand } from './commands/graph.js';
 
-// DAG Runner
-export { runDag, computeRanks, DEFAULT_DAG_LIMITS } from './dag-runner/run_dag.js';
+// DAG Runner (orchestration)
+export {
+  computeRanks,
+  nextExecutableTasks,
+  applyCascadingSkip,
+  buildTaskPrompt,
+  markRunning,
+  markDone,
+  markFailed,
+  renderCanvas,
+  DEFAULT_DAG_LIMITS,
+} from './dag-runner/run_dag.js';
 export type {
   Dag,
   DagTask,
   DagLimits,
   DagModelMap,
   DagModels,
-  RunDagOptions,
   RunnerName,
   Complexity,
   TaskStatus as DagTaskStatus,
+  MarkOptions,
 } from './dag-runner/run_dag.js';
+export { ingestTask, ingestDag, extractFilePaths } from './dag-runner/graph-ingest.js';
 export { convertYamlToDag, convertDagToYaml } from './utils/dag-converter.js';
-export {
-  getAdapter,
-  MissingApiKeyError,
-  AdapterCallError,
-} from './dag-runner/adapters/index.js';
-export type { RunnerAdapter } from './dag-runner/adapters/index.js';
 
 // Project generation
 export { generateProjectStructure } from './utils/project-generator.js';
 export type { ProjectConfig } from './utils/project-generator.js';
 
 // Knowledge graph engine
-export { GraphRAG } from './graphrag/index.js';
+export { GraphRAG, JsonGraph, createGraph, loadGraphConfig } from './graphrag/index.js';
 export type {
+  KnowledgeGraph,
+  GraphConfig,
+  GraphBackend,
   GraphNode,
   GraphEdge,
   NodeType,

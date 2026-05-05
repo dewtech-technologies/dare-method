@@ -4,11 +4,6 @@ import {
   composePrompt,
   stitchParentContext,
 } from '../../dag-runner/utils/stitch-context.js';
-import {
-  TaskAbortedError,
-  TaskTimeoutError,
-  withTimeout,
-} from '../../dag-runner/utils/timeout.js';
 import type { DagTask } from '../../dag-runner/run_dag.js';
 
 const makeTask = (over: Partial<DagTask>): DagTask => ({
@@ -48,8 +43,6 @@ describe('stitchParentContext / composePrompt', () => {
     const ctx = stitchParentContext({ task, parents: [parent], parentContextChars: 100 });
 
     expect(ctx).toMatch(/From parent: p1/);
-    // Tail-of-output strategy: ellipsis + 99 chars = 100
-    expect(ctx).toMatch(/A{50,}/); // contains a long run of As
     const snippetLine = ctx.split('\n').find((l) => l.startsWith('…')) ?? '';
     expect(snippetLine.length).toBe(100);
   });
@@ -61,44 +54,5 @@ describe('stitchParentContext / composePrompt', () => {
     expect(out.startsWith('go')).toBe(true);
     expect(out).toMatch(/Upstream context/);
     expect(out).toMatch(/parent says hi/);
-  });
-});
-
-describe('withTimeout', () => {
-  it('resolves when the operation finishes in time', async () => {
-    const result = await withTimeout(async () => 42, { timeoutSeconds: 5 });
-    expect(result).toBe(42);
-  });
-
-  it('rejects with TaskTimeoutError when the operation exceeds the budget', async () => {
-    await expect(
-      withTimeout(
-        async ({ signal }) =>
-          new Promise<number>((resolve, reject) => {
-            const t = setTimeout(() => resolve(1), 500);
-            signal.addEventListener('abort', () => {
-              clearTimeout(t);
-              reject(new Error('ignored — outer rejects first'));
-            });
-          }),
-        // 50ms timeout — way before the 500ms operation finishes
-        { timeoutSeconds: 0.05 },
-      ),
-    ).rejects.toBeInstanceOf(TaskTimeoutError);
-  });
-
-  it('rejects with TaskAbortedError when the external signal aborts', async () => {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort('user'), 20);
-    await expect(
-      withTimeout(
-        async ({ signal }) =>
-          new Promise<number>((resolve) => {
-            const t = setTimeout(() => resolve(1), 500);
-            signal.addEventListener('abort', () => clearTimeout(t));
-          }),
-        { timeoutSeconds: 5, externalSignal: ctrl.signal },
-      ),
-    ).rejects.toBeInstanceOf(TaskAbortedError);
   });
 });

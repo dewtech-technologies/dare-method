@@ -1,85 +1,108 @@
 # Comando: /run-dag
 
 ## Descrição
-Executa o grafo de tasks definido em `DARE/dare-dag.yaml` em paralelo
-respeitando dependências (Kahn's algorithm + Promise.all por rank). O canvas
-ao vivo é gravado em `DARE/.canvas.md`.
+
+Executa o grafo de tasks definido em `DARE/dare-dag.yaml` usando o **Cursor
+como executor** e o CLI `dare` como orquestrador. O canvas ao vivo fica em
+`DARE/.canvas.md`.
+
+> **Sem API keys.** Você (Cursor) usa o plano da IDE em que o usuário já está
+> logado. O CLI apenas coordena estado, monta prompts e atualiza canvas.
 
 ## Pré-requisitos
 
 - `DARE/dare-dag.yaml` existe e foi aprovado pelo usuário
 - Specs em `DARE/EXECUTION/task-<id>.md` geradas
-- `CURSOR_API_KEY` exportada no ambiente
+- `dare` disponível no PATH (`npm i -g @dewtech/dare-cli`)
 
 ## Instruções para o Cursor Composer
 
 ### 1. Validar pré-condições
 
 - Confirme que `DARE/dare-dag.yaml` existe. Se não, oriente o usuário a rodar
-  `/generate-tasks` primeiro.
+  `/generate-tasks` primeiro
 - Leia o YAML e verifique:
   - Sem ciclos
-  - Pelo menos 2 tasks no rank 0 (paralelismo real)
-  - Cada `task` tem `id` único, `complexity`, `subtask_prompt`
-- Confira `CURSOR_API_KEY`. Se faltar, peça ao usuário exportar.
+  - Pelo menos 2 tasks no rank 0 (paralelismo lógico)
+  - Cada task tem `id` único, `complexity`, `subtask_prompt`
 
-### 2. Escolher o modo de execução
+### 2. Pegar próximas tasks
 
-Pergunte ao usuário (ou infira do `$ARGUMENTS`) qual modo:
+```bash
+dare execute --next
+```
 
-| Modo | Comando |
-|------|---------|
-| Paralelo (recomendado) | `dare execute --parallel --runner cursor` |
-| Sequencial (debug) | `dare execute --runner cursor` |
-| Task única | `dare execute --task <id> --runner cursor` |
-| Resume (só PENDING/FAILED) | `dare execute --parallel --runner cursor --resume` |
+O CLI imprime as tasks ready do rank atual com o prompt completo (já com
+snippets dos outputs dos pais costurados). Use exatamente esses prompts.
 
-### 3. Abrir o canvas em paralelo à execução
+### 3. Sugerir abrir o canvas
 
-Antes de rodar, sugira ao usuário abrir `DARE/.canvas.md` em uma aba para
-acompanhar o progresso ao vivo. O runner reescreve o arquivo a cada transição
-de status.
+Antes de começar, peça ao usuário abrir `DARE/.canvas.md` em uma aba para
+acompanhar o progresso ao vivo.
 
-### 4. Executar e monitorar
+### 4. Executar cada task
 
-Rode o comando escolhido. Durante a execução:
+Para cada task ready:
 
-- Não interrompa por `SKIPPED` — o runner pula automaticamente quando uma
-  dependência falha
-- Se uma task falhar, leia o erro no terminal/canvas e corrija a spec em
-  `EXECUTION/task-<id>.md` ou o `subtask_prompt` no `dare-dag.yaml`
-- Use `--resume` para retomar sem refazer tasks DONE
+1. Leia `spec_file` se houver
+2. Implemente conforme o prompt
+3. Rode Ralph Loop: build → test → lint
+4. Registre o resultado:
 
-### 5. Pós-execução
+```bash
+# Sucesso
+dare execute --complete task-001 --output "Resumo + arquivos criados/modificados (paths)"
+
+# Falha
+dare execute --fail task-002 --reason "Mensagem clara da falha"
+```
+
+### 5. Avançar de rank
+
+Após registrar todos os `--complete`/`--fail` do rank atual:
+
+```bash
+dare execute --next
+```
+
+Se aparece `✅ All tasks resolved`, todas as tasks terminaram. Caso contrário,
+continue executando o próximo rank.
+
+### 6. Pós-execução
 
 Ao terminar:
 
-- Atualize `DARE/TASKS.md` com os status finais (DONE/FAILED/SKIPPED)
-- Mostre um resumo: total DONE, FAILED, SKIPPED, duração total, tokens
-- Se houver FAILED, sugira diagnóstico e re-execução com `--resume`
-- Se tudo DONE, parabenize e oriente próximo blueprint/feature
+- Rode `dare execute --status` para ver o sumário final
+- Se houver FAILED: leia `DARE/EXECUTION/task-<id>.md` da que falhou,
+  corrija a spec ou o prompt, depois:
 
-## Variáveis de ambiente por runner
+  ```bash
+  dare execute --reset task-002    # volta para PENDING
+  dare execute --next              # tente novamente
+  ```
 
-| Runner | Env var |
-|--------|---------|
-| `cursor` (default) | `CURSOR_API_KEY` |
-| `claude` | `ANTHROPIC_API_KEY` |
-| `antigravity` | `ANTIGRAVITY_API_KEY` |
+## Comandos disponíveis
+
+| Comando | Função |
+|---------|--------|
+| `dare execute --next` | Imprime tasks ready do rank atual com prompts |
+| `dare execute --complete <id> --output "…"` | Marca DONE |
+| `dare execute --fail <id> --reason "…"` | Marca FAILED + cascade-skip |
+| `dare execute --reset <id>` | Volta para PENDING (retry) |
+| `dare execute --status` | Snapshot do canvas + sumário |
 
 ## Erros comuns
 
 | Sintoma | Causa | Correção |
 |---------|-------|----------|
-| `dare-dag.yaml not found` | Arquivo não foi gerado | Rode `/generate-tasks` |
-| `Circular dependency detected` | Ciclo no grafo | Edite `dare-dag.yaml` para remover |
-| `CURSOR_API_KEY not set` | Env var faltando | `export CURSOR_API_KEY=...` |
-| Muitos `SKIPPED` em cascata | Pai falhou e bloqueou descendentes | Corrija o pai e use `--resume` |
-| Output truncado | Cap de 4000 chars | Faça a task escrever em arquivo e retornar resumo |
+| `dare-dag.yaml not found` | Não foi gerado | Rode `/generate-tasks` |
+| Cascata de SKIPPED | Pai falhou | Corrija pai → `--reset` → `--next` |
+| Output truncado em 4000 chars | Cap normal | Faça a task escrever em arquivo, retorne resumo |
+| Tudo no rank 0 disputa o mesmo arquivo | Ausência de deps reais | Edite `dare-dag.yaml` adicionando `depends_on` |
 
 ## Referências
 
-- Skill: `.cursor/rules/skill-dag-runner.mdc` (regras do DAG)
+- Skill: `.cursor/rules/skill-dag-runner.mdc`
 - Schema: `DARE/dare-dag.yaml`
 - Canvas: `DARE/.canvas.md`
 - Specs: `DARE/EXECUTION/task-*.md`

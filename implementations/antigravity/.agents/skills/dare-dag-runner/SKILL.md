@@ -1,33 +1,45 @@
 ---
 name: dare-dag-runner
-description: Constrói e executa o grafo DAG de tasks do método DARE com paralelismo via Kahn's algorithm. Use quando o BLUEPRINT.md está aprovado e é hora de gerar dare-dag.yaml ou executar tasks em paralelo. Garante schema correto, dependências mínimas e specs consistentes.
+description: Constrói e executa o grafo DAG do método DARE com paralelismo lógico via Kahn's algorithm. Antigravity é o executor — usa o plano nativo da IDE; sem API key. O CLI dare é orquestrador (--next/--complete/--fail).
 ---
 
 # DARE DAG Runner Skill
 
-Você é o orquestrador da fase de execução paralela do método DARE. Seu papel
-é traduzir o BLUEPRINT em um grafo executável (`DARE/dare-dag.yaml`) e
-operar o `dare execute --parallel` com confiança.
+Você é o executor da fase E (Execute) do método DARE no Antigravity. O CLI
+`dare` é o **orquestrador**: ele indica quais tasks executar agora e registra
+o que você terminou. **Você** é quem efetivamente roda cada task usando o
+runtime nativo do Antigravity — não há API key nem custo extra de tokens.
 
 ## Quando usar esta skill
 
-- BLUEPRINT.md foi aprovado e é hora de gerar tasks
-- Existe `DARE/dare-dag.yaml` e você precisa entender, modificar ou rodar
+- BLUEPRINT.md está aprovado e é hora de gerar tasks
+- Existe `DARE/dare-dag.yaml` e você precisa entender, executar ou modificar
 - Aparece o canvas `DARE/.canvas.md` durante uma execução
-- Usuário pede "executa em paralelo" ou "gera o DAG"
+- Usuário pede "executa o DAG" ou "começa o execute"
+
+## Modelo de execução
+
+> **Antigravity é o executor. O CLI `dare` é orquestrador.**
+
+- A IDE já está autenticada
+- Você lê `dare-dag.yaml` e as specs em `DARE/EXECUTION/task-*.md`
+- Você executa cada task — escreve código, roda testes, faz lint
+- Após cada task, registra o resultado no CLI:
+  - `dare execute --complete <task-id> --output "<resumo>"`
+  - `dare execute --fail <task-id> --reason "<mensagem>"`
+- O CLI atualiza `DARE/.canvas.md` e popula o `dare-graph` automaticamente
 
 ## O que é o DAG do DARE
 
-`DARE/dare-dag.yaml` é o **plano de execução** da fase E (Execute) do método.
-É um grafo direcionado acíclico:
+`DARE/dare-dag.yaml` é o **plano de execução** da fase E. Grafo direcionado
+acíclico:
 
 - **Nó** = uma task atômica
-- **Aresta** = `depends_on` (a task filha precisa do output da pai)
+- **Aresta** = `depends_on` (filha precisa do output da pai)
 
-O CLI ordena topologicamente (Kahn's algorithm) e executa tasks do mesmo rank
-em paralelo via `Promise.all`. Tasks sem dependências comuns rodam ao mesmo
-tempo. Outputs dos pais são costurados no contexto dos filhos (snippet de até
-2000 chars cada).
+O CLI ordena topologicamente (Kahn's algorithm). Tasks no mesmo rank podem
+rodar em paralelo (logicamente — você decide se literalmente fan-out ou roda
+uma após a outra).
 
 ```
 rank 0  ─→  task-001  task-002       (paralelas)
@@ -42,9 +54,9 @@ title: "<Nome do projeto> - Development Tasks"
 version: "1.0.0"
 
 limits:
-  parent_context_chars: 2000   # snippet de output de cada pai injetado no filho
+  parent_context_chars: 2000   # snippet de output de pai injetado no filho
   task_output_chars: 4000      # cap do output capturado por task
-  timeout_seconds: 600         # AbortController por task
+  timeout_seconds: 600         # apenas referência
 
 models:
   cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
@@ -61,105 +73,96 @@ tasks:
       <prompt completamente self-contained>
 ```
 
+## Loop de execução
+
+```
+1. dare execute --next
+   ↓ imprime prompts das tasks ready (rank atual)
+2. Para cada prompt:
+     - leia spec_file se houver
+     - implemente
+     - rode build/test/lint (Ralph Loop)
+3. dare execute --complete <id> --output "<resumo + arquivos tocados>"
+   (ou --fail <id> --reason "..." se falhou)
+4. Volte ao passo 1 até não haver mais tasks ready
+```
+
+Comandos úteis:
+
+```bash
+dare execute --next                                # próximas tasks ready
+dare execute --complete task-001 --output "..."    # marca DONE
+dare execute --fail task-002 --reason "..."        # marca FAILED + cascade
+dare execute --reset task-002                      # volta para PENDING (retry)
+dare execute --status                              # snapshot do canvas
+```
+
 ## Regras inegociáveis ao construir o DAG
 
 ### 1. `id` em kebab-case e único
-`task-001`, `auth-jwt`, `db-migrations`. Sem espaços nem maiúsculas. O id
-aparece no canvas e nos logs.
+`task-001`, `auth-jwt`, `db-migrations`.
 
 ### 2. `depends_on` mínimo
+Só adicione dependência quando a filha **literalmente** precisa do output.
 
-> Adicione uma dependência **somente** quando a task filha não pode começar
-> sem o output da pai (arquivo, schema, decisão exportada).
+| Cenário | Dep? |
+|---------|------|
+| B precisa do arquivo de A | sim |
+| B precisa de decisão de A | sim |
+| B é independente de A | não |
+| Testes/Docs do módulo X | sim — depende da implementação |
+| Pesquisa sem efeito colateral | não |
 
-| Cenário | Dependência? |
-|---------|--------------|
-| B precisa do arquivo que A criou | sim |
-| B precisa de uma decisão tomada em A | sim |
-| B faz coisa similar a A mas independente | não |
-| Pesquisa/leitura sem efeito colateral | não — fan out wide |
-| Testes do módulo X | sim — depende da implementação |
-| Docs do módulo X | sim — depende da implementação |
+Cadeia linear é antipattern. Reanalise.
 
-Se o seu DAG vira uma cadeia linear `001 → 002 → 003 → ...`, há dependências
-falsas. Reanalise.
-
-### 3. `complexity` mapeia para modelo
-| Nível | Uso típico |
-|-------|------------|
-| `LOW`  | Setup, scaffolding, docs simples, pesquisa |
+### 3. `complexity` é sinal de cuidado, não custo
+| Nível | Uso |
+|-------|-----|
+| `LOW`  | Setup, scaffolding, docs simples |
 | `MED`  | Implementação direta, refactors, testes unitários |
-| `HIGH` | Lógica de negócio crítica, segurança, integrações |
+| `HIGH` | Lógica crítica, segurança, integrações |
 
-Não use `HIGH` em tudo — encarece sem ganho.
+### 4. `subtask_prompt` self-contained
+Receberá `subtask_prompt` + snippets de até 2000 chars dos outputs dos pais.
+Não vale "como combinamos". Tudo no prompt ou via pais.
 
-### 4. `subtask_prompt` totalmente self-contained
+### 5. Output cap 4000 chars
+Se gerar muito, escreva em arquivo e faça o `--output` ser resumo + caminhos.
 
-O subagente recebe apenas:
-- O próprio `subtask_prompt`
-- Snippets de até 2000 chars dos outputs de cada pai
-- Acesso ao filesystem do projeto
-
-Não vale dizer "use o padrão combinado" ou "como na task-001". Coloque tudo no
-prompt ou faça vir pelos pais.
-
-### 5. Output capado em 4000 chars
-
-Se a task gera muito, escreva em arquivo e faça o output ser um resumo curto +
-caminhos dos arquivos criados.
-
-### 6. Cada task tem spec em `EXECUTION/task-<id>.md`
-
-Spec detalhada com: objetivo, arquivos a criar/modificar, validation gates,
-testes esperados, segurança. O `subtask_prompt` referencia
-`spec_file: EXECUTION/task-001.md` para que o subagente leia a spec.
+### 6. Spec por task em `EXECUTION/task-<id>.md`
+Spec detalhada com objetivo, arquivos, validation gates, testes, segurança.
 
 ## Os 3 artefatos sempre juntos
 
-Quando gerar tasks, produza simultaneamente:
+| Arquivo | Para quê |
+|---------|----------|
+| `DARE/TASKS.md` | Visão humana com tabela e progresso |
+| `DARE/dare-dag.yaml` | Grafo executável |
+| `DARE/EXECUTION/task-<id>.md` | Spec por task |
 
-1. **`DARE/TASKS.md`** — tabela master para humanos
-2. **`DARE/dare-dag.yaml`** — grafo executável pelo CLI
-3. **`DARE/EXECUTION/task-<id>.md`** — uma spec detalhada por task
-
-Os três precisam estar consistentes: mesmo `id`, mesmo `depends_on`, mesma
-`complexity`. Inconsistência aqui quebra a execução.
-
-## Como executar
-
-```bash
-dare execute --parallel              # paralelo, runner padrão
-dare execute --parallel --runner antigravity
-dare execute                         # sequencial (debug)
-dare execute --task task-003         # task única
-dare execute --parallel --resume     # só PENDING/FAILED
-```
-
-Env vars necessárias por runner:
-- `CURSOR_API_KEY` — runner cursor
-- `ANTHROPIC_API_KEY` — runner claude
-- `ANTIGRAVITY_API_KEY` — runner antigravity
+Os três precisam ser consistentes: mesmos `id`s, `depends_on`, `complexity`.
 
 ## Canvas ao vivo (`DARE/.canvas.md`)
 
-O runner reescreve `DARE/.canvas.md` a cada mudança de status. Status:
-- `PENDING` ⏳ — aguardando rank
-- `RUNNING` 🔄 — executando agora
-- `DONE` ✅ — concluído com sucesso
-- `FAILED` ❌ — erro durante execução
-- `SKIPPED` ⏭️ — dependência falhou; runner pulou automaticamente
+O CLI reescreve a cada `--complete`/`--fail`:
 
-Você não precisa intervir em `SKIPPED` — o runner cuida.
+| Status | Significado |
+|--------|-------------|
+| `PENDING` ⏳ | aguardando rank |
+| `RUNNING` 🔄 | você está executando |
+| `DONE` ✅ | concluído |
+| `FAILED` ❌ | erro durante execução |
+| `SKIPPED` ⏭️ | dependência falhou — automático, não toque |
 
 ## Erros comuns
 
-| Erro | Sintoma | Correção |
-|------|---------|----------|
-| Ciclo | `Circular dependency detected: <id>` | Retire a aresta cíclica |
-| `id` duplicado | Resultado indefinido | Renomeie |
-| `depends_on` inexistente | `Task not found: <id>` | Corrija ou adicione |
-| Tudo em rank 0 | Conflito de escrita no mesmo arquivo | Adicione dependências reais |
-| Cadeia linear | Sem paralelismo | Reveja se as deps são necessárias |
+| Erro | Correção |
+|------|----------|
+| Ciclo | Retire a aresta cíclica |
+| `id` duplicado | Renomeie |
+| `depends_on` inexistente | Corrija ou adicione a task |
+| Tudo em rank 0 | Adicione deps reais quando há contenção |
+| Cadeia linear | Reveja se as deps são necessárias |
 
 ## Checklist antes de aprovar
 
@@ -169,4 +172,4 @@ Você não precisa intervir em `SKIPPED` — o runner cuida.
 - [ ] `complexity` reflete o esforço real
 - [ ] `id` em kebab-case e único
 - [ ] Sem ciclos
-- [ ] `TASKS.md` + `dare-dag.yaml` + `EXECUTION/task-*.md` consistentes
+- [ ] Os 3 artefatos consistentes

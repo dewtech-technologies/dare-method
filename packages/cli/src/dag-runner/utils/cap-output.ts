@@ -17,6 +17,9 @@ export function capOutput(text: string, maxChars: number): string {
   if (maxChars <= 0) return '';
   if (text.length <= maxChars) return text;
 
-  const room = Math.max(0, maxChars - TRUNCATION_NOTICE.length);
-  return text.slice(0, room) + TRUNCATION_NOTICE;
+  // If the cap is too small to fit even the notice, do a hard slice.
+  if (maxChars <= TRUNCATION_NOTICE.length) {
+    return text.slice(0, maxChars);
+  }
+  return text.slice(0, maxChars - TRUNCATION_NOTICE.length) + TRUNCATION_NOTICE;
 }

@@ -88,45 +88,64 @@ dare blueprint
 
 ### `dare execute`
 
-Execute the DAG using a real SDK adapter (Claude / Cursor / Antigravity).
-The runner orders tasks topologically (Kahn's algorithm), runs each rank in
-parallel, applies per-task `parent_context_chars` / `task_output_chars` /
-`timeout_seconds` limits, and writes a live canvas to `DARE/.canvas.md`.
+Orchestrate DAG execution. **The IDE is the executor** (Cursor / Antigravity
+/ Claude Code) — `dare execute` only coordinates state, composes prompts
+with parent context, updates the live canvas at `DARE/.canvas.md`, and
+ingests finished tasks into the knowledge graph.
+
+> **No API keys, no extra token costs.** You use the plan of the IDE you're
+> already logged into.
 
 ```bash
-# Parallel execution (recommended, default runner = cursor)
-dare execute --parallel --runner cursor
-dare execute --parallel --runner claude
-dare execute --parallel --runner antigravity
+# Print next executable tasks (with composed prompts)
+dare execute --next
 
-# Sequential (debug)
-dare execute --runner claude
+# Mark a task DONE after the agent finishes it
+dare execute --complete task-001 --output "Created src/auth.ts and tests/auth.test.ts; all tests green."
 
-# Single task
-dare execute --task task-003 --runner claude
+# Mark a task FAILED — descendants are cascade-skipped automatically
+dare execute --fail task-002 --reason "Schema migration conflict in users table"
 
-# Resume — only run PENDING/FAILED, keep DONE/SKIPPED
-dare execute --parallel --resume
+# Reset a task back to PENDING (for retry)
+dare execute --reset task-002
+
+# Show snapshot of canvas + summary (default action)
+dare execute --status
 ```
 
-#### Required environment variables
-
-| Runner | Env var | Where to get it |
-|--------|---------|-----------------|
-| `claude` | `ANTHROPIC_API_KEY` | https://console.anthropic.com/settings/keys |
-| `cursor` | `CURSOR_API_KEY` | Cursor Settings → API Keys |
-| `antigravity` | `ANTIGRAVITY_API_KEY` (or `GOOGLE_API_KEY`) | https://aistudio.google.com/app/apikey |
+#### Typical flow inside the IDE agent
 
 ```bash
-# Windows (PowerShell)
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
-
-# bash
-export ANTHROPIC_API_KEY="sk-ant-..."
+dare execute --next                                # → tasks ready in current rank
+# (agent executes each task: code, build, test, lint)
+dare execute --complete task-001 --output "…"
+dare execute --complete task-002 --output "…"
+dare execute --next                                # → next rank
+# (repeat until "✅ All tasks resolved")
 ```
 
-The runner honors `SIGINT` / `SIGTERM` — Ctrl+C cancels every in-flight task
-cleanly via AbortController.
+The skills shipped by `dare init` (`.cursor/rules/skill-dag-runner.mdc`,
+`.agents/skills/dare-dag-runner/SKILL.md`, `.claude/commands/dare-dag-run.md`)
+guide the IDE agent through this loop.
+
+### `dare graph`
+
+Inspect the project's knowledge graph. The graph is populated automatically
+by `dare execute --complete/--fail` (task nodes, file nodes, `depends_on` and
+`implements` edges). Backend is whatever `dare-graph.yml` declares
+(`sqlite` default, `json` available, `neo4j` planned).
+
+```bash
+dare graph stats                       # totals + breakdown by type
+dare graph query auth                  # search nodes by label/description
+dare graph query auth --limit 20
+
+dare graph viz                         # Mermaid to stdout
+dare graph viz -f dot                  # DOT for Graphviz
+dare graph viz -o docs/graph.mmd       # write to file
+
+dare graph ingest                      # re-sync from dare-dag.yaml + state
+```
 
 ---
 
