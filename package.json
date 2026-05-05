@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-framework",
-  "version": "0.3.6",
+  "version": "0.3.8",
   "description": "DARE Framework - Distributed AI-assisted Requirements Engineering",
   "private": true,
   "type": "module",

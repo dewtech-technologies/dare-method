@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-cli",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "DARE Framework CLI - Interactive project setup and task execution",
   "type": "module",
   "main": "./dist/index.js",
