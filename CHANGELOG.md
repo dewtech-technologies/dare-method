@@ -11,6 +11,53 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-05
+
+### Adicionado — Adapters reais (substituem o placeholder)
+- **`@anthropic-ai/sdk`** — adapter `claude` chama `messages.create` com
+  `system` prompt do DARE; reporta `tokens` reais.
+- **`@cursor/sdk`** — adapter `cursor` usa `Agent.create()` + `agent.send()`
+  + `run.wait()` (cookbook DAG runner pattern).
+- **`@google/generative-ai`** — adapter `antigravity` usa Gemini com
+  `systemInstruction`; aceita `ANTIGRAVITY_API_KEY` ou `GOOGLE_API_KEY`.
+
+### Adicionado — Utilitários do runner
+- `dag-runner/utils/stitch-context.ts` — costura snippet (tail) de até
+  `parent_context_chars` chars de cada output de pai no prompt do filho.
+- `dag-runner/utils/cap-output.ts` — cap o output capturado por task em
+  `task_output_chars` com aviso de truncamento.
+- `dag-runner/utils/timeout.ts` — `withTimeout()` baseado em `AbortController`.
+  Lança `TaskTimeoutError` (timeout) ou `TaskAbortedError` (sinal externo).
+
+### Mudado — `runDag()` agora é dispatcher real
+- Usa o adapter correto via factory `getAdapter(runner)`.
+- Aplica `limits` (defaults: 2000/4000/600s) por task.
+- Cada task recebe `prompt + Upstream context` costurado a partir dos pais.
+- **SIGINT/SIGTERM cleanup global** — Ctrl+C aborta todas as tasks em
+  voo via AbortController.
+- **Cascading skip** — quando um pai falha ou é skipped, descendentes vão
+  direto para SKIPPED.
+
+### Mudado — `dare execute` (CLI)
+- Novas flags:
+  - `--task <id>` — executa apenas a task indicada (bypass paralelismo)
+  - `--resume` — pula tasks já DONE/SKIPPED
+  - `--runner` aceita `cursor | claude | antigravity` (validado antes de iniciar)
+- Exit code 1 quando há FAILED, sugerindo `--resume` após corrigir.
+
+### Adicionado — Erros úteis
+- `MissingApiKeyError` — mensagem clara quando a env var do runner falta.
+- `AdapterCallError` — encapsula erros do SDK preservando a cause.
+
+### Adicionado — testes
+- 9 testes para `utils/` (cap-output, stitch-context, withTimeout).
+- 8 testes para adapters (mocks dos 3 SDKs + casos de API key faltando).
+- **Total: 51 testes passando.**
+
+### Documentação
+- README do CLI documenta env vars (`ANTHROPIC_API_KEY`, `CURSOR_API_KEY`,
+  `ANTIGRAVITY_API_KEY`) e exemplos de `dare execute --task` / `--resume`.
+
 ## [2.1.0] — 2026-05
 
 ### Adicionado — Skills DAG nos 3 IDEs

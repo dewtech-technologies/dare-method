@@ -13,9 +13,25 @@ export { blueprintCommand } from './commands/blueprint.js';
 export { executeCommand } from './commands/execute.js';
 
 // DAG Runner
-export { runDag } from './dag-runner/run_dag.js';
-export type { Dag, DagTask, RunDagOptions } from './dag-runner/run_dag.js';
+export { runDag, computeRanks, DEFAULT_DAG_LIMITS } from './dag-runner/run_dag.js';
+export type {
+  Dag,
+  DagTask,
+  DagLimits,
+  DagModelMap,
+  DagModels,
+  RunDagOptions,
+  RunnerName,
+  Complexity,
+  TaskStatus as DagTaskStatus,
+} from './dag-runner/run_dag.js';
 export { convertYamlToDag, convertDagToYaml } from './utils/dag-converter.js';
+export {
+  getAdapter,
+  MissingApiKeyError,
+  AdapterCallError,
+} from './dag-runner/adapters/index.js';
+export type { RunnerAdapter } from './dag-runner/adapters/index.js';
 
 // Project generation
 export { generateProjectStructure } from './utils/project-generator.js';

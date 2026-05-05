@@ -2,63 +2,84 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
-import { runDag } from '../dag-runner/run_dag.js';
+import { runDag, type RunnerName } from '../dag-runner/run_dag.js';
 import { convertYamlToDag } from '../utils/dag-converter.js';
 
+interface ExecuteOptions {
+  parallel: boolean;
+  runner: string;
+  dag: string;
+  resume: boolean;
+  task?: string;
+}
+
 export const executeCommand = new Command('execute')
-  .description('Execute tasks using DAG Task Runner')
-  .argument('[task-id]', 'Specific task ID to execute')
-  .option('--parallel', 'Execute independent tasks in parallel', false)
-  .option('--runner <runner>', 'Runner: cursor or antigravity', 'cursor')
+  .description('Execute tasks using the DAG Task Runner (real SDK adapters)')
+  .option('--parallel', 'Execute independent tasks in parallel by rank', false)
+  .option('--runner <runner>', 'Runner: cursor | claude | antigravity', 'cursor')
   .option('--dag <file>', 'Path to dare-dag.yaml', 'DARE/dare-dag.yaml')
-  .action(async (taskId: string | undefined, options: { parallel: boolean; runner: string; dag: string }) => {
+  .option('--resume', 'Skip tasks already DONE/SKIPPED', false)
+  .option('--task <id>', 'Execute only the task with the given id')
+  .action(async (options: ExecuteOptions) => {
     console.log(chalk.blue.bold('\n⚡ DARE Framework - Execute Phase\n'));
 
     const dagPath = path.resolve(process.cwd(), options.dag);
-
-    if (!await fs.pathExists(dagPath)) {
+    if (!(await fs.pathExists(dagPath))) {
       console.error(chalk.red(`❌ dare-dag.yaml not found at ${dagPath}`));
       console.log(chalk.yellow('Run: dare blueprint'));
+      process.exit(1);
+    }
+
+    if (!isKnownRunner(options.runner)) {
+      console.error(
+        chalk.red(`❌ Unknown runner "${options.runner}". Use: cursor | claude | antigravity.`),
+      );
       process.exit(1);
     }
 
     const dagContent = await fs.readFile(dagPath, 'utf-8');
     const dag = convertYamlToDag(dagContent);
 
-    if (taskId) {
-      const task = dag.tasks.find((t) => t.id === taskId);
+    if (options.task) {
+      const task = dag.tasks.find((t) => t.id === options.task);
       if (!task) {
-        console.error(chalk.red(`❌ Task ${taskId} not found in DAG`));
+        console.error(chalk.red(`❌ Task "${options.task}" not found in DAG`));
         process.exit(1);
       }
-      console.log(chalk.cyan(`🎯 Executing single task: ${task.id} - ${task.title}`));
+      console.log(chalk.cyan(`🎯 Executing single task: ${task.id} — ${task.title}`));
     } else {
-      const pendingTasks = dag.tasks.filter((t) => t.status !== 'DONE');
-      console.log(chalk.cyan(`📋 Tasks to execute: ${pendingTasks.length}`));
-      console.log(chalk.cyan(`🔀 Mode: ${options.parallel ? 'Parallel (DAG)' : 'Sequential'}`));
-      console.log(chalk.cyan(`🖥️  Runner: ${options.runner}\n`));
+      const remaining = dag.tasks.filter(
+        (t) => !options.resume || (t.status !== 'DONE' && t.status !== 'SKIPPED'),
+      );
+      console.log(chalk.cyan(`📋 Tasks to execute: ${remaining.length} of ${dag.tasks.length}`));
+      console.log(chalk.cyan(`🔀 Mode: ${options.parallel ? 'Parallel (by rank)' : 'Sequential'}`));
+      console.log(chalk.cyan(`🖥️  Runner: ${options.runner}`));
+      if (options.resume) console.log(chalk.cyan('🔁 Resume: skipping DONE/SKIPPED'));
+      console.log();
     }
 
-    if (options.parallel) {
-      console.log(chalk.yellow('🚀 Starting DAG Task Runner with parallel execution...\n'));
+    try {
       await runDag(dag, {
-        parallel: true,
+        parallel: options.parallel,
         runner: options.runner,
         canvasPath: path.resolve(process.cwd(), 'DARE/.canvas.md'),
+        resume: options.resume,
+        onlyTaskId: options.task,
       });
-    } else {
-      console.log(chalk.yellow('▶️  Starting sequential execution...\n'));
-      for (const task of dag.tasks) {
-        if (task.status === 'DONE') {
-          console.log(chalk.gray(`⏭️  Skipping ${task.id} (already done)`));
-          continue;
-        }
-        console.log(chalk.cyan(`🔄 Executing ${task.id}: ${task.title}`));
-        // Sequential execution placeholder
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        console.log(chalk.green(`✅ ${task.id} completed`));
-      }
+    } catch (err) {
+      console.error(chalk.red(`\n❌ Run failed: ${err instanceof Error ? err.message : String(err)}`));
+      process.exit(1);
     }
 
-    console.log(chalk.green.bold('\n✅ Execution complete!\n'));
+    const failed = dag.tasks.filter((t) => t.status === 'FAILED').length;
+    if (failed > 0) {
+      console.log(chalk.yellow(`⚠  ${failed} task(s) FAILED. Re-run with --resume after fixing.`));
+      process.exit(1);
+    }
+
+    console.log(chalk.green.bold('✅ Execution complete!\n'));
   });
+
+function isKnownRunner(runner: string): runner is RunnerName {
+  return runner === 'cursor' || runner === 'claude' || runner === 'antigravity';
+}

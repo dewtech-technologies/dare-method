@@ -88,18 +88,45 @@ dare blueprint
 
 ### `dare execute`
 
-Execute tasks from the DAG with optional parallel execution.
+Execute the DAG using a real SDK adapter (Claude / Cursor / Antigravity).
+The runner orders tasks topologically (Kahn's algorithm), runs each rank in
+parallel, applies per-task `parent_context_chars` / `task_output_chars` /
+`timeout_seconds` limits, and writes a live canvas to `DARE/.canvas.md`.
 
 ```bash
-# Execute all tasks in parallel (75% faster)
+# Parallel execution (recommended, default runner = cursor)
 dare execute --parallel --runner cursor
+dare execute --parallel --runner claude
+dare execute --parallel --runner antigravity
 
-# Execute a specific task
-dare execute task-001
+# Sequential (debug)
+dare execute --runner claude
 
-# Sequential execution
-dare execute
+# Single task
+dare execute --task task-003 --runner claude
+
+# Resume — only run PENDING/FAILED, keep DONE/SKIPPED
+dare execute --parallel --resume
 ```
+
+#### Required environment variables
+
+| Runner | Env var | Where to get it |
+|--------|---------|-----------------|
+| `claude` | `ANTHROPIC_API_KEY` | https://console.anthropic.com/settings/keys |
+| `cursor` | `CURSOR_API_KEY` | Cursor Settings → API Keys |
+| `antigravity` | `ANTIGRAVITY_API_KEY` (or `GOOGLE_API_KEY`) | https://aistudio.google.com/app/apikey |
+
+```bash
+# Windows (PowerShell)
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
+
+# bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+The runner honors `SIGINT` / `SIGTERM` — Ctrl+C cancels every in-flight task
+cleanly via AbortController.
 
 ---
 
