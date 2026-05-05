@@ -11,6 +11,47 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.6.0] — 2026-05
+
+### Adicionado — Fallback Docker automático no `dare init` e `dare bootstrap`
+Quando a toolchain nativa da stack escolhida não está no PATH, o CLI
+detecta o Docker e roda o scaffold dentro da imagem oficial — sem nenhuma
+flag, sem perguntar nada. O usuário só precisa ter **uma** das duas:
+
+| Stack | Native | Docker fallback |
+|-------|--------|-----------------|
+| `php-laravel` | `composer` | `composer:latest` |
+| `node-nestjs`, `react`, `vue`, `mcp-node-ts` | `npm`/`npx` | `node:20-alpine` |
+| `python-fastapi`, `mcp-python` | `python` | `python:3.12-slim` |
+| `rust-axum` | `cargo` | `rust:1.83` |
+| `go-gin` | `go` | `golang:1.22` |
+
+Comportamento:
+
+```bash
+$ dare init my-api    # escolheu php-laravel mas não tem composer
+⚠  composer not found on PATH — falling back to Docker (composer:latest).
+  $ docker run --rm -v ".:/app" -w /app composer:latest create-project laravel/laravel:^11 .
+  ...
+```
+
+Detalhes da implementação:
+- Caminho de bind-mount adaptado por OS (Windows usa forward slashes; Unix
+  passa `--user $(id -u):$(id -g)` para evitar arquivos owned por root).
+- Imagens `composer:latest` (ENTRYPOINT = composer) e shell-based
+  (`node`/`python`/`rust`/`golang`) tratadas com lógica distinta — no
+  primeiro caso, só passamos os argumentos; no segundo, prefixamos o
+  comando.
+- Se nem nativo nem Docker estão disponíveis, falha fast com mensagem
+  apontando para os dois caminhos.
+
+### Documentação — Pré-requisitos no README
+README do CLI ganhou seção **Prerequisites** explícita listando:
+- Node.js (sempre — para o CLI rodar)
+- Toolchain nativa **OU** Docker para a stack escolhida
+- Tabela de imagens Docker fallback por stack
+- Nota sobre Ralph Loop precisar da mesma toolchain disponível em runtime
+
 ## [2.5.0] — 2026-05
 
 Versão que fecha 3 lacunas estruturais identificadas em uso real:

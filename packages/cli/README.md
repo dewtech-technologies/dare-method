@@ -7,6 +7,51 @@ A structured methodology for AI-assisted software development with mandatory hum
 [![npm](https://img.shields.io/npm/v/@dewtech/dare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dewtech-technologies/dare-method/blob/main/LICENSE)
 
+## Prerequisites
+
+### Required for the CLI itself
+
+| Tool | Why | Install |
+|------|-----|---------|
+| **Node.js 18+** | runs `dare`, `dare-mcp-server` and the bundled GraphRAG engine | https://nodejs.org/ |
+
+### Required to scaffold the chosen stack
+
+`dare init` runs the **official scaffold** of the stack you pick (e.g.
+`composer create-project laravel/laravel`, `npm create vite@latest`,
+`go mod init`). It tries the native toolchain first; if it isn't on PATH,
+it falls back to running the equivalent **Docker image** automatically.
+
+Pick **one** of the two paths per stack:
+
+| Stack | Native toolchain | Docker fallback (used if native missing) |
+|-------|------------------|------------------------------------------|
+| `php-laravel` | PHP 8.2+ · Composer 2+ — https://getcomposer.org/ | `composer:latest` |
+| `node-nestjs` | Node 18+ (bundles `npx`) | `node:20-alpine` |
+| `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
+| `rust-axum` | Rust 1.83+ (rustup) — https://www.rust-lang.org/tools/install | `rust:1.83` |
+| `go-gin` | Go 1.22+ — https://go.dev/dl/ | `golang:1.22` |
+| `react`, `vue` | Node 18+ (bundles `npm`) | `node:20-alpine` |
+| `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
+| `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+
+> **TL;DR:** if you have **Docker Desktop** installed, you don't strictly need
+> any other toolchain — `dare init` will pull the right image on demand.
+> Native toolchains are faster and don't depend on Docker pulling images.
+
+If neither the native CLI **nor** Docker is available, `dare init` fails
+fast with a clear error message — it never falls back to a fake template.
+
+### Required for the Ralph Loop (per project)
+
+Once the project is scaffolded, every `dare execute --complete` runs the
+stack's gates: `build → test → lint`. The same toolchain (native or Docker)
+that scaffolded the project is needed to run those gates. Plan accordingly:
+if you chose `php-laravel` and only have Docker, `dare execute --complete`
+needs to invoke `php artisan test` somehow — typically by running it inside
+your `docker-compose` app service (this is the kind of thing the
+`task-001 = Containerize app` task sets up).
+
 ## Installation
 
 ```bash
