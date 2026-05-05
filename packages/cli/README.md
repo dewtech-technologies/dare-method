@@ -192,40 +192,28 @@ npm run inspect
 
 ---
 
-## Sub-module imports (v2.0+)
+## O que vem com o pacote (v2.0+)
 
-A partir da v2.0 todos os módulos vivem em `@dewtech/dare-cli`. Use sub-path exports
-para importar programaticamente:
+A partir da v2.0 o `@dewtech/dare-cli` é um **pacote único** que inclui todas as
+funcionalidades do framework DARE. Você não precisa instalar nada além dele:
 
-```ts
-import { GraphRAG }       from '@dewtech/dare-cli/graphrag';
-import { createMcpServer } from '@dewtech/dare-cli/mcp-server';
-import { runDag, type Dag } from '@dewtech/dare-cli/dag-runner';
-import type { GraphNode, EdgeType } from '@dewtech/dare-cli/core';
+```bash
+npm install -g @dewtech/dare-cli
 ```
 
-| Sub-path | Conteúdo |
-|----------|----------|
-| `@dewtech/dare-cli` | API principal, comandos, gerador de projeto |
-| `@dewtech/dare-cli/core` | Tipos compartilhados (graph, project) |
-| `@dewtech/dare-cli/graphrag` | Engine de grafo de conhecimento (SQLite + FTS5) |
-| `@dewtech/dare-cli/mcp-server` | Servidor MCP local (~95% economia de tokens) |
-| `@dewtech/dare-cli/dag-runner` | DAG Task Runner programático |
+Isso já dá:
 
-> **Migração da v1.x:** os pacotes `@dewtech/dare-core`, `@dewtech/dare-graphrag` e
-> `@dewtech/dare-mcp-server` foram consolidados em `@dewtech/dare-cli`. Substitua
-> `from '@dewtech/dare-core'` por `from '@dewtech/dare-cli/core'` (e equivalentes).
+| Componente | O que é |
+|------------|---------|
+| CLI `dare` | `init`, `design`, `blueprint`, `execute`, `discover` |
+| CLI `dare-mcp-server` | Servidor MCP local de contexto (~95% economia de tokens) |
+| Engine GraphRAG | Grafo de conhecimento com SQLite + FTS5 |
+| DAG Task Runner | Execução paralela de tasks com Kahn's algorithm |
+| Tipos e templates | Tudo embutido — sem dependências externas do `@dewtech/*` |
 
----
-
-## Binaries
-
-Após `npm install -g @dewtech/dare-cli`:
-
-| Comando | Função |
-|---------|--------|
-| `dare` | CLI principal (`init`, `design`, `blueprint`, `execute`, `discover`) |
-| `dare-mcp-server` | Inicia o servidor MCP local |
+> **Histórico (v1.x):** os pacotes `@dewtech/dare-core`, `@dewtech/dare-graphrag` e
+> `@dewtech/dare-mcp-server` foram consolidados em `@dewtech/dare-cli` e estão
+> **deprecated** no npm. Não há mais subpacotes para gerenciar.
 
 ---
 

@@ -14,29 +14,43 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [2.0.0] — 2026-05
 
 ### Mudado (BREAKING)
-- **Consolidação de pacotes:** `@dewtech/dare-core`, `@dewtech/dare-graphrag` e
+- **Pacote único:** `@dewtech/dare-core`, `@dewtech/dare-graphrag` e
   `@dewtech/dare-mcp-server` foram unificados em `@dewtech/dare-cli`.
-  - Imports devem ser atualizados:
-    - `from '@dewtech/dare-core'` → `from '@dewtech/dare-cli/core'`
-    - `from '@dewtech/dare-graphrag'` → `from '@dewtech/dare-cli/graphrag'`
-    - `from '@dewtech/dare-mcp-server'` → `from '@dewtech/dare-cli/mcp-server'`
-  - Os 3 pacotes antigos serão deprecated no npm apontando para a v2.0.
+  Instalar `@dewtech/dare-cli` agora dá acesso a tudo — não há subpacotes
+  para gerenciar nem subpaths para importar.
+  - Os 3 pacotes antigos estão deprecated no npm.
   - Motivo: eliminar o version-sync hell entre pacotes interdependentes.
 - **Versão única:** todo o monorepo passa a versionar pelo `@dewtech/dare-cli`.
   Sem mais bumps em cascata; uma versão, um publish.
+- **Scripts internos do monorepo:** removidos `pnpm mcp` e `pnpm graphrag`
+  do `package.json` raiz (apontavam para pacotes que não existem mais).
 
 ### Adicionado
-- Sub-path exports em `@dewtech/dare-cli`:
-  `./core`, `./graphrag`, `./mcp-server`, `./dag-runner`.
-- Binário adicional `dare-mcp-server` (era pacote separado).
-- `implementations/claude/` como fonte da verdade para Claude Code.
-- `dare-graph.yml` gerado pelo `dare init` conforme backend escolhido.
+- Binário adicional `dare-mcp-server` distribuído junto com `dare`.
+- `implementations/claude/` como fonte da verdade para Claude Code
+  (`CLAUDE.md`, slash commands, settings).
+- `dare-graph.yml` gerado pelo `dare init` conforme backend escolhido
+  (sqlite | json | neo4j); preserva edição manual do usuário.
 - Sync automático no build (`scripts/sync-implementations.ts`).
 
 ### Corrigido
 - `dare --version` agora lê dinamicamente do `package.json` (era hardcoded).
 - Geração de `.cursor/commands/` e `.agents/skills/` que produzia stubs vazios.
 - Testes do GraphRAG agora usam arquivo temporário (sql.js exige disco).
+- Texto em `CLAUDE.md` template orientava `@dewtech/dare-graphrag` standalone;
+  agora aponta para os comandos `dare graph` (planejados na v2.3).
+
+### Notas de migração
+**Para usuários do CLI:** nenhuma mudança. `dare init`, `dare design`,
+`dare blueprint`, `dare execute` funcionam idênticos. Só atualize:
+
+```bash
+npm uninstall -g @dewtech/dare-cli
+npm install -g @dewtech/dare-cli@latest
+```
+
+**Para projetos gerados pelo `dare init`:** nenhuma mudança no código.
+Os projetos não importam pacotes `@dewtech/*` — eram CLIs/templates puros.
 
 ## [Unreleased - histórico legado]
 

@@ -224,16 +224,28 @@ dare discover --dir ./outro-projeto
 
 ## 📦 DARE CLI — Pacote npm
 
-O DARE Method agora está disponível como um **pacote npm instalável**, com suporte a múltiplos stacks e IDEs.
+O DARE Method está disponível como um **pacote npm único e instalável**: tudo
+o que o framework oferece (CLI, servidor MCP, engine GraphRAG, DAG runner)
+vem dentro de `@dewtech/dare-cli`. Não há subpacotes para gerenciar.
 
-### Pacotes disponíveis
+### Instalação
 
-| Pacote | Descrição | Status |
-|--------|-----------|--------|
-| [`@dewtech/dare-cli`](packages/cli) | CLI interativo com `dare init`, `dare discover`, `dare design`, `dare blueprint`, `dare execute` | ✅ v0.3.0 |
-| [`@dewtech/dare-mcp-server`](packages/mcp-server) | Servidor MCP local para queries de contexto (90% menos tokens) | ✅ v0.3.0 |
-| [`@dewtech/dare-graphrag`](packages/graphrag) | Motor de conhecimento gráfico com SQLite + FTS5 | ✅ v0.3.0 |
-| [`@dewtech/dare-core`](packages/core) | Tipos e utilitários compartilhados entre os packages | ✅ v0.3.0 |
+```bash
+npm install -g @dewtech/dare-cli
+```
+
+### O que vem incluso
+
+| Componente | Função |
+|------------|--------|
+| CLI `dare` | `init`, `discover`, `design`, `blueprint`, `execute` |
+| CLI `dare-mcp-server` | Servidor MCP local de contexto (~95% economia de tokens) |
+| Engine GraphRAG | Grafo de conhecimento com SQLite + FTS5 |
+| DAG Task Runner | Execução paralela de tasks (Kahn's algorithm) |
+
+> **Histórico:** até a v1.x existiam 4 pacotes separados (`dare-cli`, `dare-core`,
+> `dare-graphrag`, `dare-mcp-server`). A partir da v2.0 todos foram consolidados
+> em `@dewtech/dare-cli`. Os 3 pacotes antigos estão deprecated no npm.
 
 ### Stacks suportados
 
@@ -385,10 +397,9 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 - [x] Execução paralela de tasks com DAG Task Runner
 - [x] MCP Server local para economia de tokens (90% de redução)
 - [x] GraphRAG com SQLite para contexto persistente
-- [x] Pacote `@dewtech/dare-core` (tipos compartilhados)
 - [x] Publicação no npm registry (`@dewtech/dare-cli`)
 - [x] GitHub Actions para CI/CD (build, test, release)
-- [x] Monorepo com pnpm workspaces e TypeScript strict
+- [x] **v2.0:** consolidação dos pacotes em `@dewtech/dare-cli` único
 
 ### Próximos passos 🔜
 

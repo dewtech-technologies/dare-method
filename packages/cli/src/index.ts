@@ -1,3 +1,11 @@
+/**
+ * @dewtech/dare-cli — pacote único do framework DARE.
+ *
+ * Inclui CLI (`dare`), servidor MCP (`dare-mcp-server`), engine GraphRAG e
+ * o DAG Task Runner. Instalar este pacote dá acesso a todas as funcionalidades
+ * do método — não há subpacotes para gerenciar separadamente.
+ */
+
 // Commands
 export { initCommand } from './commands/init.js';
 export { designCommand } from './commands/design.js';
@@ -13,7 +21,22 @@ export { convertYamlToDag, convertDagToYaml } from './utils/dag-converter.js';
 export { generateProjectStructure } from './utils/project-generator.js';
 export type { ProjectConfig } from './utils/project-generator.js';
 
-// Sub-modules (re-exports for convenience; canonical paths are sub-path exports)
-export * as core from './core/index.js';
-export * as graphrag from './graphrag/index.js';
-export * as mcpServer from './mcp-server/index.js';
+// Knowledge graph engine
+export { GraphRAG } from './graphrag/index.js';
+export type {
+  GraphNode,
+  GraphEdge,
+  NodeType,
+  EdgeType,
+  TaskNode,
+  FileNode,
+  SchemaNode,
+  EndpointNode,
+  ComponentNode,
+  SearchResult,
+  GraphStatistics,
+} from './graphrag/index.js';
+
+// MCP server
+export { createMcpServer } from './mcp-server/index.js';
+export type { ContextQuery, ContextResult, TaskStatus } from './mcp-server/index.js';

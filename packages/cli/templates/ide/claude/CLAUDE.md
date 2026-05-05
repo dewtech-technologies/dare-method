@@ -84,7 +84,8 @@ O projeto mantém um grafo de conhecimento em `dare-graph.yml`:
 - **Nodes:** task, file, schema, endpoint, component, entity, concept
 - **Edges:** depends_on, implements, uses, references, related_to, contains, extends
 
-Use `@dewtech/dare-graphrag` para indexar e consultar o grafo.
+A engine GraphRAG vem dentro de `@dewtech/dare-cli` — use `dare graph ingest`,
+`dare graph query` e `dare graph stats` para indexar e consultar o grafo.
 
 ## DARE MCP Server (opcional)
 

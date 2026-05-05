@@ -18,9 +18,7 @@
     "test": "pnpm --recursive test",
     "lint": "pnpm --recursive lint",
     "format": "pnpm --recursive format",
-    "cli": "pnpm -F @dewtech/dare-cli",
-    "mcp": "pnpm -F @dewtech/dare-mcp-server",
-    "graphrag": "pnpm -F @dewtech/dare-graphrag"
+    "cli": "pnpm -F @dewtech/dare-cli"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
