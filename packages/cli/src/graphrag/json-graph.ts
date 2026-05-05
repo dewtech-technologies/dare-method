@@ -40,7 +40,7 @@ export class JsonGraph implements KnowledgeGraph {
         await fs.copy(this.filePath, `${this.filePath}.corrupt-${Date.now()}`);
       }
     }
-    await this.flush();
+    this.flushSync();
   }
 
   // ─── Nodes ────────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export class JsonGraph implements KnowledgeGraph {
           updatedAt: now,
         };
     this.nodes.set(node.id, merged);
-    void this.flush();
+    this.flushSync();
   }
 
   getNode(id: string): GraphNode | null {
@@ -99,7 +99,7 @@ export class JsonGraph implements KnowledgeGraph {
     for (const [edgeId, e] of this.edges) {
       if (e.sourceId === id || e.targetId === id) this.edges.delete(edgeId);
     }
-    void this.flush();
+    this.flushSync();
   }
 
   // ─── Edges ────────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ export class JsonGraph implements KnowledgeGraph {
       ? { ...existing, type: edge.type, weight: edge.weight ?? existing.weight ?? 1, metadata: edge.metadata ?? existing.metadata ?? {} }
       : { ...edge, weight: edge.weight ?? 1, metadata: edge.metadata ?? {} };
     this.edges.set(edge.id, merged);
-    void this.flush();
+    this.flushSync();
   }
 
   getEdges(nodeId: string, direction: 'out' | 'in' | 'both' = 'both'): GraphEdge[] {
@@ -169,20 +169,18 @@ export class JsonGraph implements KnowledgeGraph {
   }
 
   close(): void {
-    // Flushes are eager; nothing to do here besides letting the last write
-    // finalize. Callers can `await fs.access(this.filePath)` if they need
-    // ordering guarantees in tests.
+    // Synchronous flush is performed on every mutation; no shutdown work.
   }
 
-  private async flush(): Promise<void> {
+  private flushSync(): void {
     const data: Persisted = {
       nodes: [...this.nodes.values()],
       edges: [...this.edges.values()],
     };
     try {
-      await fs.writeJson(this.filePath, data, { spaces: 2 });
+      fs.writeJsonSync(this.filePath, data, { spaces: 2 });
     } catch {
-      // best-effort persistence; failures are surfaced by close() in tests
+      // best-effort persistence
     }
   }
 }

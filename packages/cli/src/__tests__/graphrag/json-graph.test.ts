@@ -44,9 +44,6 @@ describe('JsonGraph', () => {
     graph.addNode({ id: 'a', type: 'task', label: 'persisted' });
     graph.addEdge({ id: 'e', sourceId: 'a', targetId: 'a', type: 'related_to' });
 
-    // Allow async flush to complete
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
     const reloaded = new JsonGraph(filePath);
     await reloaded.init();
     expect(reloaded.getNode('a')?.label).toBe('persisted');
