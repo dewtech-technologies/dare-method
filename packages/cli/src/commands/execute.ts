@@ -92,7 +92,7 @@ export const executeCommand = new Command('execute')
       } else if (options.fail) {
         await handleFail(dag, options, stateFile, canvasPath, graph);
       } else if (options.reset) {
-        await handleReset(dag, options.reset, stateFile, canvasPath);
+        await handleReset(dag, options.reset, stateFile, canvasPath, graph);
       } else if (options.next) {
         await handleNext(dag, options, stateFile, canvasPath);
       } else {
@@ -204,6 +204,7 @@ async function handleReset(
   taskId: string,
   stateFile: string,
   canvasPath: string,
+  graph?: KnowledgeGraph,
 ): Promise<void> {
   const task = dag.tasks.find((t) => t.id === taskId);
   if (!task) {
@@ -215,6 +216,17 @@ async function handleReset(
   task.output = undefined;
   task.duration = undefined;
   task.tokens = undefined;
+
+  // Drop the stale graph node (and its outgoing edges) so the next DONE/FAILED
+  // recreates it with fresh metadata. Best-effort.
+  if (graph) {
+    try {
+      graph.deleteNode(`task:${taskId}`);
+    } catch {
+      // ignore — graph cleanup is non-critical
+    }
+  }
+
   console.log(chalk.cyan(`↺ ${task.id} reset to PENDING.`));
   await persist(dag, stateFile, canvasPath);
 }

@@ -11,6 +11,20 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.3.1] — 2026-05
+
+### Adicionado
+- `dare graph query <termo> --type <tipo>` — filtro opcional por tipo de nó
+  (`task`, `file`, `schema`, `endpoint`, `component`, `entity`, `concept`).
+
+### Corrigido
+- `dare execute --reset <id>` agora também remove o nó `task:<id>` do graph,
+  evitando metadata stale (status DONE/FAILED antigo) depois de um retry.
+  Os nós `file` permanecem — a remoção é cirúrgica, só na task resetada.
+- `JsonGraph` usa `flushSync` para gravar em disco — elimina race condition
+  no CI Linux quando duas mutações acontecem em sequência rápida (afetava o
+  teste `persists state across instances` no GitHub Actions).
+
 ## [2.3.0] — 2026-05
 
 ### Adicionado — comando `dare graph`

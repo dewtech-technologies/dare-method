@@ -124,4 +124,17 @@ describe('ingestTask', () => {
     ingestTask(graph, dag.tasks[0], dag); // status PENDING
     expect(graph.getNode('task:t1')).toBeNull();
   });
+
+  it('deleteNode("task:<id>") drops stale state on reset', () => {
+    const dag = sampleDag();
+    dag.tasks[0].status = 'DONE';
+    dag.tasks[0].output = 'Created src/auth.ts';
+    ingestTask(graph, dag.tasks[0], dag);
+
+    expect(graph.getNode('task:t1')).toBeDefined();
+    graph.deleteNode('task:t1');
+    expect(graph.getNode('task:t1')).toBeNull();
+    // file node remains because reset doesn't necessarily mean files vanished
+    expect(graph.getNode('file:src/auth.ts')).toBeDefined();
+  });
 });

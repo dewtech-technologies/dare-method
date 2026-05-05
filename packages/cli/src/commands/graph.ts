@@ -45,19 +45,49 @@ graphCommand
     });
   });
 
+const KNOWN_NODE_TYPES = [
+  'task',
+  'file',
+  'schema',
+  'endpoint',
+  'component',
+  'entity',
+  'concept',
+] as const;
+type KnownNodeType = (typeof KNOWN_NODE_TYPES)[number];
+
 graphCommand
   .command('query <term>')
   .description('Search nodes whose label/description contains <term>')
   .option('-l, --limit <n>', 'Maximum results', '10')
-  .action(async (term: string, options: { limit: string }) => {
+  .option('-t, --type <type>', `Restrict to a node type (${KNOWN_NODE_TYPES.join(' | ')})`)
+  .action(async (term: string, options: { limit: string; type?: string }) => {
     const limit = parseInt(options.limit, 10) || 10;
+    const typeFilter = options.type?.toLowerCase();
+    if (typeFilter && !KNOWN_NODE_TYPES.includes(typeFilter as KnownNodeType)) {
+      console.error(
+        chalk.red(`❌ Unknown node type "${options.type}". Use one of: ${KNOWN_NODE_TYPES.join(', ')}.`),
+      );
+      process.exit(1);
+    }
+
     await withGraph(async (graph) => {
-      const results = graph.searchNodes(term, limit);
+      // Search wider when filtering by type — we'll trim after filtering.
+      const rawLimit = typeFilter ? Math.max(limit * 5, 50) : limit;
+      const all = graph.searchNodes(term, rawLimit);
+      const results = typeFilter
+        ? all.filter((r) => r.node.type === typeFilter).slice(0, limit)
+        : all;
+
       if (results.length === 0) {
-        console.log(chalk.yellow(`No matches for "${term}".`));
+        const filterMsg = typeFilter ? ` of type ${typeFilter}` : '';
+        console.log(chalk.yellow(`No matches${filterMsg} for "${term}".`));
         return;
       }
-      console.log(chalk.blue.bold(`\n🔎 ${results.length} match(es) for "${term}"\n`));
+      const filterMsg = typeFilter ? ` (type=${typeFilter})` : '';
+      console.log(
+        chalk.blue.bold(`\n🔎 ${results.length} match(es) for "${term}"${filterMsg}\n`),
+      );
       for (const r of results) {
         console.log(`${chalk.cyan(r.node.id)}  ${chalk.gray(`[${r.node.type}]`)}`);
         console.log(`  ${r.node.label}`);
