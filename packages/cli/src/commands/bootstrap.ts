@@ -9,7 +9,10 @@ import {
   type BackendStack,
   type FrontendStack,
   type McpLanguage,
+  type ToolchainMode,
 } from '../utils/stack-bootstrap.js';
+
+const VALID_TOOLCHAINS: readonly ToolchainMode[] = ['auto', 'native', 'docker'];
 
 /**
  * `dare bootstrap` — runs the official scaffold for the current project's
@@ -25,7 +28,11 @@ import {
 export const bootstrapCommand = new Command('bootstrap')
   .description("Run the official scaffold for the current project's stack (uses dare.config.json)")
   .option('--force', 'Run even if framework artifacts already exist (may overwrite files)', false)
-  .action(async (options: { force: boolean }) => {
+  .option(
+    '--toolchain <mode>',
+    'Override toolchain mode for this run: auto | native | docker',
+  )
+  .action(async (options: { force: boolean; toolchain?: string }) => {
     const cwd = process.cwd();
     const cfgPath = path.join(cwd, 'dare.config.json');
 
@@ -41,7 +48,20 @@ export const bootstrapCommand = new Command('bootstrap')
       backend?: string;
       frontend?: string;
       mcpLanguage?: string;
+      toolchain?: ToolchainMode;
     };
+
+    // CLI flag wins over saved config; default 'auto' if neither set.
+    let toolchain: ToolchainMode = cfg.toolchain ?? 'auto';
+    if (options.toolchain) {
+      if (!VALID_TOOLCHAINS.includes(options.toolchain as ToolchainMode)) {
+        console.error(
+          chalk.red(`❌ Invalid --toolchain "${options.toolchain}". Use: auto | native | docker.`),
+        );
+        process.exit(1);
+      }
+      toolchain = options.toolchain as ToolchainMode;
+    }
 
     const projectName = cfg.name ?? path.basename(cwd);
 
@@ -60,12 +80,13 @@ export const bootstrapCommand = new Command('bootstrap')
     try {
       if (cfg.structure === 'mcp-server') {
         const lang = (cfg.mcpLanguage ?? 'node-ts') as McpLanguage;
-        await bootstrapMcp({ language: lang, dir: cwd, projectName });
+        await bootstrapMcp({ language: lang, dir: cwd, projectName, toolchain });
       } else if (cfg.structure === 'frontend' && cfg.frontend) {
         await bootstrapFrontend({
           stack: cfg.frontend as FrontendStack,
           dir: cwd,
           projectName,
+          toolchain,
         });
       } else if ((cfg.structure === 'backend' || cfg.structure === 'monorepo') && cfg.backend) {
         const dir = cfg.structure === 'monorepo' ? path.join(cwd, 'backend') : cwd;
@@ -74,6 +95,7 @@ export const bootstrapCommand = new Command('bootstrap')
           stack: cfg.backend as BackendStack,
           dir,
           projectName,
+          toolchain,
         });
         if (cfg.structure === 'monorepo' && cfg.frontend) {
           const fdir = path.join(cwd, 'frontend');
@@ -82,6 +104,7 @@ export const bootstrapCommand = new Command('bootstrap')
             stack: cfg.frontend as FrontendStack,
             dir: fdir,
             projectName,
+            toolchain,
           });
         }
       } else {

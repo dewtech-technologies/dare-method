@@ -26,60 +26,81 @@ export type FrontendStack = 'react' | 'vue';
 
 export type McpLanguage = 'node-ts' | 'python';
 
+/**
+ * How to satisfy each stack's toolchain dependency:
+ *   - `native`: require the CLI on PATH (composer / npm / cargo / python / go).
+ *               If missing, fail with a clear error — do not fall back.
+ *   - `docker`: always run via the official Docker image, even if the native
+ *               CLI is available. Useful when you want a hermetic, reproducible
+ *               toolchain regardless of host setup.
+ *   - `auto`  : prefer native if present; otherwise fall back to Docker.
+ *               Default behavior since v2.6.0.
+ */
+export type ToolchainMode = 'native' | 'docker' | 'auto';
+
 export interface BootstrapBackendOptions {
   stack: BackendStack;
   dir: string;
   projectName: string;
+  toolchain?: ToolchainMode;
 }
 
 export interface BootstrapFrontendOptions {
   stack: FrontendStack;
   dir: string;
   projectName: string;
+  toolchain?: ToolchainMode;
 }
 
 export interface BootstrapMcpOptions {
   language: McpLanguage;
   dir: string;
   projectName: string;
+  toolchain?: ToolchainMode;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<void> {
+  const mode = opts.toolchain ?? 'auto';
   switch (opts.stack) {
     case 'php-laravel':
-      return bootstrapPhpLaravel(opts.dir, opts.projectName);
+      return bootstrapPhpLaravel(opts.dir, opts.projectName, mode);
     case 'node-nestjs':
-      return bootstrapNodeNestjs(opts.dir, opts.projectName);
+      return bootstrapNodeNestjs(opts.dir, opts.projectName, mode);
     case 'python-fastapi':
-      return bootstrapPythonFastapi(opts.dir);
+      return bootstrapPythonFastapi(opts.dir, mode);
     case 'rust-axum':
-      return bootstrapRustAxum(opts.dir, opts.projectName);
+      return bootstrapRustAxum(opts.dir, opts.projectName, mode);
     case 'go-gin':
-      return bootstrapGoGin(opts.dir, opts.projectName);
+      return bootstrapGoGin(opts.dir, opts.projectName, mode);
     default:
       throw new Error(`Unknown backend stack: ${opts.stack as string}`);
   }
 }
 
 export async function bootstrapFrontend(opts: BootstrapFrontendOptions): Promise<void> {
+  const mode = opts.toolchain ?? 'auto';
   switch (opts.stack) {
     case 'react':
-      return bootstrapVite(opts.dir, 'react-ts');
+      await bootstrapVite(opts.dir, 'react-ts', mode);
+      break;
     case 'vue':
-      return bootstrapVite(opts.dir, 'vue-ts');
+      await bootstrapVite(opts.dir, 'vue-ts', mode);
+      break;
     default:
       throw new Error(`Unknown frontend stack: ${opts.stack as string}`);
   }
+  await tryRenameNpmProject(opts.dir, opts.projectName);
 }
 
 export async function bootstrapMcp(opts: BootstrapMcpOptions): Promise<void> {
+  const mode = opts.toolchain ?? 'auto';
   switch (opts.language) {
     case 'node-ts':
-      return bootstrapMcpNode(opts.dir, opts.projectName);
+      return bootstrapMcpNode(opts.dir, opts.projectName, mode);
     case 'python':
-      return bootstrapMcpPython(opts.dir);
+      return bootstrapMcpPython(opts.dir, mode);
     default:
       throw new Error(`Unknown MCP language: ${opts.language as string}`);
   }
@@ -114,10 +135,44 @@ class StackTool {
     dockerImage: string;
     imageHasEntrypoint?: boolean;
     dir: string;
+    mode?: ToolchainMode;
   }): Promise<StackTool> {
     const dir = path.resolve(opts.dir);
+    const mode: ToolchainMode = opts.mode ?? 'auto';
 
+    // Forced Docker
+    if (mode === 'docker') {
+      if (!(await hasCommand('docker'))) {
+        throw new Error(
+          `--toolchain=docker selected, but \`docker\` is not on PATH.\n` +
+            `  Install Docker Desktop: https://www.docker.com/products/docker-desktop/`,
+        );
+      }
+      console.log(chalk.cyan(`🐳 Using Docker (${opts.dockerImage}) — toolchain=docker`));
+      return new StackTool(
+        opts.nativeCmd,
+        'docker',
+        dir,
+        opts.dockerImage,
+        opts.imageHasEntrypoint ?? false,
+      );
+    }
+
+    // Forced native
+    if (mode === 'native') {
+      if (!(await hasCommand(opts.nativeCmd))) {
+        throw new Error(
+          `--toolchain=native selected, but \`${opts.nativeCmd}\` is not on PATH.\n` +
+            `  ${opts.nativeHint}`,
+        );
+      }
+      console.log(chalk.green(`🔧 Using native ${opts.nativeCmd} — toolchain=native`));
+      return new StackTool(opts.nativeCmd, 'native', dir, null, false);
+    }
+
+    // Auto: prefer native, fall back to Docker
     if (await hasCommand(opts.nativeCmd)) {
+      console.log(chalk.green(`🔧 Using native ${opts.nativeCmd} — toolchain=auto`));
       return new StackTool(opts.nativeCmd, 'native', dir, null, false);
     }
 
@@ -203,7 +258,11 @@ class StackTool {
 
 // ─── Per-stack scaffolds ────────────────────────────────────────────────────
 
-async function bootstrapPhpLaravel(dir: string, projectName: string): Promise<void> {
+async function bootstrapPhpLaravel(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
   banner(`Bootstrapping Laravel 11 in ${dir}`);
 
   const composer = await StackTool.resolve({
@@ -212,6 +271,7 @@ async function bootstrapPhpLaravel(dir: string, projectName: string): Promise<vo
     dockerImage: 'composer:latest',
     imageHasEntrypoint: true,
     dir,
+    mode,
   });
 
   await composer.run(['create-project', 'laravel/laravel:^11', '.', '--no-interaction', '--prefer-dist']);
@@ -221,7 +281,11 @@ async function bootstrapPhpLaravel(dir: string, projectName: string): Promise<vo
   await tryRenameComposerProject(dir, projectName);
 }
 
-async function bootstrapNodeNestjs(dir: string, projectName: string): Promise<void> {
+async function bootstrapNodeNestjs(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
   banner(`Bootstrapping NestJS in ${dir}`);
 
   const npx = await StackTool.resolve({
@@ -230,6 +294,7 @@ async function bootstrapNodeNestjs(dir: string, projectName: string): Promise<vo
     dockerImage: 'node:20-alpine',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
   await npx.run([
@@ -248,7 +313,7 @@ async function bootstrapNodeNestjs(dir: string, projectName: string): Promise<vo
   await tryRenameNpmProject(dir, projectName);
 }
 
-async function bootstrapPythonFastapi(dir: string): Promise<void> {
+async function bootstrapPythonFastapi(dir: string, mode: ToolchainMode): Promise<void> {
   banner(`Bootstrapping FastAPI in ${dir}`);
 
   const python = await StackTool.resolve({
@@ -257,6 +322,7 @@ async function bootstrapPythonFastapi(dir: string): Promise<void> {
     dockerImage: 'python:3.12-slim',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
   // Even in Docker mode, we keep .venv in the project folder so it survives
@@ -284,18 +350,25 @@ async function bootstrapPythonFastapi(dir: string): Promise<void> {
     );
   }
 
-  // Install via the venv's pip — works the same in native or Docker mode
-  // because the venv lives inside `dir` (and thus inside the volume).
-  const pipBin =
+  // Use the venv's `python -m pip` instead of `pip.exe` directly. On Windows,
+  // pip cannot replace its own running executable when upgrading itself —
+  // pip itself prints "To modify pip, please run python -m pip install
+  // --upgrade pip". So we always go through `python -m pip`, which works on
+  // Windows, macOS, and Linux without special-casing.
+  const venvPython =
     process.platform === 'win32' && !python.usingDocker
-      ? path.join('.venv', 'Scripts', 'pip.exe')
-      : path.join('.venv', 'bin', 'pip');
+      ? path.join('.venv', 'Scripts', 'python.exe')
+      : path.join('.venv', 'bin', 'python');
 
-  await python.runOther(pipBin, ['install', '--upgrade', 'pip']);
-  await python.runOther(pipBin, ['install', '-r', 'requirements.txt']);
+  await python.runOther(venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']);
+  await python.runOther(venvPython, ['-m', 'pip', 'install', '-r', 'requirements.txt']);
 }
 
-async function bootstrapRustAxum(dir: string, projectName: string): Promise<void> {
+async function bootstrapRustAxum(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
   banner(`Bootstrapping Rust + Axum in ${dir}`);
 
   const cargo = await StackTool.resolve({
@@ -304,6 +377,7 @@ async function bootstrapRustAxum(dir: string, projectName: string): Promise<void
     dockerImage: 'rust:1.83',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
   await cargo.run(['init', '--name', sanitizeCrateName(projectName)]);
@@ -340,7 +414,11 @@ async function bootstrapRustAxum(dir: string, projectName: string): Promise<void
   await cargo.run(['fetch']);
 }
 
-async function bootstrapGoGin(dir: string, projectName: string): Promise<void> {
+async function bootstrapGoGin(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
   banner(`Bootstrapping Go + Gin in ${dir}`);
 
   const go = await StackTool.resolve({
@@ -349,6 +427,7 @@ async function bootstrapGoGin(dir: string, projectName: string): Promise<void> {
     dockerImage: 'golang:1.22',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
   const moduleName = sanitizeGoModule(projectName);
@@ -444,7 +523,11 @@ func TestHealth(t *testing.T) {
   await go.run(['mod', 'tidy']);
 }
 
-async function bootstrapVite(dir: string, template: 'react-ts' | 'vue-ts'): Promise<void> {
+async function bootstrapVite(
+  dir: string,
+  template: 'react-ts' | 'vue-ts',
+  mode: ToolchainMode,
+): Promise<void> {
   banner(`Bootstrapping Vite (${template}) in ${dir}`);
 
   const npm = await StackTool.resolve({
@@ -453,13 +536,35 @@ async function bootstrapVite(dir: string, template: 'react-ts' | 'vue-ts'): Prom
     dockerImage: 'node:20-alpine',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
-  await npm.run(['create', 'vite@latest', '.', '--', '--template', template]);
+  // We use `degit` instead of `npm create vite` because the Vite scaffolder
+  // has interactive prompts (project name, package manager, sometimes the
+  // experimental "Use Rolldown-Vite?" question) that can't be reliably
+  // suppressed from a non-TTY parent process. `degit` clones the *same*
+  // official template tree from the Vite repo with zero prompts.
+  await npm.runOther('npx', [
+    '-y',
+    'degit',
+    `vitejs/vite/packages/create-vite/template-${template}`,
+    '.',
+    '--force',
+  ]);
+
+  // The Vite official templates ship a `package.json` with a placeholder
+  // `name: "vite-project"` — the DARE generator will overwrite that with
+  // the project name later (via tryRenameNpmProject in the caller chain),
+  // but we still kick off `npm install` here so the agent has node_modules
+  // and the build/test gates run from the start.
   await npm.run(['install']);
 }
 
-async function bootstrapMcpNode(dir: string, projectName: string): Promise<void> {
+async function bootstrapMcpNode(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
   banner(`Bootstrapping MCP server (TypeScript) in ${dir}`);
 
   const npm = await StackTool.resolve({
@@ -468,6 +573,7 @@ async function bootstrapMcpNode(dir: string, projectName: string): Promise<void>
     dockerImage: 'node:20-alpine',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
   await npm.run(['init', '-y']);
@@ -477,7 +583,7 @@ async function bootstrapMcpNode(dir: string, projectName: string): Promise<void>
   await tryRenameNpmProject(dir, projectName);
 }
 
-async function bootstrapMcpPython(dir: string): Promise<void> {
+async function bootstrapMcpPython(dir: string, mode: ToolchainMode): Promise<void> {
   banner(`Bootstrapping MCP server (Python) in ${dir}`);
 
   const python = await StackTool.resolve({
@@ -486,16 +592,20 @@ async function bootstrapMcpPython(dir: string): Promise<void> {
     dockerImage: 'python:3.12-slim',
     imageHasEntrypoint: false,
     dir,
+    mode,
   });
 
   await python.run(['-m', 'venv', '.venv']);
-  const pipBin =
+  // See bootstrapPythonFastapi above: `pip.exe install --upgrade pip` fails
+  // on Windows because pip can't overwrite its own running executable. We
+  // route every pip call through `python -m pip` instead.
+  const venvPython =
     process.platform === 'win32' && !python.usingDocker
-      ? path.join('.venv', 'Scripts', 'pip.exe')
-      : path.join('.venv', 'bin', 'pip');
+      ? path.join('.venv', 'Scripts', 'python.exe')
+      : path.join('.venv', 'bin', 'python');
 
-  await python.runOther(pipBin, ['install', '--upgrade', 'pip']);
-  await python.runOther(pipBin, ['install', 'mcp[cli]', 'pytest', 'ruff']);
+  await python.runOther(venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']);
+  await python.runOther(venvPython, ['-m', 'pip', 'install', 'mcp[cli]', 'pytest', 'ruff']);
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

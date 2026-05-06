@@ -125,6 +125,26 @@ export const initCommand = new Command('init')
         message: 'Enable DARE MCP Server for context queries?',
         default: true,
       },
+      {
+        type: 'list',
+        name: 'toolchain',
+        message: 'Toolchain for scaffolding (composer / npm / cargo / python / go):',
+        choices: [
+          {
+            name: '🤖 Auto — use native if on PATH, else Docker (recommended)',
+            value: 'auto',
+          },
+          {
+            name: '🔧 Native only — require the CLI on PATH (faster, no Docker pulls)',
+            value: 'native',
+          },
+          {
+            name: '🐳 Docker only — always use the official image (hermetic, no host install)',
+            value: 'docker',
+          },
+        ],
+        default: 'auto',
+      },
     ]);
 
     const name = projectName || answers.name;
@@ -142,6 +162,7 @@ export const initCommand = new Command('init')
         ide: answers.ide,
         graphrag: answers.graphrag,
         mcp: answers.mcp,
+        toolchain: answers.toolchain,
         outputDir: path.resolve(process.cwd(), name),
       });
 

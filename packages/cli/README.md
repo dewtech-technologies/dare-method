@@ -7,6 +7,116 @@ A structured methodology for AI-assisted software development with mandatory hum
 [![npm](https://img.shields.io/npm/v/@dewtech/dare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dewtech-technologies/dare-method/blob/main/LICENSE)
 
+---
+
+## ⚠ Read this first — How `dare init` runs the official scaffold
+
+`dare init` invokes the **official scaffold** of the stack you pick. That
+means it literally runs:
+
+| Stack | What `dare init` runs |
+|-------|----------------------|
+| `php-laravel` | `composer create-project laravel/laravel:^11 .` |
+| `node-nestjs` | `npx @nestjs/cli new . --strict --skip-git` |
+| `python-fastapi` | `python -m venv .venv && python -m pip install -r requirements.txt` |
+| `rust-axum` | `cargo init` + write `Cargo.toml` (axum, sqlx, tokio…) |
+| `go-gin` | `go mod init` + `go get gin/godotenv` + starter files |
+| `react`, `vue` | `npx degit vitejs/vite/packages/create-vite/template-<x> .` + `npm install` |
+| `mcp-server-node-ts` | `npm init` + `@modelcontextprotocol/sdk` |
+| `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
+
+These need a working `composer` / `npm` / `cargo` / `python` / `go`
+**somewhere**. There are three ways to provide it — you pick at init time
+(prompt below), and the choice is saved in `dare.config.json` so
+`dare bootstrap` reuses it later.
+
+```
+? Toolchain for scaffolding (composer / npm / cargo / python / go):
+  ❯ 🤖 Auto — use native if on PATH, else Docker (recommended)
+    🔧 Native only — require the CLI on PATH (faster, no Docker pulls)
+    🐳 Docker only — always use the official image (hermetic, no host install)
+```
+
+### 🤖 Auto (default)
+
+Tries the native CLI first. If missing, falls back to the official Docker
+image automatically. If neither is present, fails fast with both install
+links.
+
+```
+which composer  → ✓ found?  use native
+                → ✗ missing? which docker
+                              → ✓ found?  docker run composer:latest …
+                              → ✗ missing? error: install Composer or Docker
+```
+
+**When:** you don't know exactly what's installed; mixed teams (some
+machines have the toolchain, some only have Docker). The same project
+config (`dare.config.json` with `toolchain: auto`) works on every machine.
+
+### 🔧 Native only
+
+Requires the CLI on PATH. **Fails immediately** if missing — no Docker
+fallback even if Docker is available.
+
+```
+which composer → ✓ found?  use native
+                → ✗ missing? error: "Install Composer: https://getcomposer.org/"
+```
+
+**When:** you already have the toolchain and want **maximum speed** (no
+`docker pull`, no bind-mount overhead, no container startup); you're in CI
+with the toolchain pre-installed; you want to avoid Docker Desktop edge
+cases (Windows volume throttling, Linux uid/gid issues, etc.).
+
+### 🐳 Docker only
+
+**Always** runs the scaffold inside the official Docker image — even if
+the native CLI is on PATH. Fails if Docker isn't installed.
+
+```
+which docker → ✓ found?  docker run --rm -v ".:/app" composer:latest create-project …
+              → ✗ missing? error: "Install Docker Desktop"
+```
+
+**When:** you don't want to install PHP / Cargo / Python / Go on the
+host (keep host clean); you want **hermetic, reproducible** builds (every
+dev uses the exact toolchain version baked into the image); you want to
+mirror your CI locally.
+
+### Quick decision table
+
+| Your situation | Pick |
+|----------------|------|
+| Already have the toolchain installed, want speed | **🔧 Native** |
+| Don't want to install PHP/Cargo/Python/Go on the host | **🐳 Docker** |
+| Mixed team, varying setups | **🤖 Auto** |
+| Just want it to work | **🤖 Auto** |
+| Want bit-for-bit toolchain reproducibility | **🐳 Docker** |
+| Solo dev with everything installed | **🔧 Native** |
+
+### Override later
+
+```bash
+dare bootstrap --toolchain docker          # rerun scaffold inside Docker
+dare bootstrap --toolchain native --force  # rerun native, overwriting framework files
+dare bootstrap --toolchain auto            # back to auto-detect
+```
+
+### ⚠ Important caveat — Ralph Loop
+
+`dare execute --complete` runs the stack's quality gates
+(`composer dump-autoload`, `php artisan test`, `cargo build`, etc.)
+**directly on the host** — it does **not** automatically wrap them in
+Docker even if you picked `docker only` at init time.
+
+If you don't have the native toolchain installed, the agent should run
+the gates inside the container created by **task-001** (the Containerize
+task), e.g. `docker compose exec app php artisan test`. The skills
+shipped with `dare init` already nudge the agent toward that pattern.
+
+---
+
 ## Prerequisites
 
 ### Required for the CLI itself
@@ -41,6 +151,27 @@ Pick **one** of the two paths per stack:
 
 If neither the native CLI **nor** Docker is available, `dare init` fails
 fast with a clear error message — it never falls back to a fake template.
+
+### Choose the toolchain at init time
+
+The 3 modes (`auto` / `native` / `docker`) are explained in detail at the
+top of this README — see [⚠ Read this first](#-read-this-first--how-dare-init-runs-the-official-scaffold).
+
+Quick recap:
+
+| Mode | Behavior |
+|------|----------|
+| `auto` (default) | Native if available, else Docker. Recommended. |
+| `native` | Requires the native CLI; fails if missing. |
+| `docker` | Always uses the official Docker image. |
+
+The choice is persisted in `dare.config.json` (`"toolchain": "..."`).
+Override at any time:
+
+```bash
+dare bootstrap --toolchain docker          # rerun scaffold inside Docker
+dare bootstrap --toolchain native --force  # rerun native, overwriting
+```
 
 ### Required for the Ralph Loop (per project)
 

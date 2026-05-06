@@ -228,11 +228,64 @@ O DARE Method está disponível como um **pacote npm único e instalável**: tud
 o que o framework oferece (CLI, servidor MCP, engine GraphRAG, DAG runner)
 vem dentro de `@dewtech/dare-cli`. Não há subpacotes para gerenciar.
 
+### Pré-requisitos
+
+#### Para o CLI rodar
+- **Node.js 18+** — instala em https://nodejs.org/
+
+#### Para `dare init` scaffoldar a stack escolhida
+O `dare init` **executa o scaffold oficial** da stack (`composer create-project`,
+`npx degit vitejs/vite/...`, `cargo init`, `go mod init`, etc.). Você pode
+escolher de onde a toolchain vem:
+
+| Stack | Toolchain nativo | Imagem Docker (fallback) |
+|-------|------------------|---------------------------|
+| `php-laravel` | PHP 8.2+ · Composer 2+ — https://getcomposer.org/ | `composer:latest` |
+| `node-nestjs` | Node 18+ (já vem com `npx`) | `node:20-alpine` |
+| `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
+| `rust-axum` | Rust 1.83+ via rustup — https://www.rust-lang.org/tools/install | `rust:1.83` |
+| `go-gin` | Go 1.22+ — https://go.dev/dl/ | `golang:1.22` |
+| `react`, `vue` | Node 18+ | `node:20-alpine` |
+| `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
+| `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+
+> **TL;DR:** se você só tem **Docker Desktop**, o `dare init` consegue
+> scaffoldar qualquer stack. Se você tem o toolchain nativo, ele é mais
+> rápido. Se você tem os dois, escolha o modo no momento do init.
+
 ### Instalação
 
 ```bash
 npm install -g @dewtech/dare-cli
 ```
+
+### Modos de toolchain (a partir da v2.7.0)
+
+Ao rodar `dare init`, uma pergunta nova aparece:
+
+```
+? Toolchain for scaffolding (composer / npm / cargo / python / go):
+  ❯ 🤖 Auto — usa nativo se disponível, senão Docker (recomendado)
+    🔧 Native only — exige a CLI no PATH (mais rápido, sem pull de imagem)
+    🐳 Docker only — sempre usa imagem oficial (hermético, sem instalar nada no host)
+```
+
+A resposta é salva em `dare.config.json` (`"toolchain": "auto"`) e usada
+em todos os `dare bootstrap` futuros. Override pontual com
+`dare bootstrap --toolchain <mode>`.
+
+| Modo | Quando escolher |
+|------|-----------------|
+| `auto` | Default. Não sabe o que tem instalado, ou trabalha em time misto. |
+| `native` | Já tem toolchain instalada. Quer velocidade máxima. |
+| `docker` | Não quer instalar PHP/Cargo/Python/Go no host. Quer build hermético. |
+
+> **Caveat — Ralph Loop:** `dare execute --complete` roda os gates
+> (`composer dump-autoload`, `php artisan test`, `cargo build`, etc.)
+> direto no host, não dentro do container do scaffold. Se você escolheu
+> `docker only` sem toolchain nativa, o agente da IDE deve rodar os gates
+> via `docker compose exec app <comando>` no container que a primeira
+> task (Containerize) cria.
 
 ### O que vem incluso
 
@@ -249,7 +302,7 @@ npm install -g @dewtech/dare-cli
 
 ### Stacks suportados
 
-**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel
+**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin
 
 **Frontend:** React 18+ · Vue 3+
 

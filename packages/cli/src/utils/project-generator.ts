@@ -19,6 +19,7 @@ import {
   type BackendStack,
   type FrontendStack,
   type McpLanguage,
+  type ToolchainMode,
 } from './stack-bootstrap.js';
 
 export interface ProjectConfig {
@@ -39,6 +40,13 @@ export interface ProjectConfig {
    * Defaults to false — i.e., scaffolding is the normal path.
    */
   skipBootstrap?: boolean;
+  /**
+   * Toolchain preference for the scaffold step (and reused by `dare bootstrap`):
+   *   - `auto`   (default): use native CLI if on PATH, otherwise Docker.
+   *   - `native`: require composer/npm/cargo/python/go on PATH; fail otherwise.
+   *   - `docker`: always run via the official Docker image, even if native is available.
+   */
+  toolchain?: ToolchainMode;
 }
 
 export async function generateProjectStructure(config: ProjectConfig): Promise<void> {
@@ -49,6 +57,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   // 0) Run the official scaffold for the chosen stack BEFORE laying down DARE
   //    artifacts. The scaffold needs an empty (or near-empty) directory.
   if (!config.skipBootstrap) {
+    await assertOutputDirIsEmpty(config);
     await runStackBootstrap(config);
   }
 
@@ -57,7 +66,17 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   await fs.ensureDir(path.join(outputDir, 'DARE', 'EXECUTION'));
 
   // Write dare.config.json
-  const configData: Record<string, unknown> = { name, structure, backend, frontend, ide, graphrag, mcp, version: '0.1.0' };
+  const configData: Record<string, unknown> = {
+    name,
+    structure,
+    backend,
+    frontend,
+    ide,
+    graphrag,
+    mcp,
+    toolchain: config.toolchain ?? 'auto',
+    version: '0.1.0',
+  };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;
     configData.mcpLanguage = config.mcpLanguage;
@@ -774,8 +793,48 @@ const BACKEND_STACKS = new Set<BackendStack>([
 ]);
 const FRONTEND_STACKS = new Set<FrontendStack>(['react', 'vue']);
 
+/**
+ * Official scaffolders (composer create-project, npx degit, cargo init,
+ * `npm create`, etc.) all refuse to run inside a directory that already
+ * has files. We check for that BEFORE running the scaffold so the user gets
+ * a single clear error — not a cryptic stack trace from inside Composer or
+ * Cargo. We tolerate `.git` because some users initialize a repo first.
+ */
+async function assertOutputDirIsEmpty(config: ProjectConfig): Promise<void> {
+  const dirsToCheck: string[] = [];
+
+  if (config.structure === 'mcp-server' || config.structure === 'frontend') {
+    dirsToCheck.push(config.outputDir);
+  } else if (config.structure === 'backend') {
+    dirsToCheck.push(config.outputDir);
+  } else if (config.structure === 'monorepo') {
+    if (config.backend) dirsToCheck.push(path.join(config.outputDir, 'backend'));
+    if (config.frontend) dirsToCheck.push(path.join(config.outputDir, 'frontend'));
+  }
+
+  for (const dir of dirsToCheck) {
+    if (!(await fs.pathExists(dir))) continue;
+    const entries = (await fs.readdir(dir)).filter(
+      (e) => e !== '.git' && e !== '.gitkeep',
+    );
+    if (entries.length > 0) {
+      const preview = entries.slice(0, 8).join(', ');
+      const more = entries.length > 8 ? `, … (+${entries.length - 8})` : '';
+      throw new Error(
+        `Target directory is not empty: ${dir}\n` +
+          `  Found: ${preview}${more}\n\n` +
+          `Likely cause: a previous \`dare init\` for this project failed midway and left files behind.\n` +
+          `Resolve by either:\n` +
+          `  1) Removing the directory and trying again:  Remove-Item -Recurse -Force "${dir}"\n` +
+          `  2) Choosing a different project name.\n` +
+          `  3) Running \`dare bootstrap --force\` if you want to reuse the existing directory and overwrite framework files.`,
+      );
+    }
+  }
+}
+
 async function runStackBootstrap(config: ProjectConfig): Promise<void> {
-  const { outputDir, name, structure, backend, frontend, mcpLanguage } = config;
+  const { outputDir, name, structure, backend, frontend, mcpLanguage, toolchain } = config;
 
   // Backend / monorepo backend
   if ((structure === 'backend' || structure === 'monorepo') && backend) {
@@ -789,6 +848,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
       stack: backend as BackendStack,
       dir: backendDir,
       projectName: name,
+      toolchain,
     });
   }
 
@@ -804,13 +864,19 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
       stack: frontend as FrontendStack,
       dir: frontendDir,
       projectName: name,
+      toolchain,
     });
   }
 
   // MCP Server
   if (structure === 'mcp-server') {
     const lang = (mcpLanguage ?? 'node-ts') as McpLanguage;
-    await bootstrapMcp({ language: lang, dir: outputDir, projectName: name });
+    await bootstrapMcp({
+      language: lang,
+      dir: outputDir,
+      projectName: name,
+      toolchain,
+    });
   }
 
   console.log(chalk.green('\n✓ Stack scaffold complete.\n'));

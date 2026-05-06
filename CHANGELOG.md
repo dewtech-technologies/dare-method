@@ -11,6 +11,111 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.7.0] — 2026-05
+
+A v2.6.x ficou em desenvolvimento e nunca foi publicada — todas as
+correções e features dela estão consolidadas aqui na 2.7.0.
+
+### Adicionado — Escolha de toolchain no `dare init` e `dare bootstrap`
+Novo prompt no `dare init` (e flag `--toolchain` no `dare bootstrap`) com
+três modos:
+
+| Modo | Comportamento |
+|------|---------------|
+| `auto` (default) | Usa CLI nativo se estiver no PATH; senão cai em Docker |
+| `native` | Exige o CLI nativo no PATH (composer / npm / cargo / python / go); falha se não tiver |
+| `docker` | Sempre usa a imagem Docker oficial, mesmo com nativo disponível (toolchain hermética) |
+
+A escolha fica salva em `dare.config.json` (`"toolchain": "auto"`) e é
+reutilizada pelo `dare bootstrap`. O `dare bootstrap --toolchain <mode>`
+permite override pontual.
+
+```bash
+dare init meu-projeto                       # interativo, escolhe modo
+dare bootstrap --toolchain docker           # roda scaffold via Docker num projeto existente
+dare bootstrap --toolchain native --force   # força nativo, ignora dirty checks
+```
+
+### Corrigido — `dare init` travava em projetos React/Vue
+O `npm create vite@latest .` travava silenciosamente porque o
+`create-vite` (v9+) tem prompts interativos que não dá para suprimir só
+com `--template` (`Use Rolldown-Vite?`, package manager, etc). Quando o
+subprocess herda stdin de um contexto não-TTY, ele fica preso esperando
+input.
+
+**Fix:** trocamos para `npx -y degit vitejs/vite/packages/create-vite/template-<react-ts|vue-ts> .`
+que clona o **mesmo template oficial** direto do repositório do Vite,
+sem nenhum prompt. Em seguida, `npm install` para popular `node_modules`
+e deixar a stack pronta para o Ralph Loop.
+
+`bootstrapFrontend` agora também chama `tryRenameNpmProject` no fim, então
+o `package.json` já vem com o nome do seu projeto em vez do placeholder
+`vite-project`.
+
+### Corrigido — `dare init` falhava na stack Python no Windows
+O comando `.venv\Scripts\pip.exe install --upgrade pip` falha no Windows
+porque o pip não consegue substituir o próprio `pip.exe` enquanto está
+em execução. O próprio pip imprime: *"To modify pip, please run
+`python.exe -m pip install --upgrade pip`"*.
+
+**Fix:** todas as chamadas de pip agora vão via `python -m pip` em vez
+de `pip` direto, tanto em `python-fastapi` quanto em `mcp-server-python`.
+Funciona idêntico em Windows, macOS e Linux.
+
+### Corrigido — Erro críptico quando o diretório do projeto não está vazio
+Quando uma execução anterior de `dare init` falhava no meio (ex.: timeout
+no `composer create-project`, `pip install` interrompido), o diretório
+ficava com arquivos parciais. A próxima tentativa caía dentro do scaffold
+oficial e gerava erro críptico (`Project directory "/app/." is not empty`
+do Composer; `directory not empty` do `cargo init`).
+
+**Fix:** o CLI agora valida o diretório de destino **antes** de invocar o
+scaffold e aborta com mensagem clara apontando 3 caminhos: remover o
+diretório, escolher outro nome, ou usar `dare bootstrap --force`.
+Tolera-se `.git/` e `.gitkeep` para não atrapalhar quem inicializa o repo
+antes do `dare init`.
+
+## [2.6.1] — 2026-05
+
+### Corrigido — `dare init` travava em projetos React/Vue
+O `npm create vite@latest .` da v2.6.0 travava silenciosamente porque o
+`create-vite` (v9+) tem prompts interativos que não dá para suprimir só
+com `--template`: pede nome do projeto, package manager, e às vezes o
+"Use Rolldown-Vite?" experimental. Quando o subprocess herda stdin de um
+contexto não-TTY, ele fica preso esperando input.
+
+**Fix:** trocamos para `npx degit vitejs/vite/packages/create-vite/template-<react-ts|vue-ts> .`
+que clona o **mesmo template oficial** direto do repositório do Vite, sem
+nenhum prompt. Em seguida, `npm install` para popular `node_modules` e
+deixar a stack pronta para o Ralph Loop.
+
+Side-effect bom: `bootstrapFrontend` agora também chama
+`tryRenameNpmProject` no fim, então o `package.json` já vem com o nome
+do seu projeto em vez do placeholder `vite-project`.
+
+### Corrigido — `dare init` falhava na stack Python no Windows
+O comando `.venv\Scripts\pip.exe install --upgrade pip` falha no Windows
+porque o pip não consegue substituir o próprio `pip.exe` enquanto está
+em execução. O próprio pip imprime: *"To modify pip, please run
+`python.exe -m pip install --upgrade pip`"*.
+
+**Fix:** todas as chamadas de pip agora vão via `python -m pip` em vez
+de `pip` direto, tanto em `python-fastapi` quanto em `mcp-server-python`.
+Funciona idêntico em Windows, macOS e Linux.
+
+### Corrigido — Erro críptico quando o diretório do projeto não está vazio
+Quando uma execução anterior de `dare init` falhava no meio (ex.: timeout
+no `composer create-project`, `pip install` interrompido), o diretório
+ficava com arquivos parciais. A próxima tentativa caía dentro do scaffold
+oficial e gerava erro críptico (`Project directory "/app/." is not empty`
+do Composer; `directory not empty` do `cargo init`; etc).
+
+**Fix:** o CLI agora valida o diretório de destino **antes** de invocar o
+scaffold e aborta com mensagem clara apontando 3 caminhos: remover o
+diretório, escolher outro nome, ou usar `dare bootstrap --force`.
+Tolera-se `.git/` e `.gitkeep` para não atrapalhar quem inicializa o repo
+antes do `dare init`.
+
 ## [2.6.0] — 2026-05
 
 ### Adicionado — Fallback Docker automático no `dare init` e `dare bootstrap`
