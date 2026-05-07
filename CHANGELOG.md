@@ -11,6 +11,165 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.9.0] — 2026-05
+
+### Adicionado — Skill `rust-workspace` (decisão + migração)
+Nova skill nos 3 IDEs que orienta o agente a:
+
+1. **Decidir na fase Design/Blueprint** se um projeto Rust nasce
+   single-crate ou em workspace multi-crate (com critérios objetivos:
+   nº de binários, sistemas externos, tamanho de equipe, deploy
+   independente).
+2. **Propor plano de migração em PRs incrementais** quando um projeto
+   single-crate maduro está doendo (build lento, fronteiras erodidas,
+   workers acoplados ao API server).
+
+#### Cenário A — Decisão na fase Design/Blueprint
+
+Critérios para escolher single-crate (todos verdadeiros) vs workspace
+(qualquer um verdadeiro):
+
+| Single-crate quando | Workspace quando |
+|---------------------|-------------------|
+| 1 binário | ≥ 2 binários (API + worker, API + admin) |
+| < 30 arquivos `.rs` | Múltiplos sistemas externos (3+) |
+| 1–2 sistemas externos | Deploy independente (k8s, scaling separado) |
+| Equipe ≤ 2 devs | Fronteiras arquiteturais críticas (domain puro) |
+| Sem deploy independente | Equipe ≥ 3 devs em paralelo |
+
+A skill traz layout convencional para workspace (`<p>-domain`,
+`<p>-services`, `<p>-api`, `<p>-worker-X`, …), template de `Cargo.toml`
+raiz com `workspace.dependencies` centralizadas, e diagrama Mermaid do
+grafo de dependências para incluir no BLUEPRINT.md.
+
+#### Cenário B — Migração de single-crate para workspace
+
+Sintomas para detectar a hora de migrar:
+- `src/` > 30 arquivos ou > 6 subpastas top-level
+- `tokio::spawn(worker)` no mesmo processo do API
+- `cargo build` incremental > 10s
+- Conflitos de merge frequentes
+- Quer expor SDK/cliente como crate publicável
+
+Plano em **4 PRs incrementais** (nunca big-bang):
+
+1. **Workers** — `src/workers/` → `crates/<p>-worker-<X>/` (binário próprio)
+2. **Integrators** — `src/integrators/` → `crates/<p>-integrators/` (lib)
+3. **Domain** — `src/models/` + `src/dto/` → `crates/<p>-domain/` (deps mínimas)
+4. **API + workspace root** — `Cargo.toml` raiz vira `[workspace]` puro
+
+Cada PR passa por `cargo build/test/clippy --workspace` + smoke E2E
+antes de mergear. Antipatterns mapeados (big-bang, crate `common`,
+granularidade demais, refactor + migração no mesmo PR).
+
+#### Onde está a skill
+
+| IDE | Arquivo |
+|-----|---------|
+| Cursor | `.cursor/rules/skill-rust-workspace.mdc` |
+| Antigravity | `.agents/skills/dare-rust-workspace/SKILL.md` |
+| Claude Code | `.claude/commands/dare-rust-workspace.md` (slash `/dare-rust-workspace`) |
+
+#### Quando NÃO migrar (a skill também alerta)
+
+- Projeto < 30 arquivos, 1 binário, 1 dev
+- Sprint crítico em curso
+- Sem sinais reais de dor (build < 5s, sem conflitos, sem segundo binário planejado)
+
+Migração tem custo. A skill orienta o agente a propor migração apenas
+quando o ganho compensa.
+
+## [2.8.0] — 2026-05
+
+### Adicionado — Stack `go-stdlib` (Go puro, sem framework)
+Nova opção no `dare init` para APIs em Go usando **apenas a biblioteca
+padrão** — `net/http`, `encoding/json`, `log/slog`, `net/http/httptest`.
+Coexiste com a stack `go-gin` existente; o usuário escolhe.
+
+```
+? Backend stack:
+    🦀 Rust / Axum
+    🟢 Node.js / NestJS
+    🐍 Python / FastAPI
+    🐘 PHP / Laravel
+    🐹 Go / Gin
+  ❯ 🐹 Go / stdlib (no framework, net/http only)
+```
+
+#### O que vem no scaffold
+
+```
+cmd/api/main.go               # http.NewServeMux + middleware chain
+internal/handlers/
+  ├─ health.go                # GET /healthz
+  └─ health_test.go           # httptest puro, sem mocks externos
+internal/middleware/
+  ├─ logger.go                # slog estruturado por request
+  └─ recover.go               # converte panics em 500
+go.mod                        # ZERO dependências externas
+```
+
+Roteamento usa a sintaxe nova do Go 1.22+:
+
+```go
+mux.HandleFunc("GET /api/v1/users/{id}", handlers.GetUser)
+mux.HandleFunc("POST /api/v1/users", handlers.CreateUser)
+// path params via r.PathValue("id")
+```
+
+#### Por que adicionar essa stack
+
+A stdlib do Go cobre 90% do que frameworks oferecem desde a 1.22 (pattern
+matching no `ServeMux`, com método HTTP e path params). Para times que
+preferem zero dependências, compilação rápida e controle total, essa
+stack é mais idiomática que `go-gin`.
+
+| | `go-gin` | `go-stdlib` |
+|--|----------|-------------|
+| Roteamento | `r.GET("/users/:id", h)` | `mux.HandleFunc("GET /users/{id}", h)` |
+| Bind JSON | `c.BindJSON(&dto)` | `json.NewDecoder(r.Body).Decode(&dto)` |
+| Middleware | `r.Use(mw)` | `Logger(Recover(mux))` |
+| go.mod | ~30 deps transitivas | 0 deps |
+| Velocidade | Excelente | Excelente |
+
+#### Ralph Loop
+Mesmos gates que `go-gin`:
+```
+go build ./...
+go test ./...
+go vet ./...
+```
+
+#### Skill stack-specific
+Skill `skill-go-stdlib.mdc` orienta o agente IA a:
+- NÃO adicionar framework (Gin/Echo/Chi/Fiber) — defeats the purpose
+- Usar `r.PathValue("id")` para path params (Go 1.22+)
+- Compor middleware como funções wrapping `http.Handler`
+- Usar `log/slog` (stdlib) em vez de Zap/Logrus
+- Para SQL: `database/sql` + sqlx ou pgx; nada de ORM
+- Tests com `net/http/httptest` + table-driven
+
+## [2.7.1] — 2026-05
+
+### Corrigido — `dare init` falhava com `go-gin` em modo Docker
+A imagem Docker para Go estava em `golang:1.22`. O `gin@latest` (v1.12)
+foi atualizado e exige Go ≥ 1.25, então `go get github.com/gin-gonic/gin@latest`
+falhava com:
+
+```
+github.com/gin-gonic/gin@v1.12.0 requires go >= 1.25.0
+(running go 1.22.12; GOTOOLCHAIN=local)
+```
+
+**Fix:** atualizada a imagem Docker para `golang:1.25` e o hint para
+"Install Go 1.25+". Hosts com Go nativo precisam de 1.25+; quem usa
+Docker é transparente.
+
+| Antes | Depois |
+|-------|--------|
+| `golang:1.22` | `golang:1.25` |
+| Native hint: "Install Go 1.22+" | Native hint: "Install Go 1.25+" |
+
 ## [2.7.0] — 2026-05
 
 A v2.6.x ficou em desenvolvimento e nunca foi publicada — todas as
@@ -129,7 +288,7 @@ flag, sem perguntar nada. O usuário só precisa ter **uma** das duas:
 | `node-nestjs`, `react`, `vue`, `mcp-node-ts` | `npm`/`npx` | `node:20-alpine` |
 | `python-fastapi`, `mcp-python` | `python` | `python:3.12-slim` |
 | `rust-axum` | `cargo` | `rust:1.83` |
-| `go-gin` | `go` | `golang:1.22` |
+| `go-gin` | `go` | `golang:1.25` (atualizado na 2.7.1) |
 
 Comportamento:
 

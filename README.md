@@ -244,7 +244,8 @@ escolher de onde a toolchain vem:
 | `node-nestjs` | Node 18+ (já vem com `npx`) | `node:20-alpine` |
 | `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
 | `rust-axum` | Rust 1.83+ via rustup — https://www.rust-lang.org/tools/install | `rust:1.83` |
-| `go-gin` | Go 1.22+ — https://go.dev/dl/ | `golang:1.22` |
+| `go-gin` | Go 1.25+ — https://go.dev/dl/ | `golang:1.25` |
+| `go-stdlib` | Go 1.22+ (sem framework — só `net/http`) — https://go.dev/dl/ | `golang:1.25` |
 | `react`, `vue` | Node 18+ | `node:20-alpine` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
@@ -302,7 +303,7 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 ### Stacks suportados
 
-**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin
+**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 
 **Frontend:** React 18+ · Vue 3+
 

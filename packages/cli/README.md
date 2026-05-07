@@ -21,6 +21,7 @@ means it literally runs:
 | `python-fastapi` | `python -m venv .venv && python -m pip install -r requirements.txt` |
 | `rust-axum` | `cargo init` + write `Cargo.toml` (axum, sqlx, tokio…) |
 | `go-gin` | `go mod init` + `go get gin/godotenv` + starter files |
+| `go-stdlib` | `go mod init` + starter usando só `net/http` (zero deps externas) |
 | `react`, `vue` | `npx degit vitejs/vite/packages/create-vite/template-<x> .` + `npm install` |
 | `mcp-server-node-ts` | `npm init` + `@modelcontextprotocol/sdk` |
 | `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
@@ -140,7 +141,8 @@ Pick **one** of the two paths per stack:
 | `node-nestjs` | Node 18+ (bundles `npx`) | `node:20-alpine` |
 | `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
 | `rust-axum` | Rust 1.83+ (rustup) — https://www.rust-lang.org/tools/install | `rust:1.83` |
-| `go-gin` | Go 1.22+ — https://go.dev/dl/ | `golang:1.22` |
+| `go-gin` | Go 1.25+ — https://go.dev/dl/ | `golang:1.25` |
+| `go-stdlib` | Go 1.22+ — https://go.dev/dl/ | `golang:1.25` |
 | `react`, `vue` | Node 18+ (bundles `npm`) | `node:20-alpine` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
@@ -202,7 +204,7 @@ dare init my-project
 Prompts:
 - **Structure:** Monorepo · Backend only · Frontend only · **MCP Server** ← new
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
-- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin
+- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 - **Frontend stack:** React 18+ · Vue 3+
 - **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
 - **GraphRAG backend:** SQLite · JSON · Neo4j
@@ -303,6 +305,20 @@ dare execute --next                                # → next rank
 The skills shipped by `dare init` (`.cursor/rules/skill-dag-runner.mdc`,
 `.agents/skills/dare-dag-runner/SKILL.md`, `.claude/commands/dare-dag-run.md`)
 guide the IDE agent through this loop.
+
+#### Stack-specific skills
+
+`dare init` also ships skills focused on architectural decisions for
+specific stacks. As of v2.9.0:
+
+- **`skill-rust-workspace.mdc`** (Cursor) /
+  **`dare-rust-workspace/SKILL.md`** (Antigravity) /
+  **`/dare-rust-workspace`** (Claude command) — guides the agent on
+  whether a Rust project should start single-crate or as a Cargo
+  workspace, and gives a step-by-step PR-by-PR migration plan when an
+  existing single-crate project has outgrown its layout. Active during
+  `/dare-design` and `/dare-blueprint` for `rust-axum` projects, plus on
+  demand for migration analysis.
 
 ### `dare bootstrap`
 
@@ -481,7 +497,7 @@ npm run inspect
 
 | Type | Options |
 |------|---------|
-| **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin |
+| **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib |
 | **Frontend** | React 18+ · Vue 3+ |
 | **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
 | **IDE / Agent** | Claude Code · Cursor · Antigravity · Hybrid |

@@ -68,6 +68,7 @@ export function gatesFor(stack: string): RalphLoopGate[] {
         { name: 'lint', command: 'cargo clippy --quiet -- -D warnings' },
       ];
     case 'go-gin':
+    case 'go-stdlib':
       return [
         { name: 'build', command: 'go build ./...' },
         { name: 'test', command: 'go test ./...' },

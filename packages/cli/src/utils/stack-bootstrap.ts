@@ -20,7 +20,8 @@ export type BackendStack =
   | 'node-nestjs'
   | 'python-fastapi'
   | 'rust-axum'
-  | 'go-gin';
+  | 'go-gin'
+  | 'go-stdlib';
 
 export type FrontendStack = 'react' | 'vue';
 
@@ -74,6 +75,8 @@ export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<v
       return bootstrapRustAxum(opts.dir, opts.projectName, mode);
     case 'go-gin':
       return bootstrapGoGin(opts.dir, opts.projectName, mode);
+    case 'go-stdlib':
+      return bootstrapGoStdlib(opts.dir, opts.projectName, mode);
     default:
       throw new Error(`Unknown backend stack: ${opts.stack as string}`);
   }
@@ -423,8 +426,8 @@ async function bootstrapGoGin(
 
   const go = await StackTool.resolve({
     nativeCmd: 'go',
-    nativeHint: 'Install Go 1.22+: https://go.dev/dl/',
-    dockerImage: 'golang:1.22',
+    nativeHint: 'Install Go 1.25+: https://go.dev/dl/',
+    dockerImage: 'golang:1.25',
     imageHasEntrypoint: false,
     dir,
     mode,
@@ -516,6 +519,205 @@ func TestHealth(t *testing.T) {
 \tif rec.Code != http.StatusOK {
 \t\tt.Fatalf("expected 200, got %d", rec.Code)
 \t}
+}
+`,
+  );
+
+  await go.run(['mod', 'tidy']);
+}
+
+async function bootstrapGoStdlib(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
+  banner(`Bootstrapping Go (stdlib only, no framework) in ${dir}`);
+
+  const go = await StackTool.resolve({
+    nativeCmd: 'go',
+    nativeHint: 'Install Go 1.22+: https://go.dev/dl/',
+    // Go 1.22+ is the minimum that supports the new ServeMux pattern syntax
+    // (`mux.HandleFunc("GET /path/{id}", h)`). Anything below that defeats
+    // the whole point of going stdlib-only.
+    dockerImage: 'golang:1.25',
+    imageHasEntrypoint: false,
+    dir,
+    mode,
+  });
+
+  const moduleName = sanitizeGoModule(projectName);
+
+  await go.run(['mod', 'init', moduleName]);
+  // Intentionally NO `go get` for any framework — this is the stdlib-only
+  // path. The starter only uses `net/http`, `encoding/json`, `log/slog`,
+  // `net/http/httptest` (test), all bundled with Go.
+
+  await fs.ensureDir(path.join(dir, 'cmd', 'api'));
+  await fs.ensureDir(path.join(dir, 'internal', 'handlers'));
+  await fs.ensureDir(path.join(dir, 'internal', 'middleware'));
+
+  // cmd/api/main.go — http.NewServeMux with the Go 1.22+ pattern syntax,
+  // wired through a logging + recover middleware chain.
+  await fs.writeFile(
+    path.join(dir, 'cmd', 'api', 'main.go'),
+    `package main
+
+import (
+\t"log"
+\t"log/slog"
+\t"net/http"
+\t"os"
+
+\t"${moduleName}/internal/handlers"
+\t"${moduleName}/internal/middleware"
+)
+
+func main() {
+\tlogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+\tslog.SetDefault(logger)
+
+\tmux := http.NewServeMux()
+
+\tmux.HandleFunc("GET /healthz", handlers.Health)
+
+\t// Example resource — replace with real routes per BLUEPRINT.md.
+\tmux.HandleFunc("GET /api/v1/", handlers.RootV1)
+
+\thandler := middleware.Recover(middleware.Logger(mux))
+
+\tport := os.Getenv("PORT")
+\tif port == "" {
+\t\tport = "8080"
+\t}
+\tslog.Info("server starting", "addr", ":"+port)
+\tif err := http.ListenAndServe(":"+port, handler); err != nil {
+\t\tlog.Fatal(err)
+\t}
+}
+`,
+  );
+
+  // internal/handlers/health.go
+  await fs.writeFile(
+    path.join(dir, 'internal', 'handlers', 'health.go'),
+    `package handlers
+
+import (
+\t"encoding/json"
+\t"net/http"
+)
+
+// Health returns 200 with a small JSON status payload.
+func Health(w http.ResponseWriter, r *http.Request) {
+\twriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// RootV1 is a placeholder for the v1 root handler — replace per BLUEPRINT.
+func RootV1(w http.ResponseWriter, r *http.Request) {
+\twriteJSON(w, http.StatusOK, map[string]string{"message": "API v1"})
+}
+
+func writeJSON(w http.ResponseWriter, status int, body any) {
+\tw.Header().Set("Content-Type", "application/json")
+\tw.WriteHeader(status)
+\t_ = json.NewEncoder(w).Encode(body)
+}
+`,
+  );
+
+  // internal/handlers/health_test.go — uses net/http/httptest from stdlib.
+  await fs.writeFile(
+    path.join(dir, 'internal', 'handlers', 'health_test.go'),
+    `package handlers
+
+import (
+\t"encoding/json"
+\t"net/http"
+\t"net/http/httptest"
+\t"testing"
+)
+
+func TestHealth(t *testing.T) {
+\treq := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+\trec := httptest.NewRecorder()
+
+\tHealth(rec, req)
+
+\tif rec.Code != http.StatusOK {
+\t\tt.Fatalf("expected 200, got %d", rec.Code)
+\t}
+
+\tvar body map[string]string
+\tif err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+\t\tt.Fatalf("invalid JSON: %v", err)
+\t}
+\tif body["status"] != "ok" {
+\t\tt.Fatalf("expected status=ok, got %q", body["status"])
+\t}
+}
+`,
+  );
+
+  // internal/middleware/logger.go
+  await fs.writeFile(
+    path.join(dir, 'internal', 'middleware', 'logger.go'),
+    `package middleware
+
+import (
+\t"log/slog"
+\t"net/http"
+\t"time"
+)
+
+// Logger emits a structured log line per request: method, path, status, duration.
+func Logger(next http.Handler) http.Handler {
+\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+\t\tstart := time.Now()
+\t\tsr := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+\t\tnext.ServeHTTP(sr, r)
+\t\tslog.Info("http",
+\t\t\t"method", r.Method,
+\t\t\t"path", r.URL.Path,
+\t\t\t"status", sr.status,
+\t\t\t"duration_ms", time.Since(start).Milliseconds(),
+\t\t)
+\t})
+}
+
+type statusRecorder struct {
+\thttp.ResponseWriter
+\tstatus int
+}
+
+func (s *statusRecorder) WriteHeader(code int) {
+\ts.status = code
+\ts.ResponseWriter.WriteHeader(code)
+}
+`,
+  );
+
+  // internal/middleware/recover.go
+  await fs.writeFile(
+    path.join(dir, 'internal', 'middleware', 'recover.go'),
+    `package middleware
+
+import (
+\t"log/slog"
+\t"net/http"
+)
+
+// Recover intercepts panics in handlers and turns them into 500 responses
+// instead of letting the goroutine crash the server.
+func Recover(next http.Handler) http.Handler {
+\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+\t\tdefer func() {
+\t\t\tif rec := recover(); rec != nil {
+\t\t\t\tslog.Error("panic recovered", "value", rec, "path", r.URL.Path)
+\t\t\t\thttp.Error(w, "internal server error", http.StatusInternalServerError)
+\t\t\t}
+\t\t}()
+\t\tnext.ServeHTTP(w, r)
+\t})
 }
 `,
   );

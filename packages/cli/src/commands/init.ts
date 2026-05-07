@@ -83,6 +83,7 @@ export const initCommand = new Command('init')
           { name: '🐍 Python / FastAPI', value: 'python-fastapi' },
           { name: '🐘 PHP / Laravel', value: 'php-laravel' },
           { name: '🐹 Go / Gin', value: 'go-gin' },
+          { name: '🐹 Go / stdlib (no framework, net/http only)', value: 'go-stdlib' },
         ],
       },
       {

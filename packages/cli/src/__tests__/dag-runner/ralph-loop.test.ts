@@ -34,6 +34,12 @@ describe('gatesFor', () => {
     expect(gates.find((g) => g.name === 'lint')?.command).toBe('go vet ./...');
   });
 
+  it('returns the same gates for go-stdlib (same Go toolchain)', () => {
+    const gin = gatesFor('go-gin');
+    const stdlib = gatesFor('go-stdlib');
+    expect(stdlib).toEqual(gin);
+  });
+
   it('returns gates for python-fastapi (with venv-aware shell)', () => {
     const gates = gatesFor('python-fastapi');
     expect(gates).toHaveLength(3);
