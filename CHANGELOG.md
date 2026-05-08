@@ -11,6 +11,20 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.15.0] — 2026-05
+
+### Corrigido — Package names corretos por crate em monorepo Rust
+`dare init` com layout Rust monorepo (Axum + Leptos) gerava `name = "<project-name>"` em todos os
+crates membros, causando colisão de nomes dentro do workspace (`ars-server` e `ars-web` com o mesmo
+package name). Agora cada crate recebe seu nome correto:
+- Layout `single`: `crates/server` → `name = "server"`, `crates/web` → `name = "web"`
+- Layout `multi`: `crates/{prefix}-server` → `name = "{prefix}-server"`, etc.
+
+### Corrigido — `Cargo.lock` removido após `cargo fetch` em bootstraps Leptos
+`bootstrapLeptosFullstack` e `bootstrapLeptosCsr` chamam `cargo fetch` ao final, que criava
+`Cargo.lock` dentro do crate membro antes do workspace root existir. O arquivo é agora removido
+automaticamente quando `isMonorepo: true`, mantendo apenas o `Cargo.lock` na raiz do workspace.
+
 ## [2.14.0] — 2026-05
 
 ### Corrigido — Templates `generate-blueprint` e `dare-blueprint` não sincronizados
