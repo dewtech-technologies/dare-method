@@ -864,6 +864,16 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
     (frontend === 'rust-leptos' || frontend === 'rust-leptos-csr');
   const layout = rustWorkspaceLayout ?? 'single';
 
+  // For Rust monorepo the crate name must differ per member to avoid duplicate
+  // package name errors in the workspace. Single layout → "server"/"web";
+  // multi layout → "{prefix}-server" / "{prefix}-web".
+  const rustCrateName = (type: 'server' | 'web'): string => {
+    if (!isRustMonorepo) return name;
+    const prefix = cratePrefix?.trim() ||
+      name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+    return layout === 'single' ? type : `${prefix}-${type}`;
+  };
+
   // Backend / monorepo backend
   if ((structure === 'backend' || structure === 'monorepo') && backend) {
     if (!BACKEND_STACKS.has(backend as BackendStack)) {
@@ -878,7 +888,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
     await bootstrapBackend({
       stack: backend as BackendStack,
       dir: backendDir,
-      projectName: name,
+      projectName: rustCrateName('server'),
       toolchain,
       isMonorepo: structure === 'monorepo',
     });
@@ -898,7 +908,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
     await bootstrapFrontend({
       stack: frontend as FrontendStack,
       dir: frontendDir,
-      projectName: name,
+      projectName: rustCrateName('web'),
       toolchain,
       isMonorepo: structure === 'monorepo',
     });

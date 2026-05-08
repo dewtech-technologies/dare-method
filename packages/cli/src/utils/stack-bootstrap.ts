@@ -437,6 +437,10 @@ async function bootstrapRustAxum(
   );
 
   await cargo.run(['fetch']);
+  if (isMonorepo) {
+    const lockFile = path.join(dir, 'Cargo.lock');
+    if (await fs.pathExists(lockFile)) await fs.remove(lockFile);
+  }
 }
 
 async function bootstrapGoGin(
@@ -984,6 +988,10 @@ button {
   }
 
   await cargo.run(['fetch']);
+  if (isMonorepo) {
+    const lockFile = path.join(dir, 'Cargo.lock');
+    if (await fs.pathExists(lockFile)) await fs.remove(lockFile);
+  }
 }
 
 async function bootstrapLeptosCsr(
@@ -1132,6 +1140,10 @@ button {
   }
 
   await cargo.run(['fetch']);
+  if (isMonorepo) {
+    const lockFile = path.join(dir, 'Cargo.lock');
+    if (await fs.pathExists(lockFile)) await fs.remove(lockFile);
+  }
 }
 
 async function bootstrapVite(
