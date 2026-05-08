@@ -261,10 +261,20 @@ dare design "Build a REST API for user authentication with JWT"
 
 ### `dare blueprint`
 
-Generate `DARE/BLUEPRINT.md`, `dare-dag.yaml` and `TASKS.md` from `DESIGN.md`.
+Generate `DARE/BLUEPRINT.md` from `DESIGN.md`. Stops here — requires human review and approval before tasks are created.
 
 ```bash
 dare blueprint
+```
+
+---
+
+### `dare tasks`
+
+Generate `DARE/TASKS.md`, `DARE/dare-dag.yaml` and all `DARE/EXECUTION/task-*.md` specs from an approved `BLUEPRINT.md`. Run this only after reviewing and approving the blueprint.
+
+```bash
+dare tasks
 ```
 
 ---
@@ -314,7 +324,7 @@ guide the IDE agent through this loop.
 #### Stack-specific skills
 
 `dare init` also ships skills focused on architectural decisions for
-specific stacks. As of v2.13.0:
+specific stacks. As of v2.14.0:
 
 - **`skill-rust-workspace.mdc`** (Cursor) /
   **`dare-rust-workspace/SKILL.md`** (Antigravity) /
@@ -406,7 +416,7 @@ The Mermaid output groups tasks into rank subgraphs and colors nodes by
 status (`PENDING` / `RUNNING` / `DONE` / `FAILED` / `SKIPPED`), so you can
 **see the execution plan before running any task**.
 
-> `dare blueprint` writes `DARE/dag-graph.mmd` automatically — open it in
+> `dare tasks` writes `DARE/dag-graph.mmd` automatically — open it in
 > your editor with a Mermaid preview to see the static graph immediately.
 
 ### `dare graph`

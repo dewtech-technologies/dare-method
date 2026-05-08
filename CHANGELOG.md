@@ -11,6 +11,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.14.0] — 2026-05
+
+### Corrigido — Templates `generate-blueprint` e `dare-blueprint` não sincronizados
+Os arquivos de template instalados por `dare init` (`packages/cli/templates/ide/`) estavam desatualizados
+em relação ao código-fonte (`implementations/`). O sync agora propaga corretamente o fix de phase
+separation: `/generate-blueprint` e `/dare-blueprint` geram somente `BLUEPRINT.md`, bloqueando
+geração de tasks sem aprovação humana.
+
 ## [2.13.0] — 2026-05
 
 ### Corrigido — `/dare-blueprint` e `/generate-blueprint` geram apenas `BLUEPRINT.md`
