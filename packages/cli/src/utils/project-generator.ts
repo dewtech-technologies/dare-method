@@ -49,6 +49,8 @@ export interface ProjectConfig {
   toolchain?: ToolchainMode;
   /** single: crates/server + crates/web | multi: {slug}-core/-server/-web/-cli */
   rustWorkspaceLayout?: 'single' | 'multi';
+  /** Short prefix for multi-crate names, e.g. "ars" → ars-core/ars-server/ars-web/ars-cli */
+  cratePrefix?: string;
 }
 
 export async function generateProjectStructure(config: ProjectConfig): Promise<void> {
@@ -844,16 +846,18 @@ function rustMonorepoDir(
   crateType: 'server' | 'web',
   layout: 'single' | 'multi',
   name: string,
+  cratePrefix?: string,
 ): string {
   if (layout === 'multi') {
-    const slug = name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
-    return path.join(outputDir, 'crates', `${slug}-${crateType}`);
+    const prefix = cratePrefix?.trim() ||
+      name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+    return path.join(outputDir, 'crates', `${prefix}-${crateType}`);
   }
   return path.join(outputDir, 'crates', crateType);
 }
 
 async function runStackBootstrap(config: ProjectConfig): Promise<void> {
-  const { outputDir, name, structure, backend, frontend, mcpLanguage, toolchain, rustWorkspaceLayout } = config;
+  const { outputDir, name, structure, backend, frontend, mcpLanguage, toolchain, rustWorkspaceLayout, cratePrefix } = config;
   const isRustMonorepo =
     structure === 'monorepo' &&
     backend === 'rust-axum' &&
@@ -866,7 +870,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
       throw new Error(`Unsupported backend stack: ${backend}`);
     }
     const backendDir = isRustMonorepo
-      ? rustMonorepoDir(outputDir, 'server', layout, name)
+      ? rustMonorepoDir(outputDir, 'server', layout, name, cratePrefix)
       : structure === 'monorepo'
         ? path.join(outputDir, 'backend')
         : outputDir;
@@ -886,7 +890,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
       throw new Error(`Unsupported frontend stack: ${frontend}`);
     }
     const frontendDir = isRustMonorepo
-      ? rustMonorepoDir(outputDir, 'web', layout, name)
+      ? rustMonorepoDir(outputDir, 'web', layout, name, cratePrefix)
       : structure === 'monorepo'
         ? path.join(outputDir, 'frontend')
         : outputDir;
@@ -913,7 +917,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
 
   // Combo: rust-axum + rust-leptos(csr) in monorepo → unified Cargo workspace
   if (isRustMonorepo) {
-    await createRustFullstackWorkspace(outputDir, name, layout, frontend as 'rust-leptos' | 'rust-leptos-csr');
+    await createRustFullstackWorkspace(outputDir, name, layout, frontend as 'rust-leptos' | 'rust-leptos-csr', cratePrefix);
   }
 
   console.log(chalk.green('\n✓ Stack scaffold complete.\n'));
@@ -924,11 +928,14 @@ async function createRustFullstackWorkspace(
   projectName: string,
   layout: 'single' | 'multi',
   frontend: 'rust-leptos' | 'rust-leptos-csr',
+  cratePrefix?: string,
 ): Promise<void> {
   const frontendLabel = frontend === 'rust-leptos-csr' ? 'rust-leptos-csr' : 'rust-leptos';
   console.log(chalk.cyan(`\n🦀 Creating unified Cargo workspace (rust-axum + ${frontendLabel}, ${layout})...\n`));
 
-  const slug = projectName.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+  const fullSlug = projectName.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+  // For multi-layout use the user-supplied prefix; fall back to full slug only for single
+  const slug = layout === 'multi' ? (cratePrefix?.trim() || fullSlug) : fullSlug;
 
   // Determine workspace members based on layout
   let members: string[];

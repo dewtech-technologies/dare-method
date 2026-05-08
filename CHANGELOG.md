@@ -11,6 +11,23 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.13.0] — 2026-05
+
+### Corrigido — `/dare-blueprint` e `/generate-blueprint` geram apenas `BLUEPRINT.md`
+Os comandos de blueprint violavam a separação de fases do DARE: geravam BLUEPRINT + TASKS + DAG
+sem aprovação humana. Agora geram **somente** `DARE/BLUEPRINT.md` e instruem explicitamente a rodar
+`/dare-tasks` / `/generate-tasks` após revisão e aprovação do blueprint.
+
+### Corrigido — `Cargo.lock` removido de crates membros do workspace
+`cargo init` cria `Cargo.lock` em crates binários mesmo com `--vcs none`. O arquivo era incorretamente
+incluído nos membros do workspace, violando a regra Cargo: apenas o workspace root deve ter `Cargo.lock`.
+`dare init` agora remove o `Cargo.lock` automaticamente dos crates membros após o scaffold.
+
+### Adicionado — Prompt `cratePrefix` no `dare init` para layout multi-crate
+Projetos Rust monorepo com layout `multi` agora perguntam um prefixo curto para os crates
+(ex: `"ars"` → `ars-core / ars-server / ars-web / ars-cli`), evitando nomes verbosos como
+`ai-runtime-securyti-rasp-server`. O CLI sugere automaticamente as iniciais do slug do projeto.
+
 ## [2.12.0] — 2026-05
 
 ### Adicionado — Workspace layout single vs multi-crate no `dare init`

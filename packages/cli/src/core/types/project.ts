@@ -14,4 +14,6 @@ export interface ProjectConfig {
   ide: IdeChoice;
   graphrag: GraphRagBackend;
   rustWorkspaceLayout?: RustWorkspaceLayout;
+  /** Short prefix for multi-crate names, e.g. "ars" → ars-core/ars-server/ars-web/ars-cli */
+  cratePrefix?: string;
 }

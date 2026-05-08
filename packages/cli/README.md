@@ -210,7 +210,7 @@ Prompts:
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
 - **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 - **Frontend stack:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR-only (Rust WASM)
-- **Cargo workspace layout** *(Monorepo + Rust/Axum + Leptos only)*: Single-crate (`crates/server` + `crates/web`) · Multi-crate (`{name}-core` + `{name}-server` + `{name}-web` + `{name}-cli`)
+- **Cargo workspace layout** *(Monorepo + Rust/Axum + Leptos only)*: Single-crate (`crates/server` + `crates/web`) · Multi-crate (`{prefix}-core` + `{prefix}-server` + `{prefix}-web` + `{prefix}-cli`) — prefix suggested from project initials (e.g. `ai-runtime-securyti-rasp` → `arsr`)
 - **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
 - **GraphRAG backend:** SQLite · JSON · Neo4j
 - **DARE MCP Server:** context query server (saves ~95% tokens)

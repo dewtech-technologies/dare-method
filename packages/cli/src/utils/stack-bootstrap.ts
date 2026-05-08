@@ -400,6 +400,13 @@ async function bootstrapRustAxum(
   const vcsArgs = isMonorepo ? ['--vcs', 'none'] : [];
   await cargo.run(['init', '--name', sanitizeCrateName(projectName), ...vcsArgs]);
 
+  // cargo init creates Cargo.lock for binary crates even with --vcs none.
+  // Workspace members must NOT have their own Cargo.lock — only the workspace root does.
+  if (isMonorepo) {
+    const lockFile = path.join(dir, 'Cargo.lock');
+    if (await fs.pathExists(lockFile)) await fs.remove(lockFile);
+  }
+
   const cargoToml = path.join(dir, 'Cargo.toml');
   await fs.writeFile(
     cargoToml,

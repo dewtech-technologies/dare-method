@@ -122,6 +122,28 @@ export const initCommand = new Command('init')
         default: 'single',
       },
 
+      // ── Crate prefix for multi-crate layout ──────────────────────────────
+      {
+        type: 'input',
+        name: 'cratePrefix',
+        message: 'Short crate prefix (e.g. "ars" → ars-core / ars-server / ars-web / ars-cli):',
+        when: (ans) =>
+          ans.structure === 'monorepo' &&
+          ans.backend === 'rust-axum' &&
+          (ans.frontend === 'rust-leptos' || ans.frontend === 'rust-leptos-csr') &&
+          ans.rustWorkspaceLayout === 'multi',
+        default: (ans: Record<string, string>) => {
+          const slug = (ans.name || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+          const initials = slug.split('-').map((p: string) => p[0] ?? '').join('');
+          return initials.length >= 2 ? initials : slug.slice(0, 6) || 'app';
+        },
+        validate: (input: string) => {
+          if (!input.trim()) return 'Prefix cannot be empty';
+          if (!/^[a-z][a-z0-9-]*$/.test(input.trim())) return 'Use only lowercase letters, numbers, hyphens (must start with a letter)';
+          return true;
+        },
+      },
+
       // ── Common questions ──────────────────────────────────────────────────
       {
         type: 'list',
@@ -190,6 +212,7 @@ export const initCommand = new Command('init')
         mcp: answers.mcp,
         toolchain: answers.toolchain,
         rustWorkspaceLayout: answers.rustWorkspaceLayout,
+        cratePrefix: answers.cratePrefix,
         outputDir: path.resolve(process.cwd(), name),
       });
 
