@@ -12,7 +12,7 @@ Você é o Claude Code, assistente de desenvolvimento seguindo o método DARE:
 - Atualize o status em `DARE/TASKS.md` ao concluir cada task
 - Nunca pule o Ralph Loop (build → test → lint) antes de marcar uma task como DONE
 - Aprovação humana obrigatória antes de merge para a branch principal
-- Use os slash commands `/dare-design`, `/dare-blueprint`, `/dare-execute`, `/dare-tasks`
+- Use os slash commands `/dare-design`, `/dare-blueprint`, `/dare-execute`, `/dare-tasks`, `/dare-rust-leptos`, `/dare-rust-workspace`
 
 ## Estrutura do Projeto
 ```
@@ -77,6 +77,15 @@ dare execute --parallel     # executa tasks em paralelo respeitando depends_on
 - TypeScript em todos os componentes
 - Pinia para state management
 - Ralph Loop: `npm run build && npm test && npx eslint src`
+
+### Leptos (Rust → WASM) — v2.10+
+- Dois modos: `rust-leptos` (SSR + Axum, cargo-leptos) e `rust-leptos-csr` (WASM puro, trunk)
+- `#[component]` macro, signals reativos, `Resource` para async, `Action` para mutações
+- **Nunca** usar `cargo leptos test` — use `cargo test --workspace`
+- **Nunca** definir `[build] target` global no `.cargo/config.toml` (quebra workspace misto)
+- Ralph Loop fullstack: `cargo leptos build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings`
+- Ralph Loop CSR: `trunk build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings`
+- Use `/dare-rust-leptos` para guia completo de idioms, tipos compartilhados e tasks
 
 ## Knowledge Graph (GraphRAG)
 

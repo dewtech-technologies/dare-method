@@ -1,0 +1,4 @@
+# DARE: Do NOT add a global [build] target here.
+# Mixed workspaces (Leptos WASM + native crates like napi-rs or aya) will break
+# if cargo tries to compile all crates for the same target.
+# cargo-leptos manages wasm32-unknown-unknown target per-crate automatically.

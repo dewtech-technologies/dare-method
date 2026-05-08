@@ -1,0 +1,2 @@
+# DARE: Do NOT add a global [build] target here.
+# trunk manages wasm32-unknown-unknown target automatically via its own build pipeline.

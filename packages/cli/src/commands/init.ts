@@ -92,8 +92,11 @@ export const initCommand = new Command('init')
         message: 'Frontend stack:',
         when: (ans) => ans.structure !== 'backend' && ans.structure !== 'mcp-server',
         choices: [
-          { name: '⚛️  React 18+', value: 'react' },
-          { name: '💚 Vue 3+', value: 'vue' },
+          { name: '⚛️  React 18+ (TypeScript)', value: 'react' },
+          { name: '💚 Vue 3+ (Composition API)', value: 'vue' },
+          { name: '🦀 Leptos fullstack (Rust SSR + WASM)', value: 'rust-leptos' },
+          { name: '🦀 Leptos CSR-only (Rust WASM + trunk)', value: 'rust-leptos-csr' },
+          { name: '🚫 None (backend only)', value: 'none' },
         ],
       },
 
@@ -193,6 +196,22 @@ export const initCommand = new Command('init')
       const isClaudeCode = answers.ide === 'claude-code' || answers.ide === 'claude-hybrid';
       if (isClaudeCode) {
         console.log(chalk.gray(`  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands\n`));
+      }
+
+      const isRustFullstack =
+        answers.backend === 'rust-axum' &&
+        answers.frontend === 'rust-leptos' &&
+        answers.structure === 'monorepo';
+      if (isRustFullstack) {
+        console.log(chalk.cyan('🦀 Rust full-stack workspace created!'));
+        console.log(chalk.gray('   Cargo.toml workspace unifies backend/ and frontend/ into a single Cargo workspace.'));
+        console.log(chalk.gray('   See .cargo/config.toml — do NOT add a global [build] target (breaks WASM + native crates).\n'));
+        console.log(chalk.gray('   Tip: use /dare-rust-leptos for Leptos idioms and /dare-rust-workspace for multi-crate decisions.\n'));
+      }
+
+      const isLeptos = answers.frontend === 'rust-leptos' || answers.frontend === 'rust-leptos-csr';
+      if (isLeptos && !isRustFullstack) {
+        console.log(chalk.gray(`  Leptos tip: use /dare-rust-leptos for component patterns, server functions and workspace config.\n`));
       }
     } catch (err) {
       spinner.fail(chalk.red('Failed to create project'));

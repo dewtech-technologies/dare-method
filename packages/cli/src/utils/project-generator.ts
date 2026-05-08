@@ -747,6 +747,8 @@ async function generateFrontendTemplate(dir: string, stack: string, projectName 
   const stackMap: Record<string, string> = {
     react: 'react',
     vue: 'vue',
+    'rust-leptos': 'leptos-fullstack',
+    'rust-leptos-csr': 'leptos-csr',
   };
   const templateName = stackMap[stack];
   if (templateName) {
@@ -792,7 +794,7 @@ const BACKEND_STACKS = new Set<BackendStack>([
   'go-gin',
   'go-stdlib',
 ]);
-const FRONTEND_STACKS = new Set<FrontendStack>(['react', 'vue']);
+const FRONTEND_STACKS = new Set<FrontendStack>(['react', 'vue', 'rust-leptos', 'rust-leptos-csr']);
 
 /**
  * Official scaffolders (composer create-project, npx degit, cargo init,
@@ -880,11 +882,114 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
     });
   }
 
+  // Combo: rust-axum + rust-leptos in monorepo → unify into a single Cargo workspace
+  if (structure === 'monorepo' && backend === 'rust-axum' && frontend === 'rust-leptos') {
+    await createRustFullstackWorkspace(outputDir, name);
+  }
+
   console.log(chalk.green('\n✓ Stack scaffold complete.\n'));
+}
+
+async function createRustFullstackWorkspace(outputDir: string, projectName: string): Promise<void> {
+  console.log(chalk.cyan('\n🦀 Creating unified Cargo workspace (rust-axum + rust-leptos)...\n'));
+
+  const sanitized = projectName.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'app';
+
+  // Root Cargo.toml workspace
+  await fs.writeFile(
+    path.join(outputDir, 'Cargo.toml'),
+    [
+      `[workspace]`,
+      `resolver = "2"`,
+      `members = [`,
+      `  "backend",`,
+      `  "frontend",`,
+      `]`,
+      ``,
+      `# Shared dependencies — pin versions here, reference in crates via { workspace = true }`,
+      `[workspace.dependencies]`,
+      `tokio = { version = "1", features = ["full"] }`,
+      `serde = { version = "1.0", features = ["derive"] }`,
+      `serde_json = "1.0"`,
+      `tracing = "0.1"`,
+      `anyhow = "1.0"`,
+      `thiserror = "1.0"`,
+      `uuid = { version = "1.10", features = ["v4", "serde"] }`,
+      `leptos = { version = "0.7", features = [] }`,
+      ``,
+    ].join('\n'),
+  );
+
+  // Root .cargo/config.toml — MUST NOT have global [build] target
+  await fs.ensureDir(path.join(outputDir, '.cargo'));
+  await fs.writeFile(
+    path.join(outputDir, '.cargo', 'config.toml'),
+    `# DARE: Do NOT add a global [build] target here.
+# This workspace mixes Leptos WASM crates (frontend) with native crates (backend).
+# A global target would make cargo try to compile Axum for wasm32 or Leptos for x86 — both fail.
+# cargo-leptos manages the wasm32-unknown-unknown target for the frontend crate automatically.
+`,
+  );
+
+  // Root .gitignore additions
+  const rootGitignore = path.join(outputDir, '.gitignore');
+  const rustIgnore = [
+    '',
+    '# Rust / Cargo',
+    'target/',
+    'dist/',
+    'Cargo.lock',
+    '',
+  ].join('\n');
+  if (await fs.pathExists(rootGitignore)) {
+    const existing = await fs.readFile(rootGitignore, 'utf-8');
+    if (!existing.includes('target/')) {
+      await fs.writeFile(rootGitignore, existing.replace(/\s+$/, '') + rustIgnore);
+    }
+  } else {
+    await fs.writeFile(rootGitignore, rustIgnore);
+  }
+
+  console.log(chalk.green(`  ✓ Cargo workspace root created`));
+  console.log(chalk.gray(`  backend/ (rust-axum) and frontend/ (rust-leptos) are workspace members.\n`));
+  console.log(chalk.yellow(`  ⚠  Cargo.lock is gitignored at root — commit it if this is a binary deployment.\n`));
 }
 
 function generateStackSkill(stack: string): string {
   const skills: Record<string, string> = {
+    'rust-leptos': `---
+description: Leptos fullstack (SSR + WASM) development skill
+---
+# Leptos Fullstack Skill
+- Use \`#[component]\` macro for all components — no class components
+- State: \`signal()\` (RwSignal), \`ReadSignal\`/\`WriteSignal\` — fine-grained reactivity
+- Async data: \`Resource\` for fetching, never \`Effect\` that calls fetch
+- Mutations: \`Action\` for server calls (forms, submits)
+- Loading states: \`Suspense\` and \`Transition\` — never block the render
+- Conditionals: \`Show\`, \`For\` components — not if/for in view!
+- Server functions: \`#[server]\` macro — only available with \`ssr\` feature
+- Shared types (server + WASM): use \`#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]\`
+- Avoid: \`tokio::spawn\` on client (no async runtime in WASM), \`panic!\` in components, \`wasm_bindgen\` direct
+- Build: \`cargo leptos build\` (not \`cargo build\`)
+- Test: \`cargo test --workspace\` (not \`cargo leptos test\` — that doesn't exist)
+- Lint: \`cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check\`
+- Dev server: \`cargo leptos watch\` (port 3000 + hot reload on port 3001)
+`,
+    'rust-leptos-csr': `---
+description: Leptos CSR (WASM + trunk) development skill
+---
+# Leptos CSR Skill
+- Pure client-side WASM — no server rendering, no \`#[server]\` functions
+- Use \`#[component]\` macro for all components
+- State: \`signal()\`, \`create_memo()\` for derived state
+- Async data: \`Resource\` — never \`Effect\` that calls fetch
+- Entry point: \`leptos::mount::mount_to_body(App)\` called from \`main()\`
+- Build tool: \`trunk build\` (NOT \`cargo leptos build\` — wrong tool for CSR)
+- Dev server: \`trunk serve\` (port 3001 by default, configured in Trunk.toml)
+- Test: \`cargo test --workspace\`
+- Lint: \`cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check\`
+- Deploy: \`trunk build --release\` produces \`dist/\` — static files, deployable to any CDN
+`,
     'rust-axum': `---\ndescription: Rust/Axum API development skill\n---\n# Rust/Axum Skill\n- Use Axum for HTTP routing\n- Use Tokio for async runtime\n- Use SQLx for database\n- Run clippy and cargo test\n`,
     'go-gin': `---\ndescription: Go/Gin API development skill\n---\n# Go + Gin Skill\n- Use Gin for HTTP routing (github.com/gin-gonic/gin)\n- Project layout: cmd/api/main.go (entrypoint), internal/handlers, internal/middleware, internal/services, internal/repository\n- Use context.Context propagation in every handler/service\n- Use struct tags for binding/validation (binding:"required" on DTOs)\n- For SQL: prefer database/sql + sqlx, parametrize ALL queries, no string concat\n- Errors: return wrapped errors (fmt.Errorf("...: %w", err)), not panics\n- Tests: use net/http/httptest + table-driven tests; place *_test.go alongside the package\n- Ralph Loop: \`go build ./...\`, \`go test ./...\`, \`go vet ./...\`\n`,
     'go-stdlib': `---\ndescription: Go API development with stdlib only (no framework)\n---\n# Go stdlib Skill (net/http only)\n- Use \`net/http\` from stdlib — NO framework (no Gin, Echo, Chi, Fiber). Adding one defeats the purpose of this stack.\n- Routing: \`http.NewServeMux()\` with the Go 1.22+ pattern syntax: \`mux.HandleFunc("GET /api/v1/users/{id}", h)\`, \`mux.HandleFunc("POST /api/v1/users", h)\`. Use \`r.PathValue("id")\` to extract path params.\n- Project layout: \`cmd/api/main.go\` (entrypoint), \`internal/handlers/\`, \`internal/middleware/\`, \`internal/services/\`, \`internal/repository/\`.\n- Middleware = function wrapping http.Handler. Compose with \`middleware.Recover(middleware.Logger(mux))\` style — no framework chain.\n- JSON: \`json.NewDecoder(r.Body).Decode(&dto)\` for input, \`json.NewEncoder(w).Encode(obj)\` for output. Always set \`Content-Type: application/json\` and the status code explicitly.\n- Validation: prefer \`github.com/go-playground/validator/v10\` for struct tags (lightweight, no framework lock-in). For trivial cases, manual validation in the handler is fine.\n- Logging: \`log/slog\` from stdlib. \`slog.Info("...", "key", val)\` style. Configure JSON handler in main.\n- Context propagation: \`r.Context()\` flows through every layer. NEVER use context.Background() inside handlers.\n- For SQL: prefer \`database/sql\` + \`github.com/jmoiron/sqlx\` or \`github.com/jackc/pgx/v5\`. Parametrize ALL queries.\n- Errors: \`fmt.Errorf("doing X: %w", err)\`. Map domain errors to HTTP status in the handler layer, not deeper.\n- Tests: \`net/http/httptest\` + table-driven. \`httptest.NewRequest\` + \`httptest.NewRecorder\`. Test each handler in isolation.\n- Ralph Loop: \`go build ./...\`, \`go test ./...\`, \`go vet ./...\`.\n- Avoid: middleware libraries that pull in heavyweight deps; ORM (use sqlx); reflection-based DI (wire by hand in main).\n`,

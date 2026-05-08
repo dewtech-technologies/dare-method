@@ -23,7 +23,7 @@ export type BackendStack =
   | 'go-gin'
   | 'go-stdlib';
 
-export type FrontendStack = 'react' | 'vue';
+export type FrontendStack = 'react' | 'vue' | 'rust-leptos' | 'rust-leptos-csr';
 
 export type McpLanguage = 'node-ts' | 'python';
 
@@ -87,14 +87,21 @@ export async function bootstrapFrontend(opts: BootstrapFrontendOptions): Promise
   switch (opts.stack) {
     case 'react':
       await bootstrapVite(opts.dir, 'react-ts', mode);
+      await tryRenameNpmProject(opts.dir, opts.projectName);
       break;
     case 'vue':
       await bootstrapVite(opts.dir, 'vue-ts', mode);
+      await tryRenameNpmProject(opts.dir, opts.projectName);
+      break;
+    case 'rust-leptos':
+      await bootstrapLeptosFullstack(opts.dir, opts.projectName, mode);
+      break;
+    case 'rust-leptos-csr':
+      await bootstrapLeptosCsr(opts.dir, opts.projectName, mode);
       break;
     default:
       throw new Error(`Unknown frontend stack: ${opts.stack as string}`);
   }
-  await tryRenameNpmProject(opts.dir, opts.projectName);
 }
 
 export async function bootstrapMcp(opts: BootstrapMcpOptions): Promise<void> {
@@ -723,6 +730,386 @@ func Recover(next http.Handler) http.Handler {
   );
 
   await go.run(['mod', 'tidy']);
+}
+
+async function bootstrapLeptosFullstack(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
+  banner(`Bootstrapping Leptos fullstack (SSR + WASM) in ${dir}`);
+
+  const cargo = await StackTool.resolve({
+    nativeCmd: 'cargo',
+    nativeHint: [
+      'Install Rust toolchain: https://www.rust-lang.org/tools/install',
+      'Then: rustup target add wasm32-unknown-unknown',
+      '      cargo install cargo-leptos --locked --version 0.2.22',
+    ].join('\n  '),
+    dockerImage: 'ghcr.io/dewtech-technologies/dare-rust-leptos:1',
+    imageHasEntrypoint: false,
+    dir,
+    mode,
+  });
+
+  const crateName = sanitizeCrateName(projectName);
+  const crateIdent = crateName.replace(/-/g, '_');
+
+  await fs.ensureDir(path.join(dir, 'src'));
+  await fs.ensureDir(path.join(dir, 'style'));
+  await fs.ensureDir(path.join(dir, 'public'));
+  await fs.ensureDir(path.join(dir, '.cargo'));
+
+  // Cargo.toml — pinned to Leptos 0.7 (0.6 → 0.7 broke server function API)
+  await fs.writeFile(
+    path.join(dir, 'Cargo.toml'),
+    [
+      `[package]`,
+      `name = "${crateName}"`,
+      `version = "0.1.0"`,
+      `edition = "2021"`,
+      ``,
+      `[lib]`,
+      `crate-type = ["cdylib", "rlib"]`,
+      ``,
+      `[dependencies]`,
+      `axum = { version = "0.7", optional = true }`,
+      `console_error_panic_hook = "0.1"`,
+      `leptos = { version = "0.7", features = [] }`,
+      `leptos_axum = { version = "0.7", optional = true }`,
+      `leptos_meta = { version = "0.7" }`,
+      `leptos_router = { version = "0.7", features = [] }`,
+      `tokio = { version = "1", features = ["full"], optional = true }`,
+      `tower = { version = "0.5", optional = true }`,
+      `tower-http = { version = "0.6", features = ["fs"], optional = true }`,
+      `wasm-bindgen = "0.2"`,
+      ``,
+      `[features]`,
+      `default = []`,
+      `hydrate = ["leptos/hydrate"]`,
+      `ssr = [`,
+      `  "dep:axum",`,
+      `  "dep:leptos_axum",`,
+      `  "dep:tokio",`,
+      `  "dep:tower",`,
+      `  "dep:tower-http",`,
+      `  "leptos/ssr",`,
+      `  "leptos_meta/ssr",`,
+      `  "leptos_router/ssr",`,
+      `]`,
+      ``,
+      `[package.metadata.leptos]`,
+      `output-name = "${crateName}"`,
+      `site-root = "target/site"`,
+      `site-pkg-dir = "pkg"`,
+      `style-file = "style/main.scss"`,
+      `browserquery = "defaults"`,
+      `env = "DEV"`,
+      `bin-features = ["ssr"]`,
+      `lib-features = ["hydrate"]`,
+      ``,
+      `[[bin]]`,
+      `name = "${crateName}"`,
+      `path = "src/main.rs"`,
+      `required-features = ["ssr"]`,
+      ``,
+      `[profile.release]`,
+      `codegen-units = 1`,
+      `lto = true`,
+      ``,
+      `[profile.wasm-release]`,
+      `inherits = "release"`,
+      `opt-level = "z"`,
+      ``,
+    ].join('\n'),
+  );
+
+  // src/lib.rs — shared App component + hydrate entry for WASM
+  await fs.writeFile(
+    path.join(dir, 'src', 'lib.rs'),
+    `pub mod app;
+
+#[cfg(feature = "hydrate")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
+    use app::App;
+    console_error_panic_hook::set_once();
+    leptos::mount::hydrate_body(App);
+}
+`,
+  );
+
+  // src/app.rs — App component with basic router
+  await fs.writeFile(
+    path.join(dir, 'src', 'app.rs'),
+    `use leptos::prelude::*;
+use leptos_meta::*;
+use leptos_router::{components::Router, path};
+
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                <AutoReload options=options.clone()/>
+                <HydrationScripts options=options.clone()/>
+                <MetaTags/>
+            </head>
+            <body>
+                <App/>
+            </body>
+        </html>
+    }
+}
+
+#[component]
+pub fn App() -> impl IntoView {
+    provide_meta_context();
+
+    view! {
+        <Title text="${projectName}"/>
+        <Router>
+            <main>
+                <Routes fallback=|| view! { <p>"Not found."</p> }>
+                    <Route path=path!("/") view=HomePage/>
+                </Routes>
+            </main>
+        </Router>
+    }
+}
+
+#[component]
+fn HomePage() -> impl IntoView {
+    let (count, set_count) = signal(0);
+
+    view! {
+        <h1>"${projectName}"</h1>
+        <button on:click=move |_| set_count.update(|n| *n += 1)>
+            "Count: " {count}
+        </button>
+    }
+}
+`.replace(/\${projectName}/g, projectName),
+  );
+
+  // src/main.rs — SSR server entry (Axum + leptos_axum)
+  await fs.writeFile(
+    path.join(dir, 'src', 'main.rs'),
+    `#[cfg(feature = "ssr")]
+#[tokio::main]
+async fn main() {
+    use axum::Router;
+    use leptos::prelude::*;
+    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use ${crateIdent}::app::{shell, App};
+
+    let conf = get_configuration(None).unwrap();
+    let leptos_options = conf.leptos_options;
+    let addr = leptos_options.site_addr;
+    let routes = generate_route_list(App);
+
+    let app = Router::new()
+        .leptos_routes(&leptos_options, routes, {
+            let leptos_options = leptos_options.clone();
+            move || shell(leptos_options.clone())
+        })
+        .fallback(leptos_axum::file_and_error_handler(shell))
+        .with_state(leptos_options);
+
+    println!("Listening on http://{}", addr);
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
+#[cfg(not(feature = "ssr"))]
+pub fn main() {}
+`,
+  );
+
+  // style/main.scss
+  await fs.writeFile(
+    path.join(dir, 'style', 'main.scss'),
+    `:root {
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  color: #b7410e;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+`,
+  );
+
+  // .cargo/config.toml — CRITICAL: no global [build] target
+  // Setting a global target breaks mixed workspaces (WASM + native crates like napi-rs)
+  await fs.writeFile(
+    path.join(dir, '.cargo', 'config.toml'),
+    `# DARE: Do NOT add a global [build] target here.
+# Mixed workspaces (Leptos WASM + native crates like napi-rs or aya) will break
+# if cargo tries to compile all crates for the same target.
+# cargo-leptos manages wasm32-unknown-unknown target per-crate automatically.
+`,
+  );
+
+  await cargo.run(['fetch']);
+}
+
+async function bootstrapLeptosCsr(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+): Promise<void> {
+  banner(`Bootstrapping Leptos CSR (WASM + trunk) in ${dir}`);
+
+  const cargo = await StackTool.resolve({
+    nativeCmd: 'cargo',
+    nativeHint: [
+      'Install Rust toolchain: https://www.rust-lang.org/tools/install',
+      'Then: rustup target add wasm32-unknown-unknown',
+      '      cargo install trunk --locked',
+    ].join('\n  '),
+    dockerImage: 'ghcr.io/dewtech-technologies/dare-rust-leptos:1',
+    imageHasEntrypoint: false,
+    dir,
+    mode,
+  });
+
+  const crateName = sanitizeCrateName(projectName);
+
+  await fs.ensureDir(path.join(dir, 'src'));
+  await fs.ensureDir(path.join(dir, 'style'));
+  await fs.ensureDir(path.join(dir, '.cargo'));
+
+  // Cargo.toml — CSR-only, compiled to WASM via trunk
+  await fs.writeFile(
+    path.join(dir, 'Cargo.toml'),
+    [
+      `[package]`,
+      `name = "${crateName}"`,
+      `version = "0.1.0"`,
+      `edition = "2021"`,
+      ``,
+      `[lib]`,
+      `crate-type = ["cdylib", "rlib"]`,
+      ``,
+      `[dependencies]`,
+      `leptos = { version = "0.7", features = ["csr"] }`,
+      `console_error_panic_hook = "0.1"`,
+      `wasm-bindgen = "0.2"`,
+      ``,
+      `[profile.release]`,
+      `lto = true`,
+      `opt-level = "z"`,
+      ``,
+    ].join('\n'),
+  );
+
+  // src/lib.rs — App component, mount entry for trunk
+  await fs.writeFile(
+    path.join(dir, 'src', 'lib.rs'),
+    `use leptos::prelude::*;
+
+pub fn main() {
+    console_error_panic_hook::set_once();
+    leptos::mount::mount_to_body(App);
+}
+
+#[component]
+pub fn App() -> impl IntoView {
+    let (count, set_count) = signal(0);
+
+    view! {
+        <main>
+            <h1>"${projectName}"</h1>
+            <button on:click=move |_| set_count.update(|n| *n += 1)>
+                "Count: " {count}
+            </button>
+        </main>
+    }
+}
+`.replace('${projectName}', projectName),
+  );
+
+  // index.html — trunk entry point (data-trunk attributes tell trunk what to bundle)
+  await fs.writeFile(
+    path.join(dir, 'index.html'),
+    `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${projectName}</title>
+    <link data-trunk rel="scss" href="style/main.scss" />
+    <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
+  </head>
+  <body></body>
+</html>
+`.replace(/\${projectName}/g, projectName),
+  );
+
+  // Trunk.toml
+  await fs.writeFile(
+    path.join(dir, 'Trunk.toml'),
+    `[build]
+target = "index.html"
+dist = "dist"
+
+[watch]
+ignore = ["./dist"]
+
+[serve]
+port = 3001
+open = false
+`,
+  );
+
+  // style/main.scss
+  await fs.writeFile(
+    path.join(dir, 'style', 'main.scss'),
+    `:root {
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  color: #b7410e;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+`,
+  );
+
+  // .cargo/config.toml
+  await fs.writeFile(
+    path.join(dir, '.cargo', 'config.toml'),
+    `# DARE: Do NOT add a global [build] target here.
+# trunk manages wasm32-unknown-unknown target automatically via its own build pipeline.
+`,
+  );
+
+  await cargo.run(['fetch']);
 }
 
 async function bootstrapVite(

@@ -57,6 +57,19 @@ export function generateCursorRules(config: TemplateConfig): string {
 - Use Pinia for state management
 - Use Vue Router for navigation
 - Write Vitest + Vue Test Utils tests`,
+    'rust-leptos': `## Frontend: Leptos fullstack (Rust SSR + WASM)
+- Use \`#[component]\` macro — no class components
+- State: \`signal()\`, \`Resource\` for async, \`Action\` for mutations
+- Loading: \`Suspense\`/\`Transition\` — never block the render
+- Server functions: \`#[server]\` macro (ssr feature only)
+- Shared types: \`#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]\`
+- Avoid: \`tokio::spawn\` on client, \`panic!\` in components, \`Effect\` for fetch
+- Build: \`cargo leptos build\` | Test: \`cargo test --workspace\` | Dev: \`cargo leptos watch\``,
+    'rust-leptos-csr': `## Frontend: Leptos CSR (Rust WASM + trunk)
+- Pure client-side WASM — no SSR, no \`#[server]\` functions
+- Use \`#[component]\` macro, \`signal()\` for state, \`Resource\` for async
+- Build tool: \`trunk build\` (NOT cargo leptos) | Dev: \`trunk serve\`
+- Test: \`cargo test --workspace\` | Deploy: \`dist/\` is fully static`,
   };
 
   return `# DARE Framework - Cursor Rules
@@ -265,6 +278,17 @@ export function generateClaudeCodeRules(config: TemplateConfig): string {
 - TypeScript for all components
 - Use Pinia for state management
 - Ralph Loop: \`npm run build && npm test && npx eslint src\``,
+    'rust-leptos': `## Frontend: Leptos fullstack (Rust SSR + WASM)
+- Use \`#[component]\` macro — estado com \`signal()\`, async com \`Resource\`, mutações com \`Action\`
+- Loading: \`Suspense\`/\`Transition\` — nunca bloqueie o render
+- Server functions: \`#[server]\` macro (feature ssr)
+- Tipos compartilhados server + WASM: \`#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]\`
+- Evite: \`tokio::spawn\` no client, \`panic!\` em componentes, \`Effect\` para fetch
+- Ralph Loop: \`cargo leptos build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings\``,
+    'rust-leptos-csr': `## Frontend: Leptos CSR (Rust WASM + trunk)
+- WASM puro — sem SSR, sem \`#[server]\`
+- Build: \`trunk build --release\` | Dev: \`trunk serve\` | Test: \`cargo test --workspace\`
+- Ralph Loop: \`trunk build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings\``,
   };
 
   return `# DARE Framework
@@ -485,19 +509,30 @@ Antes de marcar qualquer task como DONE:
 }
 
 export function generateClaudeSettings(stack: { backend?: string; frontend?: string; structure: string }): string {
-  const buildCmd = stack.backend === 'rust-axum'
+  const isLeptosFullstack = stack.frontend === 'rust-leptos';
+  const isLeptosCsr = stack.frontend === 'rust-leptos-csr';
+
+  const buildCmd = isLeptosFullstack
+    ? 'cargo leptos build --release'
+    : isLeptosCsr
+    ? 'trunk build --release'
+    : stack.backend === 'rust-axum'
     ? 'cargo build'
     : stack.backend === 'python-fastapi' || stack.structure === 'mcp-server'
     ? 'python -m py_compile main.py'
     : 'npm run build';
 
-  const testCmd = stack.backend === 'rust-axum'
+  const testCmd = isLeptosFullstack || isLeptosCsr
+    ? 'cargo test --workspace'
+    : stack.backend === 'rust-axum'
     ? 'cargo test'
     : stack.backend === 'python-fastapi' || stack.structure === 'mcp-server'
     ? 'pytest'
     : 'npm test';
 
-  const lintCmd = stack.backend === 'rust-axum'
+  const lintCmd = isLeptosFullstack || isLeptosCsr
+    ? 'cargo clippy --all-features -- -D warnings'
+    : stack.backend === 'rust-axum'
     ? 'cargo clippy'
     : stack.backend === 'python-fastapi' || stack.structure === 'mcp-server'
     ? 'ruff check .'

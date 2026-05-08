@@ -81,6 +81,20 @@ export function gatesFor(stack: string): RalphLoopGate[] {
         { name: 'test', command: 'npm test -- --run --passWithNoTests' },
         { name: 'lint', command: 'npm run lint' },
       ];
+    // cargo-leptos manages the SSR + WASM dual build; trunk manages CSR WASM.
+    // Tests run via cargo test --workspace (not cargo leptos test — that doesn't exist).
+    case 'rust-leptos':
+      return [
+        { name: 'build', command: 'cargo leptos build --release' },
+        { name: 'test', command: 'cargo test --workspace' },
+        { name: 'lint', command: 'cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check' },
+      ];
+    case 'rust-leptos-csr':
+      return [
+        { name: 'build', command: 'trunk build --release' },
+        { name: 'test', command: 'cargo test --workspace' },
+        { name: 'lint', command: 'cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check' },
+      ];
     case 'mcp-server-node-ts':
       return [
         { name: 'build', command: 'npm run build' },
