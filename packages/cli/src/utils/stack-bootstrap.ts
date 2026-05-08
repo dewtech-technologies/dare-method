@@ -1290,7 +1290,9 @@ function dockerizePath(p: string): string {
 }
 
 function sanitizeCrateName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'app';
+  // Cargo package names use hyphens (idiomatic). Rust identifiers derived from
+  // them replace hyphens with underscores — see crateIdent usages in this file.
+  return name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
 }
 
 function sanitizeGoModule(name: string): string {
