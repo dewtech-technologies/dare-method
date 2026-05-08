@@ -100,6 +100,28 @@ export const initCommand = new Command('init')
         ],
       },
 
+      // ── Rust workspace layout (only for monorepo + rust-axum + rust-leptos*) ──
+      {
+        type: 'list',
+        name: 'rustWorkspaceLayout',
+        message: 'Cargo workspace layout:',
+        when: (ans) =>
+          ans.structure === 'monorepo' &&
+          ans.backend === 'rust-axum' &&
+          (ans.frontend === 'rust-leptos' || ans.frontend === 'rust-leptos-csr'),
+        choices: [
+          {
+            name: '📦 Single-crate  — crates/server + crates/web  (app simples, recomendado para começar)',
+            value: 'single',
+          },
+          {
+            name: '🏗️  Multi-crate   — {name}-core / {name}-server / {name}-web / {name}-cli  (produto / plataforma)',
+            value: 'multi',
+          },
+        ],
+        default: 'single',
+      },
+
       // ── Common questions ──────────────────────────────────────────────────
       {
         type: 'list',
@@ -167,6 +189,7 @@ export const initCommand = new Command('init')
         graphrag: answers.graphrag,
         mcp: answers.mcp,
         toolchain: answers.toolchain,
+        rustWorkspaceLayout: answers.rustWorkspaceLayout,
         outputDir: path.resolve(process.cwd(), name),
       });
 
@@ -198,19 +221,25 @@ export const initCommand = new Command('init')
         console.log(chalk.gray(`  Claude Code tip: use /dare-design, /dare-blueprint, /dare-execute as slash commands\n`));
       }
 
-      const isRustFullstack =
+      const isRustMonorepo =
         answers.backend === 'rust-axum' &&
-        answers.frontend === 'rust-leptos' &&
+        (answers.frontend === 'rust-leptos' || answers.frontend === 'rust-leptos-csr') &&
         answers.structure === 'monorepo';
-      if (isRustFullstack) {
-        console.log(chalk.cyan('🦀 Rust full-stack workspace created!'));
-        console.log(chalk.gray('   Cargo.toml workspace unifies backend/ and frontend/ into a single Cargo workspace.'));
+      if (isRustMonorepo) {
+        const layout = answers.rustWorkspaceLayout ?? 'single';
+        const sanitized = name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+        console.log(chalk.cyan('🦀 Rust workspace created!'));
+        if (layout === 'single') {
+          console.log(chalk.gray(`   crates/server/  (rust-axum)  +  crates/web/  (${answers.frontend})`));
+        } else {
+          console.log(chalk.gray(`   crates/${sanitized}-core  |  crates/${sanitized}-server  |  crates/${sanitized}-web  |  crates/${sanitized}-cli`));
+        }
         console.log(chalk.gray('   See .cargo/config.toml — do NOT add a global [build] target (breaks WASM + native crates).\n'));
-        console.log(chalk.gray('   Tip: use /dare-rust-leptos for Leptos idioms and /dare-rust-workspace for multi-crate decisions.\n'));
+        console.log(chalk.gray('   Tip: /dare-rust-leptos for Leptos idioms · /dare-rust-workspace for workspace decisions.\n'));
       }
 
       const isLeptos = answers.frontend === 'rust-leptos' || answers.frontend === 'rust-leptos-csr';
-      if (isLeptos && !isRustFullstack) {
+      if (isLeptos && !isRustMonorepo) {
         console.log(chalk.gray(`  Leptos tip: use /dare-rust-leptos for component patterns, server functions and workspace config.\n`));
       }
     } catch (err) {

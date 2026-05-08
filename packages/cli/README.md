@@ -23,8 +23,8 @@ means it literally runs:
 | `go-gin` | `go mod init` + `go get gin/godotenv` + starter files |
 | `go-stdlib` | `go mod init` + starter usando só `net/http` (zero deps externas) |
 | `react`, `vue` | `npx degit vitejs/vite/packages/create-vite/template-<x> .` + `npm install` |
-| `rust-leptos` | write Cargo.toml (Leptos 0.7 SSR+hydrate) + Axum main + `cargo fetch` |
-| `rust-leptos-csr` | write Cargo.toml (Leptos 0.7 csr) + index.html + Trunk.toml + `cargo fetch` |
+| `rust-leptos` | Cargo workspace with `crates/server` (Axum) + `crates/web` (Leptos 0.7 SSR+hydrate) + `cargo fetch` |
+| `rust-leptos-csr` | Cargo workspace with `crates/server` (Axum) + `crates/web` (Leptos 0.7 CSR) + Trunk.toml + `cargo fetch` |
 | `mcp-server-node-ts` | `npm init` + `@modelcontextprotocol/sdk` |
 | `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
 
@@ -210,13 +210,14 @@ Prompts:
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
 - **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 - **Frontend stack:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR-only (Rust WASM)
+- **Cargo workspace layout** *(Monorepo + Rust/Axum + Leptos only)*: Single-crate (`crates/server` + `crates/web`) · Multi-crate (`{name}-core` + `{name}-server` + `{name}-web` + `{name}-cli`)
 - **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
 - **GraphRAG backend:** SQLite · JSON · Neo4j
 - **DARE MCP Server:** context query server (saves ~95% tokens)
 
 Generates:
 - `dare.config.json` — project config
-- `CLAUDE.md` + `.claude/commands/` + `.claude/settings.json` — Claude Code rules and slash commands
+- `CLAUDE.md` + `.claude/commands/` + `.claude/settings.json` — Claude Code rules and slash commands (includes `/dare-security`)
 - `.cursorrules` / `.antigravityrules` — Cursor / Antigravity rules
 - `.cursor/rules/*.mdc` — stack-specific skills
 - `.cursor/commands/` — Cursor slash commands
@@ -313,7 +314,7 @@ guide the IDE agent through this loop.
 #### Stack-specific skills
 
 `dare init` also ships skills focused on architectural decisions for
-specific stacks. As of v2.11.0:
+specific stacks. As of v2.13.0:
 
 - **`skill-rust-workspace.mdc`** (Cursor) /
   **`dare-rust-workspace/SKILL.md`** (Antigravity) /

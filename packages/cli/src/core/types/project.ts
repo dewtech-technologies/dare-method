@@ -3,6 +3,8 @@ export type BackendStack = 'rust-axum' | 'node-nestjs' | 'python-fastapi' | 'php
 export type FrontendStack = 'react' | 'vue' | 'rust-leptos' | 'rust-leptos-csr';
 export type IdeChoice = 'cursor' | 'antigravity' | 'hybrid';
 export type GraphRagBackend = 'sqlite' | 'json' | 'neo4j';
+/** single: crates/server + crates/web | multi: {name}-core + {name}-server + {name}-web + {name}-cli */
+export type RustWorkspaceLayout = 'single' | 'multi';
 
 export interface ProjectConfig {
   name: string;
@@ -11,4 +13,5 @@ export interface ProjectConfig {
   frontend?: FrontendStack;
   ide: IdeChoice;
   graphrag: GraphRagBackend;
+  rustWorkspaceLayout?: RustWorkspaceLayout;
 }

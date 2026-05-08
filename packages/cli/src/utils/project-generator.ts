@@ -47,6 +47,8 @@ export interface ProjectConfig {
    *   - `docker`: always run via the official Docker image, even if native is available.
    */
   toolchain?: ToolchainMode;
+  /** single: crates/server + crates/web | multi: {slug}-core/-server/-web/-cli */
+  rustWorkspaceLayout?: 'single' | 'multi';
 }
 
 export async function generateProjectStructure(config: ProjectConfig): Promise<void> {
@@ -836,32 +838,58 @@ async function assertOutputDirIsEmpty(config: ProjectConfig): Promise<void> {
   }
 }
 
+/** Returns the crate directory for a Rust backend/frontend inside a monorepo. */
+function rustMonorepoDir(
+  outputDir: string,
+  crateType: 'server' | 'web',
+  layout: 'single' | 'multi',
+  name: string,
+): string {
+  if (layout === 'multi') {
+    const slug = name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+    return path.join(outputDir, 'crates', `${slug}-${crateType}`);
+  }
+  return path.join(outputDir, 'crates', crateType);
+}
+
 async function runStackBootstrap(config: ProjectConfig): Promise<void> {
-  const { outputDir, name, structure, backend, frontend, mcpLanguage, toolchain } = config;
+  const { outputDir, name, structure, backend, frontend, mcpLanguage, toolchain, rustWorkspaceLayout } = config;
+  const isRustMonorepo =
+    structure === 'monorepo' &&
+    backend === 'rust-axum' &&
+    (frontend === 'rust-leptos' || frontend === 'rust-leptos-csr');
+  const layout = rustWorkspaceLayout ?? 'single';
 
   // Backend / monorepo backend
   if ((structure === 'backend' || structure === 'monorepo') && backend) {
     if (!BACKEND_STACKS.has(backend as BackendStack)) {
       throw new Error(`Unsupported backend stack: ${backend}`);
     }
-    const backendDir =
-      structure === 'monorepo' ? path.join(outputDir, 'backend') : outputDir;
+    const backendDir = isRustMonorepo
+      ? rustMonorepoDir(outputDir, 'server', layout, name)
+      : structure === 'monorepo'
+        ? path.join(outputDir, 'backend')
+        : outputDir;
     await fs.ensureDir(backendDir);
     await bootstrapBackend({
       stack: backend as BackendStack,
       dir: backendDir,
       projectName: name,
       toolchain,
+      isMonorepo: structure === 'monorepo',
     });
   }
 
   // Frontend / monorepo frontend
-  if ((structure === 'frontend' || structure === 'monorepo') && frontend) {
+  if ((structure === 'frontend' || structure === 'monorepo') && frontend && frontend !== 'none') {
     if (!FRONTEND_STACKS.has(frontend as FrontendStack)) {
       throw new Error(`Unsupported frontend stack: ${frontend}`);
     }
-    const frontendDir =
-      structure === 'monorepo' ? path.join(outputDir, 'frontend') : outputDir;
+    const frontendDir = isRustMonorepo
+      ? rustMonorepoDir(outputDir, 'web', layout, name)
+      : structure === 'monorepo'
+        ? path.join(outputDir, 'frontend')
+        : outputDir;
     await fs.ensureDir(frontendDir);
     await bootstrapFrontend({
       stack: frontend as FrontendStack,
@@ -883,31 +911,56 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
     });
   }
 
-  // Combo: rust-axum + rust-leptos in monorepo → unify into a single Cargo workspace
-  if (structure === 'monorepo' && backend === 'rust-axum' && frontend === 'rust-leptos') {
-    await createRustFullstackWorkspace(outputDir, name);
+  // Combo: rust-axum + rust-leptos(csr) in monorepo → unified Cargo workspace
+  if (isRustMonorepo) {
+    await createRustFullstackWorkspace(outputDir, name, layout, frontend as 'rust-leptos' | 'rust-leptos-csr');
   }
 
   console.log(chalk.green('\n✓ Stack scaffold complete.\n'));
 }
 
-async function createRustFullstackWorkspace(outputDir: string, projectName: string): Promise<void> {
-  console.log(chalk.cyan('\n🦀 Creating unified Cargo workspace (rust-axum + rust-leptos)...\n'));
+async function createRustFullstackWorkspace(
+  outputDir: string,
+  projectName: string,
+  layout: 'single' | 'multi',
+  frontend: 'rust-leptos' | 'rust-leptos-csr',
+): Promise<void> {
+  const frontendLabel = frontend === 'rust-leptos-csr' ? 'rust-leptos-csr' : 'rust-leptos';
+  console.log(chalk.cyan(`\n🦀 Creating unified Cargo workspace (rust-axum + ${frontendLabel}, ${layout})...\n`));
 
-  const sanitized = projectName.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'app';
+  const slug = projectName.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+
+  // Determine workspace members based on layout
+  let members: string[];
+  if (layout === 'single') {
+    members = ['crates/server', 'crates/web'];
+  } else {
+    members = [
+      `crates/${slug}-core`,
+      `crates/${slug}-server`,
+      `crates/${slug}-web`,
+      `crates/${slug}-cli`,
+    ];
+  }
 
   // Root Cargo.toml workspace
+  // Note: leptos is NOT in workspace.dependencies — features (ssr/hydrate/csr) must be
+  // set per-crate to avoid conflicting feature resolution across the workspace.
   await fs.writeFile(
     path.join(outputDir, 'Cargo.toml'),
     [
       `[workspace]`,
       `resolver = "2"`,
       `members = [`,
-      `  "backend",`,
-      `  "frontend",`,
+      ...members.map((m) => `  "${m}",`),
       `]`,
       ``,
-      `# Shared dependencies — pin versions here, reference in crates via { workspace = true }`,
+      `# CRÍTICO: NÃO definir [build] target global aqui.`,
+      `# Este workspace mistura crates WASM (${layout === 'single' ? 'crates/web' : `crates/${slug}-web`}/Leptos)`,
+      `# com crates nativos (${layout === 'single' ? 'crates/server' : `crates/${slug}-server`}/Axum).`,
+      `# cargo-leptos gerencia wasm32-unknown-unknown internamente.`,
+      ``,
+      `# Shared dependencies — reference in crates via { workspace = true }`,
       `[workspace.dependencies]`,
       `tokio = { version = "1", features = ["full"] }`,
       `serde = { version = "1.0", features = ["derive"] }`,
@@ -916,32 +969,29 @@ async function createRustFullstackWorkspace(outputDir: string, projectName: stri
       `anyhow = "1.0"`,
       `thiserror = "1.0"`,
       `uuid = { version = "1.10", features = ["v4", "serde"] }`,
-      `leptos = { version = "0.7", features = [] }`,
       ``,
     ].join('\n'),
   );
 
-  // Root .cargo/config.toml — MUST NOT have global [build] target
+  // Root .cargo/config.toml guard
   await fs.ensureDir(path.join(outputDir, '.cargo'));
   await fs.writeFile(
     path.join(outputDir, '.cargo', 'config.toml'),
     `# DARE: Do NOT add a global [build] target here.
-# This workspace mixes Leptos WASM crates (frontend) with native crates (backend).
-# A global target would make cargo try to compile Axum for wasm32 or Leptos for x86 — both fail.
-# cargo-leptos manages the wasm32-unknown-unknown target for the frontend crate automatically.
+# This workspace mixes Leptos WASM crates with native Axum crates.
+# A global target breaks one or the other — cargo-leptos manages wasm32 internally.
 `,
   );
 
-  // Root .gitignore additions
+  // Multi-crate: create core and cli scaffold crates
+  if (layout === 'multi') {
+    await createCoreCrate(outputDir, slug);
+    await createCliCrate(outputDir, slug);
+  }
+
+  // Root .gitignore
   const rootGitignore = path.join(outputDir, '.gitignore');
-  const rustIgnore = [
-    '',
-    '# Rust / Cargo',
-    'target/',
-    'dist/',
-    'Cargo.lock',
-    '',
-  ].join('\n');
+  const rustIgnore = ['', '# Rust / Cargo', 'target/', 'dist/', 'Cargo.lock', ''].join('\n');
   if (await fs.pathExists(rootGitignore)) {
     const existing = await fs.readFile(rootGitignore, 'utf-8');
     if (!existing.includes('target/')) {
@@ -952,8 +1002,75 @@ async function createRustFullstackWorkspace(outputDir: string, projectName: stri
   }
 
   console.log(chalk.green(`  ✓ Cargo workspace root created`));
-  console.log(chalk.gray(`  backend/ (rust-axum) and frontend/ (rust-leptos) are workspace members.\n`));
-  console.log(chalk.yellow(`  ⚠  Cargo.lock is gitignored at root — commit it if this is a binary deployment.\n`));
+  members.forEach((m) => console.log(chalk.gray(`    ${m}/`)));
+  console.log(chalk.yellow(`\n  ⚠  Cargo.lock gitignored — commit it for binary deployments.\n`));
+}
+
+async function createCoreCrate(outputDir: string, slug: string): Promise<void> {
+  const dir = path.join(outputDir, 'crates', `${slug}-core`);
+  await fs.ensureDir(path.join(dir, 'src'));
+  await fs.writeFile(
+    path.join(dir, 'Cargo.toml'),
+    [
+      `[package]`,
+      `name = "${slug}-core"`,
+      `version = "0.1.0"`,
+      `edition = "2021"`,
+      ``,
+      `[lib]`,
+      ``,
+      `[dependencies]`,
+      `serde = { workspace = true }`,
+      `serde_json = { workspace = true }`,
+      `thiserror = { workspace = true }`,
+      `anyhow = { workspace = true }`,
+      `tracing = { workspace = true }`,
+      `uuid = { workspace = true }`,
+      ``,
+    ].join('\n'),
+  );
+  await fs.writeFile(path.join(dir, 'src', 'lib.rs'), `// ${slug}-core — shared domain types and business logic\n`);
+}
+
+async function createCliCrate(outputDir: string, slug: string): Promise<void> {
+  const dir = path.join(outputDir, 'crates', `${slug}-cli`);
+  await fs.ensureDir(path.join(dir, 'src'));
+  await fs.writeFile(
+    path.join(dir, 'Cargo.toml'),
+    [
+      `[package]`,
+      `name = "${slug}-cli"`,
+      `version = "0.1.0"`,
+      `edition = "2021"`,
+      ``,
+      `[[bin]]`,
+      `name = "${slug}-cli"`,
+      `path = "src/main.rs"`,
+      ``,
+      `[dependencies]`,
+      `${slug}-core = { path = "../${slug}-core" }`,
+      `clap = { version = "4", features = ["derive"] }`,
+      `anyhow = { workspace = true }`,
+      `tokio = { workspace = true }`,
+      ``,
+    ].join('\n'),
+  );
+  await fs.writeFile(
+    path.join(dir, 'src', 'main.rs'),
+    [
+      `use clap::Parser;`,
+      ``,
+      `#[derive(Parser)]`,
+      `#[command(name = "${slug}-cli")]`,
+      `struct Cli {}`,
+      ``,
+      `#[tokio::main]`,
+      `async fn main() {`,
+      `    let _cli = Cli::parse();`,
+      `}`,
+      ``,
+    ].join('\n'),
+  );
 }
 
 function generateStackSkill(stack: string): string {

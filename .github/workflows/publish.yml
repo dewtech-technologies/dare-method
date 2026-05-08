@@ -43,9 +43,11 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "Resolving release notes for v${VERSION}"
+          # Capture first — avoids unclosed heredoc if the script exits non-zero
+          NOTES="$(node scripts/extract-release-notes.mjs "${VERSION}")"
           {
             echo "body<<__DARE_NOTES_EOF__"
-            node scripts/extract-release-notes.mjs "${VERSION}"
+            printf '%s\n' "${NOTES}"
             echo "__DARE_NOTES_EOF__"
           } >> "$GITHUB_OUTPUT"
 

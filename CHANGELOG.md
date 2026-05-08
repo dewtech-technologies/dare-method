@@ -11,6 +11,130 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.12.0] — 2026-05
+
+### Adicionado — Workspace layout single vs multi-crate no `dare init`
+Novo prompt no `dare init` para projetos Rust monorepo (Axum + Leptos): escolha entre
+`single` (`crates/server` + `crates/web`) ou `multi` (`{name}-core / {name}-server / {name}-web / {name}-cli`).
+
+### Adicionado — `/dare-security` (novo slash command Claude Code)
+Guia completo de segurança com OWASP A01–A10, exemplos de código por stack (Rust/Node/Python/PHP),
+supply chain, gestão de secrets, headers de segurança e prompt injection para projetos com LLM.
+
+### Melhorado — Templates DESIGN, BLUEPRINT e TASK-SPEC reestruturados
+- `DESIGN-template.md`: seções RF/RNF/RS numeradas, stakeholders, matriz de integrações,
+  riscos com probabilidade/impacto/mitigação, métricas de sucesso mensuráveis, checklist de aprovação.
+- `BLUEPRINT-template.md`: fases com critério de DONE verificável, validation gates por stack
+  incluindo auditoria de dependências, controles de segurança mapeados, estratégia de 4 tipos de testes.
+- `TASK-SPEC-template.md`: objetivo como estado observável, seção obrigatória de segurança (6 pontos),
+  validation gates com build + test + lint + audit.
+
+### Melhorado — Ralph Loop expandido com auditoria de dependências
+`/dare-execute` agora inclui passo 5.4: `npm audit --audit-level=high` / `cargo audit` / `pip-audit` /
+`composer audit` toda vez que a task adicionar ou atualizar dependências. CVE HIGH ou CRITICAL = task FAILED.
+Passo 5.5: verificação de secrets antes de commitar.
+
+### Melhorado — `skill-security.mdc` completamente reescrita
+OWASP A01–A10 com exemplos de código reais por stack; A06 (Dependências Vulneráveis) com comandos
+por stack e gate obrigatório no Ralph Loop; supply chain (detect-secrets, lockfiles, CI pins);
+prompt injection para projetos com LLM; headers de segurança HTTP obrigatórios em produção.
+
+### Corrigido — Estrutura Rust monorepo usa `crates/server` + `crates/web`
+`dare init` com Rust/Axum + Leptos (fullstack ou CSR) agora gera a estrutura Cargo workspace correta:
+`crates/server/` e `crates/web/` (ou `crates/{name}-{tipo}/` no layout multi-crate) em vez de
+`backend/` + `frontend/` (convenção npm, não Rust).
+
+### Corrigido — `--vcs none` em crates membros de workspace
+`cargo init` dentro de um monorepo Cargo agora usa `--vcs none` para não criar um `.git` aninhado
+que quebra o workspace e o histórico do repositório pai.
+
+## [2.11.0] — 2026-05
+
+### Adicionado — Stacks `rust-leptos` e `rust-leptos-csr`
+Suporte completo a Leptos 0.7 no `dare init`:
+
+- **`rust-leptos`** — fullstack SSR + hidratação com `cargo-leptos` 0.2.22 + Axum. Gera:
+  `Cargo.toml` workspace com `crates/server` (Axum) + `crates/web` (Leptos), `.cargo/config.toml`
+  (WASM target apenas para `crates/web`, **sem** `[build] target` global),
+  `main.rs` Axum com `LeptosOptions`, componente `App` com routing.
+- **`rust-leptos-csr`** — CSR puro (WASM sem SSR) com `trunk`. Gera:
+  `Cargo.toml` com features `csr`, `index.html` Trunk-compatible, `Trunk.toml`.
+
+#### Toolchain nativa requerida
+| Stack | Native | Docker fallback |
+|-------|--------|-----------------|
+| `rust-leptos` | Rust 1.83+ + `cargo install cargo-leptos --version 0.2.22` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
+| `rust-leptos-csr` | Rust 1.83+ + `cargo install trunk` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
+
+#### Ralph Loop por modo
+```bash
+# fullstack (cargo-leptos):
+cargo leptos build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings
+
+# CSR (trunk):
+trunk build --release && cargo test --workspace && cargo clippy --all-features -- -D warnings
+```
+
+### Adicionado — Skill `/dare-rust-leptos`
+Guia completo para desenvolvimento Leptos: decisão CSR vs fullstack, idioms Leptos 0.7
+(`#[component]`, signals, `Resource`, `Action`, `Show`, `For`, `#[server]`), tipos compartilhados
+com `cfg_attr`, configuração de workspace misto (WASM + native), antipatterns a evitar.
+Inclui 3 templates de task prontos para projetos Leptos.
+
+| IDE | Arquivo |
+|-----|---------|
+| Cursor | `.cursor/rules/skill-rust-leptos.mdc` |
+| Antigravity | `.agents/skills/dare-rust-leptos/SKILL.md` |
+| Claude Code | `.claude/commands/dare-rust-leptos.md` (`/dare-rust-leptos`) |
+
+## [2.10.0] — 2026-05
+
+### Adicionado — Tipo de projeto `mcp-server`
+Nova opção na estrutura do `dare init` para criar servidores MCP (Model Context Protocol):
+
+```
+? Project structure:
+    Monorepo (backend + frontend)
+    Backend only
+    Frontend only
+  ❯ MCP Server
+```
+
+Prompts específicos para MCP:
+- **Linguagem:** TypeScript/Node.js ou Python
+- **Transport:** `stdio` (CLI tools, agentes locais) · `SSE` (integrações web) · `HTTP Stream` (streamable HTTP)
+- **Capabilities:** Tools · Resources · Prompts (checkbox múltiplo)
+
+#### Templates gerados por combinação
+| Linguagem | Transport | O que vem |
+|-----------|-----------|-----------|
+| TypeScript | stdio | `src/index.ts` com `StdioServerTransport` + tool de exemplo |
+| TypeScript | SSE | Express + `SSEServerTransport` + CORS |
+| TypeScript | HTTP Stream | Express + `StreamableHTTPServerTransport` + sessões |
+| Python | stdio | `main.py` com `stdio_server()` + FastMCP |
+| Python | SSE | FastMCP com `sse_app()` |
+| Python | HTTP Stream | FastMCP com `streamable_http_app()` |
+
+#### Próximos passos gerados automaticamente
+```bash
+dare design "Descreva o que este MCP server expõe"
+dare blueprint
+dare execute --parallel
+npx @modelcontextprotocol/inspector python main.py  # ou npm run inspect
+```
+
+### Adicionado — `dare discover` detecta projetos MCP existentes
+`dare discover` agora reconhece projetos MCP a partir de:
+- `package.json` com `@modelcontextprotocol/sdk`
+- `requirements.txt` / `pyproject.toml` com `mcp` ou `fastmcp`
+
+### Melhorado — Suporte Claude Code
+- `CLAUDE.md` gerado com seções de stack específicas (Rust/Axum, NestJS, FastAPI, Laravel, Leptos)
+- `.claude/commands/` com todos os slash commands DARE
+- `.claude/settings.json` com hooks do Ralph Loop
+- Slash commands disponíveis: `/dare-design`, `/dare-blueprint`, `/dare-execute`, `/dare-tasks`,
+  `/dare-rust-workspace`, `/dare-dag-run`
+
 ## [2.9.0] — 2026-05
 
 ### Adicionado — Skill `rust-workspace` (decisão + migração)

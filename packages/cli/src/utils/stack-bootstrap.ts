@@ -44,6 +44,8 @@ export interface BootstrapBackendOptions {
   dir: string;
   projectName: string;
   toolchain?: ToolchainMode;
+  /** When true the crate lives inside a Cargo workspace — use --vcs none on cargo init. */
+  isMonorepo?: boolean;
 }
 
 export interface BootstrapFrontendOptions {
@@ -75,7 +77,7 @@ export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<v
     case 'python-fastapi':
       return bootstrapPythonFastapi(opts.dir, mode);
     case 'rust-axum':
-      return bootstrapRustAxum(opts.dir, opts.projectName, mode);
+      return bootstrapRustAxum(opts.dir, opts.projectName, mode, opts.isMonorepo ?? false);
     case 'go-gin':
       return bootstrapGoGin(opts.dir, opts.projectName, mode);
     case 'go-stdlib':
@@ -381,6 +383,7 @@ async function bootstrapRustAxum(
   dir: string,
   projectName: string,
   mode: ToolchainMode,
+  isMonorepo: boolean = false,
 ): Promise<void> {
   banner(`Bootstrapping Rust + Axum in ${dir}`);
 
@@ -393,7 +396,9 @@ async function bootstrapRustAxum(
     mode,
   });
 
-  await cargo.run(['init', '--name', sanitizeCrateName(projectName)]);
+  // --vcs none when inside a workspace — the workspace root owns the .git
+  const vcsArgs = isMonorepo ? ['--vcs', 'none'] : [];
+  await cargo.run(['init', '--name', sanitizeCrateName(projectName), ...vcsArgs]);
 
   const cargoToml = path.join(dir, 'Cargo.toml');
   await fs.writeFile(

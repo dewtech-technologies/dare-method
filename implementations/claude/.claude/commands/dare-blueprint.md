@@ -1,11 +1,12 @@
 # /dare-blueprint
 
-Gera os 4 artefatos a partir do `DARE/DESIGN.md`:
+Gera os 5 artefatos a partir do `DARE/DESIGN.md`:
 
-1. `DARE/BLUEPRINT.md` — arquitetura técnica
+1. `DARE/BLUEPRINT.md` — arquitetura técnica detalhada
 2. `DARE/TASKS.md` — visão humana das tasks
 3. `DARE/dare-dag.yaml` — grafo executável pelo CLI
-4. `DARE/EXECUTION/task-<id>.md` — uma spec detalhada por task
+4. `DARE/EXECUTION/task-<id>.md` — spec detalhada por task
+5. `DARE/dag-graph.mmd` — visualização Mermaid do DAG
 
 ## Como usar
 
@@ -20,15 +21,52 @@ Gera os 4 artefatos a partir do `DARE/DESIGN.md`:
 
 Obrigatório. Se não existir, peça para rodar `/dare-design` primeiro.
 
+Extraia e memorize para uso neste comando:
+- Stack técnica (linguagem, framework, versões)
+- Requisitos funcionais priorizados (RF-*)
+- Requisitos de segurança (RS-*)
+- Integrações externas confirmadas
+- Restrições e escopo
+
 ### 2. Gerar `DARE/BLUEPRINT.md`
 
-- Stack tecnológico detalhado (versões, libs)
-- Módulos e responsabilidades
-- Contratos de API (endpoints, schemas em OpenAPI)
-- Modelo de dados (tabelas, índices, relações)
-- Decisões arquiteturais com justificativa
-- Estratégia de testes
-- Estratégia de deploy
+Siga o template `templates/BLUEPRINT-template.md`. Seções obrigatórias:
+
+**2.1 Visão Geral da Arquitetura**
+- Diagrama Mermaid da arquitetura
+- Tabela de decisões arquiteturais com justificativa (não apenas "escolha X")
+
+**2.2 Stack Técnica Definida** — versões fixas, não ranges
+
+**2.3 Estrutura de Pastas** — árvore completa dos arquivos que serão criados
+
+**2.4 Modelo de Dados** — entidades, campos tipados, relacionamentos, índices necessários
+
+**2.5 Contratos de API** — tabela completa: método, rota, auth, request body, response, status codes
+
+**2.6 Plano de Execução (Fases)** — cada fase com:
+- Nome e objetivo
+- **Critério de DONE** — comportamento verificável e testável (não "código feito")
+- Lista de entregáveis concretos
+
+  > **Fase 1 é sempre containerização** (Dockerfile + docker-compose + healthcheck)
+  > **Fase N-1 é sempre auditoria de segurança e dependências**
+
+**2.7 Validation Gates por Stack**
+
+| Stack | Build | Test | Lint/Audit |
+|-------|-------|------|------------|
+| Rust/Axum | `cargo build` | `cargo test --workspace` | `cargo clippy && cargo audit` |
+| Node/NestJS | `npm run build` | `npm test` | `npx eslint src && npm audit --audit-level=high` |
+| Python/FastAPI | verificar imports | `pytest` | `ruff check . && pip-audit` |
+| PHP/Laravel | `php artisan config:cache` | `php artisan test` | `./vendor/bin/phpstan && composer audit` |
+| Go | `go build ./...` | `go test ./...` | `golangci-lint run` |
+
+**2.8 Controles de Segurança** — checklist com todos os RS-* do DESIGN mapeados para tasks específicas
+
+**2.9 Estratégia de Testes** — unitários + integração + segurança (auditoria de deps) + E2E se frontend
+
+**2.10 Estratégia de Deploy** — por ambiente com branch, trigger e infra
 
 ### 3. Gerar `DARE/dare-dag.yaml` (grafo executável)
 
@@ -39,44 +77,38 @@ title: "<Nome do Projeto> - Development Tasks"
 version: "1.0.0"
 
 limits:
-  parent_context_chars: 2000   # snippet de output de cada pai injetado no filho
-  task_output_chars: 4000      # cap do output capturado por task
-  timeout_seconds: 600         # AbortController por task
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
 
 models:
   cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
-  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  claude:      { HIGH: claude-sonnet-4-6, MED: claude-haiku-4-5, LOW: claude-haiku-4-5 }
   antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
 
 tasks:
   - id: task-001
-    title: "Setup project structure"
+    title: "Containerização — Dockerfile + docker-compose"
     depends_on: []
     complexity: LOW
     spec_file: EXECUTION/task-001.md
     subtask_prompt: |
-      <prompt completamente self-contained — o subagente vê só este texto
-      mais snippets de até 2000 chars de cada pai>
+      <prompt completamente self-contained>
 ```
 
-**Regras inegociáveis ao construir o DAG:**
+**Regras inegociáveis:**
 
 - `id` em kebab-case e único
-- `depends_on` **mínimo** — só adicione quando a task filha *literalmente*
-  não pode começar sem o output da pai (arquivo, schema, decisão exportada)
-- `subtask_prompt` totalmente self-contained — não vale "use o padrão da
-  task-001"
-- Pelo menos 2 tasks no rank 0 (`depends_on: []`) para haver paralelismo
-- Cadeia linear (`001→002→003→...`) é antipattern — reanalise
-- `complexity` honesta: `HIGH` só para lógica crítica/segurança
-- Output cap de 4000 chars: se a task gera muito, escreva em arquivo e
-  retorne só resumo + caminhos
-- **A primeira task deve containerizar a aplicação** (Dockerfile + compose
-  + healthcheck) — sem isso o Ralph Loop automático não tem onde rodar
-- **NÃO crie task "Ralph Loop final" / "Hardening" / "QA final"** — o
-  Ralph Loop roda em CADA `dare execute --complete`, automaticamente
-- **Tests com assertions reais** — `assertTrue(true)` quebra o gate `test`
-  e a task vai para FAILED
+- `depends_on` **mínimo** — só quando a task filha literalmente não pode começar sem o output da pai
+- `subtask_prompt` totalmente self-contained — não use "siga o padrão da task-001"
+- Pelo menos 2 tasks no rank 0 (`depends_on: []`) para haver paralelismo real
+- Cadeia linear (`001→002→003→...`) é antipattern — reanalise o grafo
+- `complexity: HIGH` apenas para lógica de segurança crítica, algoritmos complexos ou integrações externas arriscadas
+- **task-001 = containerização** sempre
+- **task-N-1 ou task-N = auditoria de segurança + dependências** (sem CVE HIGH/CRITICAL)
+- **NÃO crie task "Ralph Loop final" / "QA final"** — o Ralph Loop roda em CADA `--complete`
+- **NÃO crie task "Refactoring geral"** — refactoring faz parte de cada task
+- Testes com assertions reais — `assertTrue(true)` quebra o gate e a task vai para FAILED
 
 ### 4. Gerar `DARE/TASKS.md` (visão humana)
 
@@ -91,78 +123,52 @@ tasks:
 
 | ID       | Título                    | Status      | Depends On       | Complexity |
 |----------|---------------------------|-------------|------------------|------------|
-| task-001 | Setup project structure   | ⏳ PENDING  | —                | LOW        |
+| task-001 | Containerização           | ⏳ PENDING  | —                | LOW        |
 | task-002 | DB migrations             | ⏳ PENDING  | —                | MED        |
-| task-003 | Auth controllers          | ⏳ PENDING  | task-001, 002    | HIGH       |
+| task-003 | Auth endpoints            | ⏳ PENDING  | task-001, 002    | HIGH       |
 ```
 
 ### 5. Gerar `DARE/EXECUTION/task-<id>.md` (uma por task)
 
-Para CADA task em `dare-dag.yaml`, crie a spec correspondente seguindo
-`templates/TASK-SPEC-template.md`:
+Para CADA task, use o template `templates/TASK-SPEC-template.md`:
+- Objetivo verificável (não uma ação, mas um estado observável)
+- Arquivos a criar/modificar (tabela)
+- Implementação passo a passo
+- **Considerações de segurança** (seção obrigatória mesmo para tasks de infra)
+- **Validation Gates** específicos da stack (build + test + lint + audit se nova dep)
+- Critérios de DONE explícitos
 
-- **Objetivo** claro
-- **Arquivos a criar/modificar**
-- **Validation Gates** específicos da stack (PHPUnit, Pytest, Vitest, cargo test)
-- **Testes esperados**
-- **Considerações de segurança**
-- **Próxima task** sugerida
+### 6. Validar consistência dos 5 artefatos
 
-O `subtask_prompt` no YAML pode referenciar `spec_file: EXECUTION/task-001.md`
-para que o subagente leia a spec na hora de executar.
-
-### 6. Validar consistência dos 4 artefatos
-
-Antes de entregar:
 - [ ] Mesmos `id`s em `TASKS.md`, `dare-dag.yaml` e `EXECUTION/task-*.md`
-- [ ] Mesmas `depends_on` nos três
-- [ ] Mesmas `complexity`
-- [ ] Sem ciclos
+- [ ] Mesmas `depends_on` nos três artefatos
+- [ ] Mesma `complexity` nos três artefatos
+- [ ] Sem ciclos no DAG
 - [ ] Pelo menos 2 tasks no rank 0
-- [ ] Cada `subtask_prompt` executável sem contexto adicional
+- [ ] task-001 é containerização
+- [ ] Existe task de auditoria de segurança/dependências
+- [ ] Cada `subtask_prompt` é executável sem contexto adicional
 
-### 7. Regenerar a visualização do DAG
-
-Depois de salvar o `dare-dag.yaml`, rode:
+### 7. Regenerar visualização do DAG
 
 ```bash
 dare dag viz -o DARE/dag-graph.mmd
 ```
 
-Isso reescreve `DARE/dag-graph.mmd` (Mermaid) refletindo o grafo atualizado.
-O usuário pode abrir no editor com Markdown Preview Mermaid para ver o
-grafo estático com cores por status antes de executar.
-
 ### 8. Aguardar aprovação humana
 
-**Não execute nenhuma task** até o usuário revisar e aprovar os 5 artefatos
-(BLUEPRINT, TASKS, dare-dag.yaml, EXECUTION/task-*, dag-graph.mmd).
-
-## Templates disponíveis
-
-- `templates/BLUEPRINT-template.md`
-- `templates/TASKS-template.md`
-- `templates/TASK-SPEC-template.md`
+**Não execute nenhuma task** até o usuário revisar e aprovar os 5 artefatos.
 
 ## Próximos passos
 
-Após aprovação humana:
+Após aprovação:
 
 ```bash
-# Paralelo (recomendado)
 dare execute --parallel --runner claude
-
-# Sequencial (debug)
-dare execute --runner claude
-
-# Task única
-dare execute --task task-003 --runner claude
+dare execute --runner claude          # sequencial (debug)
+dare execute --task task-003 --runner claude  # task única
 ```
 
-Ou pelos slash commands:
-
-- `/dare-dag-run` — executa o DAG completo em paralelo
-- `/dare-execute task-001` — executa uma task específica
-- `/dare-tasks` — mostra status atual das tasks
+Ou slash commands: `/dare-dag-run` · `/dare-execute task-001` · `/dare-tasks`
 
 $ARGUMENTS

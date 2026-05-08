@@ -10,9 +10,9 @@ Você é o Claude Code, assistente de desenvolvimento seguindo o método DARE:
 ## Regras Fundamentais
 - Sempre leia `DARE/BLUEPRINT.md` antes de implementar qualquer feature
 - Atualize o status em `DARE/TASKS.md` ao concluir cada task
-- Nunca pule o Ralph Loop (build → test → lint) antes de marcar uma task como DONE
+- Nunca pule o Ralph Loop (build → test → lint → audit) antes de marcar uma task como DONE
 - Aprovação humana obrigatória antes de merge para a branch principal
-- Use os slash commands `/dare-design`, `/dare-blueprint`, `/dare-execute`, `/dare-tasks`, `/dare-rust-leptos`, `/dare-rust-workspace`
+- Use os slash commands `/dare-design`, `/dare-blueprint`, `/dare-execute`, `/dare-tasks`, `/dare-security`, `/dare-rust-leptos`, `/dare-rust-workspace`
 
 ## Estrutura do Projeto
 ```
@@ -105,14 +105,42 @@ Quando habilitado, o MCP Server expõe queries de contexto em `http://localhost:
 ## Ralph Loop (obrigatório antes de DONE)
 
 1. **Build** — compile e verifique erros
-2. **Test** — rode a suite de testes completa
-3. **Lint** — rode o linter/formatter
-4. Só marque DONE se os 3 passos passarem sem erros
+2. **Test** — rode a suite de testes completa (assertions reais, não `assertTrue(true)`)
+3. **Lint** — rode o linter/formatter sem warnings
+4. **Audit** — se a task adicionou ou atualizou dependências: `npm audit --audit-level=high` / `cargo audit` / `pip-audit` / `composer audit`
+5. Só marque DONE se **todos os 4 passos** passarem sem erros
+6. CVE HIGH/CRITICAL em deps = task FAILED até corrigir
 
 ## Segurança
 
-- Nunca exponha secrets em logs ou outputs
-- Valide e sanitize todas as entradas
-- Use proteções OWASP Top 10
-- Autenticação/autorização em todos os endpoints sensíveis
-- Rate limiting em endpoints públicos
+### Controles obrigatórios em toda implementação
+
+- **Nunca** exponha secrets, senhas, tokens ou PII em logs, respostas de erro ou stack traces
+- **Valide no servidor** toda entrada do usuário antes de qualquer processamento (OWASP A03)
+- **Controle de acesso por recurso**, não só por rota — verifique ownership (OWASP A01)
+- **Hash de senhas** com Argon2id ou Bcrypt (custo ≥ 12) — nunca MD5/SHA1/texto plano (OWASP A02)
+- **Rate limiting** em endpoints de autenticação e públicos (OWASP A07)
+- **Auditoria de dependências** sem CVE HIGH/CRITICAL antes de todo release (OWASP A06)
+- **Secrets** via variáveis de ambiente / vault — nunca hardcoded em código ou commits
+
+### Auditoria de dependências por stack
+
+```bash
+npm audit --audit-level=high     # Node — + npm audit fix para auto-corrigir
+cargo audit                      # Rust — + cargo update para bumpar
+pip-audit                        # Python — pip install pip-audit
+composer audit                   # PHP — nativo no Composer 2.4+
+govulncheck ./...                # Go — ferramenta oficial Google
+```
+
+### Headers de segurança em produção
+
+```
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Content-Security-Policy: default-src 'self'
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+Use `/dare-security` para o guia completo de segurança (OWASP Top 10 completo, exemplos por stack, supply chain, prompt injection para projetos IA).
