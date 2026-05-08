@@ -868,6 +868,7 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
       dir: frontendDir,
       projectName: name,
       toolchain,
+      isMonorepo: structure === 'monorepo',
     });
   }
 

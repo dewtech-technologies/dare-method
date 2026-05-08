@@ -51,6 +51,9 @@ export interface BootstrapFrontendOptions {
   dir: string;
   projectName: string;
   toolchain?: ToolchainMode;
+  /** When true the frontend crate lives inside a Cargo workspace whose root
+   *  already has a .cargo/config.toml — skip writing one inside the crate dir. */
+  isMonorepo?: boolean;
 }
 
 export interface BootstrapMcpOptions {
@@ -94,10 +97,10 @@ export async function bootstrapFrontend(opts: BootstrapFrontendOptions): Promise
       await tryRenameNpmProject(opts.dir, opts.projectName);
       break;
     case 'rust-leptos':
-      await bootstrapLeptosFullstack(opts.dir, opts.projectName, mode);
+      await bootstrapLeptosFullstack(opts.dir, opts.projectName, mode, opts.isMonorepo ?? false);
       break;
     case 'rust-leptos-csr':
-      await bootstrapLeptosCsr(opts.dir, opts.projectName, mode);
+      await bootstrapLeptosCsr(opts.dir, opts.projectName, mode, opts.isMonorepo ?? false);
       break;
     default:
       throw new Error(`Unknown frontend stack: ${opts.stack as string}`);
@@ -736,6 +739,7 @@ async function bootstrapLeptosFullstack(
   dir: string,
   projectName: string,
   mode: ToolchainMode,
+  isMonorepo: boolean,
 ): Promise<void> {
   banner(`Bootstrapping Leptos fullstack (SSR + WASM) in ${dir}`);
 
@@ -953,16 +957,19 @@ button {
 `,
   );
 
-  // .cargo/config.toml — CRITICAL: no global [build] target
-  // Setting a global target breaks mixed workspaces (WASM + native crates like napi-rs)
-  await fs.writeFile(
-    path.join(dir, '.cargo', 'config.toml'),
-    `# DARE: Do NOT add a global [build] target here.
+  // .cargo/config.toml — only needed when this crate is the workspace root.
+  // In a monorepo the root Cargo workspace already has this file; writing it
+  // inside the frontend/ member dir is redundant and can confuse tooling.
+  if (!isMonorepo) {
+    await fs.writeFile(
+      path.join(dir, '.cargo', 'config.toml'),
+      `# DARE: Do NOT add a global [build] target here.
 # Mixed workspaces (Leptos WASM + native crates like napi-rs or aya) will break
 # if cargo tries to compile all crates for the same target.
 # cargo-leptos manages wasm32-unknown-unknown target per-crate automatically.
 `,
-  );
+    );
+  }
 
   await cargo.run(['fetch']);
 }
@@ -971,6 +978,7 @@ async function bootstrapLeptosCsr(
   dir: string,
   projectName: string,
   mode: ToolchainMode,
+  isMonorepo: boolean,
 ): Promise<void> {
   banner(`Bootstrapping Leptos CSR (WASM + trunk) in ${dir}`);
 
@@ -1101,13 +1109,15 @@ button {
 `,
   );
 
-  // .cargo/config.toml
-  await fs.writeFile(
-    path.join(dir, '.cargo', 'config.toml'),
-    `# DARE: Do NOT add a global [build] target here.
+  // .cargo/config.toml — omit when inside a Cargo workspace (root already has it)
+  if (!isMonorepo) {
+    await fs.writeFile(
+      path.join(dir, '.cargo', 'config.toml'),
+      `# DARE: Do NOT add a global [build] target here.
 # trunk manages wasm32-unknown-unknown target automatically via its own build pipeline.
 `,
-  );
+    );
+  }
 
   await cargo.run(['fetch']);
 }

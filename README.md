@@ -38,7 +38,7 @@ dare init meu-projeto
 # → Escolha: Estrutura (Monorepo / Backend / Frontend / MCP Server)
 # → Escolha: IDE (Claude Code / Cursor / Antigravity / Hybrid)
 # → Escolha: Backend (Rust/Axum, Node/NestJS, Python/FastAPI, PHP/Laravel)
-# → Escolha: Frontend (React, Vue)
+# → Escolha: Frontend (React, Vue, Leptos fullstack, Leptos CSR)
 # → Escolha: GraphRAG (SQLite, JSON, Neo4j)
 
 # 3. Abra seu projeto e dispare o primeiro comando
@@ -247,6 +247,8 @@ escolher de onde a toolchain vem:
 | `go-gin` | Go 1.25+ — https://go.dev/dl/ | `golang:1.25` |
 | `go-stdlib` | Go 1.22+ (sem framework — só `net/http`) — https://go.dev/dl/ | `golang:1.25` |
 | `react`, `vue` | Node 18+ | `node:20-alpine` |
+| `rust-leptos` | Rust 1.83+ (rustup) + **cargo-leptos 0.2.22** | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
+| `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
 
@@ -305,7 +307,7 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 **Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 
-**Frontend:** React 18+ · Vue 3+
+**Frontend:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM)
 
 **MCP Server:** TypeScript/Node.js · Python — transports `stdio`, `SSE`, `HTTP Stream`
 
@@ -447,13 +449,14 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 - [x] **Tipo de projeto `mcp-server`** — templates TypeScript e Python com stdio/SSE/HTTP Stream
 - [x] **Suporte ao Claude Code** — `CLAUDE.md`, `.claude/commands/`, `.claude/settings.json` com hooks
 - [x] Templates por linguagem: Rust/Axum, Node.js/NestJS, Python/FastAPI, PHP/Laravel
-- [x] Templates frontend: React 18+, Vue 3+
+- [x] Templates frontend: React 18+, Vue 3+, Leptos fullstack (SSR+WASM), Leptos CSR (WASM)
 - [x] Execução paralela de tasks com DAG Task Runner
 - [x] MCP Server local para economia de tokens (90% de redução)
 - [x] GraphRAG com SQLite para contexto persistente
 - [x] Publicação no npm registry (`@dewtech/dare-cli`)
 - [x] GitHub Actions para CI/CD (build, test, release)
 - [x] **v2.0:** consolidação dos pacotes em `@dewtech/dare-cli` único
+- [x] **v2.11:** suporte a Leptos 0.7 — fullstack (cargo-leptos + Axum) e CSR (trunk); skill `/dare-rust-leptos` com idioms, antipatterns e templates de tasks
 
 ### Próximos passos 🔜
 

@@ -23,6 +23,8 @@ means it literally runs:
 | `go-gin` | `go mod init` + `go get gin/godotenv` + starter files |
 | `go-stdlib` | `go mod init` + starter usando só `net/http` (zero deps externas) |
 | `react`, `vue` | `npx degit vitejs/vite/packages/create-vite/template-<x> .` + `npm install` |
+| `rust-leptos` | write Cargo.toml (Leptos 0.7 SSR+hydrate) + Axum main + `cargo fetch` |
+| `rust-leptos-csr` | write Cargo.toml (Leptos 0.7 csr) + index.html + Trunk.toml + `cargo fetch` |
 | `mcp-server-node-ts` | `npm init` + `@modelcontextprotocol/sdk` |
 | `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
 
@@ -144,6 +146,8 @@ Pick **one** of the two paths per stack:
 | `go-gin` | Go 1.25+ — https://go.dev/dl/ | `golang:1.25` |
 | `go-stdlib` | Go 1.22+ — https://go.dev/dl/ | `golang:1.25` |
 | `react`, `vue` | Node 18+ (bundles `npm`) | `node:20-alpine` |
+| `rust-leptos` | Rust 1.83+ (rustup) + **cargo-leptos 0.2.22** — `cargo install cargo-leptos --version 0.2.22` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
+| `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** — `cargo install trunk` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
 
@@ -205,7 +209,7 @@ Prompts:
 - **Structure:** Monorepo · Backend only · Frontend only · **MCP Server** ← new
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
 - **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
-- **Frontend stack:** React 18+ · Vue 3+
+- **Frontend stack:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR-only (Rust WASM)
 - **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
 - **GraphRAG backend:** SQLite · JSON · Neo4j
 - **DARE MCP Server:** context query server (saves ~95% tokens)
@@ -309,7 +313,7 @@ guide the IDE agent through this loop.
 #### Stack-specific skills
 
 `dare init` also ships skills focused on architectural decisions for
-specific stacks. As of v2.9.0:
+specific stacks. As of v2.11.0:
 
 - **`skill-rust-workspace.mdc`** (Cursor) /
   **`dare-rust-workspace/SKILL.md`** (Antigravity) /
@@ -319,6 +323,16 @@ specific stacks. As of v2.9.0:
   existing single-crate project has outgrown its layout. Active during
   `/dare-design` and `/dare-blueprint` for `rust-axum` projects, plus on
   demand for migration analysis.
+
+- **`skill-rust-leptos.mdc`** (Cursor) /
+  **`dare-rust-leptos/SKILL.md`** (Antigravity) /
+  **`/dare-rust-leptos`** (Claude command) — full guide for Leptos
+  development: CSR vs fullstack decision table, Leptos 0.7 idioms
+  (signals, Resource, Action, Show, For, `#[server]`), shared types with
+  `cfg_attr`, mixed workspace configuration (WASM + native crates), and
+  antipatterns to avoid (`cargo leptos test` does not exist; no global
+  `[build] target` in `.cargo/config.toml`). Ships 3 ready-to-use DARE
+  task templates for Leptos projects.
 
 ### `dare bootstrap`
 
@@ -498,7 +512,7 @@ npm run inspect
 | Type | Options |
 |------|---------|
 | **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib |
-| **Frontend** | React 18+ · Vue 3+ |
+| **Frontend** | React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM) |
 | **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
 | **IDE / Agent** | Claude Code · Cursor · Antigravity · Hybrid |
 
