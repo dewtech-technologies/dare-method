@@ -9,7 +9,46 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
-## [Unreleased]
+## [2.16.0] — 2026-05
+
+### ✨ Adicionado — Visualização Excalidraw para DAG
+
+Novo formato de visualização para `dare dag viz` com **Excalidraw** — editor visual interativo:
+
+```bash
+dare dag viz --format excalidraw
+# → Gera: DARE/dag-graph.excalidraw
+# → Abra em: https://excalidraw.com
+```
+
+**Recursos:**
+- 🎨 **Color-coding automático:**
+  - Por complexidade: LOW (azul) | MED (laranja) | HIGH (rosa)
+  - Por status: PENDING (cinza) | RUNNING (azul tracejado) | DONE (verde) | FAILED (vermelho) | SKIPPED (cinza escuro)
+  
+- 🏊 **Swim lanes por rank:** Tasks em mesmo nível podem rodar em paralelo (posicionamento automático)
+
+- ↔️ **Setas de dependência:** Cinza normal, vermelha se source falhou, tracejada se RUNNING
+
+- 🎯 **Interativo:** Zoom, pan, anotar, exportar PNG/SVG para slides/docs
+
+**Design Tokens:** Veja `docs/DESIGN-TOKENS-EXCALIDRAW.md` para cores, tipografia e layout
+
+**Skills IDE:**
+- Claude Code: `/dare-dag-viz`
+- Cursor: `/dare-dag-viz`
+- Antigravity: `/dare-dag-viz`
+
+**Exemplo completo:** `packages/cli/templates/DARE-dag-example.yaml` (7 tasks com ranks e dependências)
+
+**Implementação:**
+- `packages/cli/src/utils/excalidraw-renderer.ts` — Conversor DAG → Excalidraw JSON
+- `packages/cli/src/commands/dag.ts` — Integração com CLI (já suportava Mermaid + DOT)
+- `packages/cli/src/utils/excalidraw-renderer.test.ts` — 13 testes unitários
+
+Formatos alternativos ainda suportados: `--format mermaid` | `--format dot`
+
+---
 
 ## [2.15.0] — 2026-05
 

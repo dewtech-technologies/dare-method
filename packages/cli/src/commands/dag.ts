@@ -13,6 +13,10 @@ import {
   DEFAULT_STATE_PATH,
   loadAndApplyState,
 } from '../dag-runner/state-store.js';
+import {
+  renderDagExcalidraw,
+  serializeExcalidraw,
+} from '../utils/excalidraw-renderer.js';
 
 /**
  * `dare dag` — inspect and visualize the static task DAG declared in
@@ -26,17 +30,17 @@ export const dagCommand = new Command('dag').description(
 dagCommand
   .command('viz')
   .description(
-    'Render dare-dag.yaml as a Mermaid or DOT diagram with status colors',
+    'Render dare-dag.yaml as a Mermaid, DOT, or Excalidraw diagram with status colors',
   )
   .option('--dag <file>', 'Path to dare-dag.yaml', 'DARE/dare-dag.yaml')
   .option(
     '-f, --format <fmt>',
-    'Output format: mermaid | dot',
+    'Output format: mermaid | dot | excalidraw',
     'mermaid',
   )
   .option(
     '-o, --output <file>',
-    'Write to file (defaults to stdout)',
+    'Write to file (defaults to stdout or DARE/dag-graph.{fmt} for excalidraw)',
   )
   .action(
     async (options: { dag: string; format: string; output?: string }) => {
@@ -50,9 +54,9 @@ dagCommand
       }
 
       const format = options.format.toLowerCase();
-      if (format !== 'mermaid' && format !== 'dot') {
+      if (format !== 'mermaid' && format !== 'dot' && format !== 'excalidraw') {
         console.error(
-          chalk.red(`Unsupported format "${options.format}". Use: mermaid | dot.`),
+          chalk.red(`Unsupported format "${options.format}". Use: mermaid | dot | excalidraw.`),
         );
         process.exit(1);
       }
@@ -60,18 +64,36 @@ dagCommand
       const dag = convertYamlToDag(await fs.readFile(dagPath, 'utf-8'));
       await loadAndApplyState(dag, path.resolve(cwd, DEFAULT_STATE_PATH));
 
-      const rendered =
-        format === 'mermaid' ? renderDagMermaid(dag) : renderDagDot(dag);
+      let rendered: string;
+      let outputPath = options.output;
 
-      if (options.output) {
-        const out = path.resolve(cwd, options.output);
+      if (format === 'excalidraw') {
+        const excalidrawData = renderDagExcalidraw(dag);
+        rendered = serializeExcalidraw(excalidrawData);
+        // Default output for Excalidraw
+        if (!outputPath) {
+          outputPath = 'DARE/dag-graph.excalidraw';
+        }
+      } else {
+        rendered =
+          format === 'mermaid' ? renderDagMermaid(dag) : renderDagDot(dag);
+      }
+
+      if (outputPath) {
+        const out = path.resolve(cwd, outputPath);
         await fs.ensureDir(path.dirname(out));
         await fs.writeFile(out, rendered);
+        const formatLabel = format === 'excalidraw' ? 'Excalidraw diagram' : `${format} diagram`;
         console.log(
           chalk.green(
-            `✅ Wrote ${dag.tasks.length} task(s) and ${countEdges(dag)} dependency arrow(s) to ${options.output}`,
+            `✅ Generated ${formatLabel} with ${dag.tasks.length} task(s) and ${countEdges(dag)} dependency arrow(s) → ${outputPath}`,
           ),
         );
+        if (format === 'excalidraw') {
+          console.log(
+            chalk.cyan('   Open in https://excalidraw.com or via File → Open'),
+          );
+        }
       } else {
         console.log(rendered);
       }

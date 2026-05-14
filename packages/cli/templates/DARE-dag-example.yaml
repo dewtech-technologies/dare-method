@@ -1,0 +1,280 @@
+# Exemplo completo de dare-dag.yaml para o DARE CLI
+#
+# Este arquivo ilustra como estruturar um grafo de tasks (DAG) para o método DARE.
+# Copie e customize para seu projeto.
+#
+# Campos:
+#   - name: nome do projeto
+#   - version: semântica (versionamento do projeto)
+#   - created_at: timestamp
+#   - tasks: dicionário de tasks
+#
+# Cada task tem:
+#   - name (obrigatório): nome legível da tarefa
+#   - complexity (obrigatório): LOW | MEDIUM | HIGH
+#   - rank (opcional): ordem no DAG, calculado automaticamente se omitido
+#   - depends_on (opcional): lista de task IDs que DEVE completar antes
+#   - status (opcional): PENDING | RUNNING | DONE | FAILED
+#   - subtask_prompt (opcional): descrição detalhada para o agente executar
+#   - blueprint_section (opcional): link para seção em BLUEPRINT.md
+
+name: "API de Autenticação com JWT"
+version: "1.0"
+created_at: "2026-05-14T10:30:00Z"
+
+# Metadados opcionais
+metadata:
+  project_url: "https://github.com/seu-org/seu-projeto"
+  team: "Backend Team"
+  deadline: "2026-06-30"
+
+# ============================
+# TAREFAS (TASKS)
+# ============================
+
+tasks:
+  # ─────────────────────────────────────────────────────────────
+  # RANK 1 — Fundação (sem dependências)
+  # Estas tarefas podem rodar em paralelo — nenhuma depende uma da outra
+  # ─────────────────────────────────────────────────────────────
+
+  task-001:
+    name: "Setup Boilerplate"
+    complexity: "LOW"
+    # rank será calculado como 1 automaticamente (sem deps)
+    depends_on: []
+    status: "DONE"  # ✅ Já completada
+    subtask_prompt: |
+      Crie estrutura básica Node.js + NestJS:
+      - package.json com deps (typescript, express, dotenv)
+      - tsconfig.json
+      - .gitignore, .env.example
+      - scripts: dev, build, test, lint
+    blueprint_section: "1. Foundation"
+
+  task-002:
+    name: "Setup Database Schema"
+    complexity: "MEDIUM"
+    depends_on: []
+    status: "DONE"  # ✅ Completada
+    subtask_prompt: |
+      Defina schema no banco de dados:
+      - Tabela `users` (id, email, password_hash, created_at, updated_at)
+      - Tabela `refresh_tokens` (id, user_id, token_hash, expires_at, revoked_at)
+      - Índices em email e token
+      - Migrations com Prisma / TypeORM / Knex
+    blueprint_section: "1. Foundation"
+
+  # ─────────────────────────────────────────────────────────────
+  # RANK 2 — Core (depende de Rank 1)
+  # task-003 depende de task-001 (boilerplate)
+  # task-004 depende de task-002 (schema)
+  # Podem rodar em paralelo uma com a outra
+  # ─────────────────────────────────────────────────────────────
+
+  task-003:
+    name: "Implement JWT Auth Middleware"
+    complexity: "HIGH"
+    depends_on:
+      - "task-001"  # Precisa do boilerplate
+    status: "RUNNING"  # ⚙️ Em andamento
+    subtask_prompt: |
+      Crie middleware de autenticação:
+      - Gere JWT (HS256 ou RS256) com payload (user_id, iat, exp)
+      - Middleware que valida JWT em cada request
+      - Extraia user_id do token e injete em req.user
+      - Trate expiração, inválido, ausente
+      - Logs de tentativas falhadas
+    blueprint_section: "2. Authentication Core"
+
+  task-004:
+    name: "Implement Refresh Token Flow"
+    complexity: "MEDIUM"
+    depends_on:
+      - "task-001",  # Precisa do boilerplate
+      - "task-002"   # Precisa do schema
+    status: "PENDING"  # ⏳ Não iniciada
+    subtask_prompt: |
+      Implemente rotação de refresh tokens:
+      - Endpoint POST /auth/refresh que aceita refresh_token
+      - Valide refresh_token contra banco de dados
+      - Gere novo access_token + refresh_token
+      - Revogue token antigo no banco
+      - Implemente segurança: limite rate, valide origin
+    blueprint_section: "2. Authentication Core"
+
+  # ─────────────────────────────────────────────────────────────
+  # RANK 3 — Integração & Testes (depende de Rank 2)
+  # task-005 depende de task-003 (middleware)
+  # task-006 depende de task-003 e task-004 (ambos cores)
+  # ─────────────────────────────────────────────────────────────
+
+  task-005:
+    name: "Add Login & Logout Endpoints"
+    complexity: "LOW"
+    depends_on:
+      - "task-003"  # Precisa do middleware JWT
+    status: "PENDING"  # ⏳ Não iniciada
+    subtask_prompt: |
+      Crie endpoints de autenticação:
+      - POST /auth/login (email, password) → access_token, refresh_token
+      - POST /auth/logout (revoga refresh_token)
+      - Validação de entrada (email válido, password não vazio)
+      - Hash de password com bcrypt/argon2
+      - Testes unitários para sucesso e erro
+    blueprint_section: "3. API Endpoints"
+
+  task-006:
+    name: "Implement Tests & Security Hardening"
+    complexity: "HIGH"
+    depends_on:
+      - "task-003",  # Precisa do middleware
+      - "task-004"   # Precisa do refresh flow
+    status: "PENDING"  # ⏳ Não iniciada
+    subtask_prompt: |
+      Teste segurança e implemente proteções:
+      - Testes end-to-end: login → refresh → logout
+      - Testes de segurança: expiração, inválido, reuso de token
+      - CORS policy (origem permitida)
+      - Helmet.js para headers de segurança
+      - Rate limiting no /auth/refresh
+      - CSP (Content Security Policy)
+      - Logs de auditoria (tentativas falhadas)
+    blueprint_section: "4. Security & Testing"
+
+  # ─────────────────────────────────────────────────────────────
+  # RANK 4 — Documentação & Deploy (depende de tudo)
+  # task-007 depende de toda core (task-005, task-006)
+  # ─────────────────────────────────────────────────────────────
+
+  task-007:
+    name: "Document API & Prepare Deploy"
+    complexity: "LOW"
+    depends_on:
+      - "task-005",  # Precisa endpoints prontos
+      - "task-006"   # Precisa testes passando
+    status: "PENDING"  # ⏳ Não iniciada
+    subtask_prompt: |
+      Documente e prepare deployment:
+      - OpenAPI/Swagger documentation
+      - README com exemplos de uso (curl/Postman)
+      - Environment variables documentation
+      - Docker setup (Dockerfile, docker-compose)
+      - CI/CD pipeline (GitHub Actions / GitLab CI)
+      - Health check endpoint
+    blueprint_section: "5. Documentation & Deploy"
+
+# ============================
+# EXPLICAÇÃO DO GRAFO
+# ============================
+
+# Visualização (Rank = camada):
+#
+# Rank 1 (Fundação — paralelo)
+# ├── task-001 [LOW] ✅
+# └── task-002 [MEDIUM] ✅
+#
+# Rank 2 (Core — paralelo)
+# ├── task-003 [HIGH] ⚙️ (depende: 001)
+# └── task-004 [MEDIUM] ⏳ (depende: 001, 002)
+#
+# Rank 3 (Integração — paralelo)
+# ├── task-005 [LOW] ⏳ (depende: 003)
+# └── task-006 [HIGH] ⏳ (depende: 003, 004)
+#
+# Rank 4 (Documentação)
+# └── task-007 [LOW] ⏳ (depende: 005, 006)
+
+# ============================
+# COMO USAR ESTE ARQUIVO
+# ============================
+
+# 1. Copie para seu projeto:
+#    cp packages/cli/templates/DARE-dag-example.yaml DARE/dare-dag.yaml
+
+# 2. Customize:
+#    - Substitua nomes das tasks pelo seu projeto
+#    - Ajuste complexidade (LOW/MEDIUM/HIGH)
+#    - Defina dependências corretas
+#    - Atualize blueprint_section se tiver um BLUEPRINT.md
+
+# 3. Valide:
+#    dare dag validate
+
+# 4. Visualize:
+#    /dare-dag-viz
+#    → Abre em https://excalidraw.com com cores por complexidade
+
+# 5. Atualize status conforme avança:
+#    task-003:
+#      status: "DONE"  # Após completar
+
+# ============================
+# CONVENÇÕES
+# ============================
+
+# Task ID:
+#   Formato: task-NNN-slug
+#   - NNN = número sequencial (001, 002, ...)
+#   - slug = nome legível em kebab-case
+#   Exemplos: task-001-setup-boilerplate, task-003-jwt-middleware
+
+# Complexidade:
+#   - LOW: < 30 min, padrão bem definido
+#   - MEDIUM: 2-8 horas, múltiplas decisões
+#   - HIGH: 1+ dias, design crítico, risco alto
+
+# Status:
+#   - PENDING: não iniciada, aguardando
+#   - RUNNING: em execução neste momento
+#   - DONE: completada com sucesso
+#   - FAILED: falhou, requer ajuste
+
+# Depends_on:
+#   Lista outras tasks que devem completar ANTES desta
+#   Sem ciclos permitidos (A→B→A é inválido)
+
+# Rank (automático):
+#   Calculado como: 1 + max(rank das dependências)
+#   Rank 1 = nenhuma dependência
+#   Rank N = executa após Rank N-1
+
+# ============================
+# INTEGRAÇÃO COM DARE WORKFLOW
+# ============================
+
+# Phase 1: DESIGN (você define requisitos)
+#   → Cria DARE/DESIGN.md
+#
+# Phase 2: ARCHITECT (Claude Code/Cursor propõe arquitetura)
+#   → Cria DARE/BLUEPRINT.md
+#   → Você aprova / ajusta
+#
+# Phase 3: REVIEW (Claude Code propõe tasks)
+#   → Cria DARE/dare-dag.yaml (este arquivo!)
+#   → Você aprova structure
+#
+# Phase 4: EXECUTE (Claude Code implementa)
+#   → Roda dare execute --ralph-loop
+#   → Testes automáticos (build, test, lint)
+#   → Abre PR / commit automático
+
+# ============================
+# REFERÊNCIAS
+# ============================
+
+# DARE Methodology: https://github.com/dewtech-technologies/dare-method
+# Design Tokens (cores, fonts): docs/DESIGN-TOKENS-EXCALIDRAW.md
+# Visualization: /dare-dag-viz (gera dag-graph.excalidraw)
+# Excalidraw app: https://excalidraw.com
+
+# ============================
+# LICENÇA
+# ============================
+
+# Este arquivo e o método DARE são AGPL v3.
+# Você é livre para usar, modificar, compartilhar.
+# Contribuições voltam ao projeto.
+#
+# Créditos: Wanderson Leandro (Dewtech Technologies)
+# Inspirações: Ralph Loop (termo original), Excalidraw (ferramenta)
