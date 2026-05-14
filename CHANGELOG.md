@@ -11,6 +11,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.15.1] — 2026-05
+
+### Corrigido — `sanitizeCrateName` preserva hífens no nome do package Cargo
+`sanitizeCrateName` substituía hífens por underscores, gerando `name = "ars_server"` e
+`name = "ars_web"` nos `Cargo.toml` dos crates membros. O padrão idiomático Cargo usa hífens
+no campo `name` (ex: `ars-server`, `ars-web`) — underscores ficam restritos a identificadores
+Rust no código fonte, já tratados pelo `crateIdent` nos bootstraps Leptos.
+
 ## [2.15.0] — 2026-05
 
 ### Corrigido — Package names corretos por crate em monorepo Rust

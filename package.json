@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-framework",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "description": "DARE Framework - Distributed AI-assisted Requirements Engineering",
   "private": true,
   "type": "module",
@@ -35,7 +35,7 @@
     "framework"
   ],
   "author": "Dewtech Technologies",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dewtech-technologies/dare-method.git"

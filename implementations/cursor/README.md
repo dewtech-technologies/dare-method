@@ -223,9 +223,14 @@ Quer adicionar uma stack? Veja o [CONTRIBUTING.md](../../CONTRIBUTING.md) na rai
 
 ---
 
+## 📄 Licença
+
+Este projeto está licenciado sob a **GNU Affero General Public License v3.0 (AGPL-3.0)** — veja o arquivo [LICENSE](../../LICENSE) para detalhes.
+
+---
+
 ## 🔗 Links
 
 - [Repo dare-method principal](../../README.md)
 - [Cursor IDE — Documentação oficial](https://cursor.com/docs)
-- [Anthropic Claude](https://claude.ai)
 - [Site da Dewtech](https://dewtech.tech)

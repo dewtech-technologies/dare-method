@@ -237,6 +237,12 @@ Mostra tokens consumidos, modelos usados, custo estimado.
 
 ---
 
+## 📄 Licença
+
+Este projeto está licenciado sob a **GNU Affero General Public License v3.0 (AGPL-3.0)** — veja o arquivo [LICENSE](../../LICENSE) para detalhes.
+
+---
+
 ## 🔗 Links
 
 - [Repo dare-method principal](../../README.md)

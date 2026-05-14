@@ -8,7 +8,7 @@
 
 **A structured methodology for AI-assisted software development with mandatory human-in-the-loop reviews.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Built by Dewtech](https://img.shields.io/badge/built%20by-Dewtech-0070f3)](https://dewtech.tech)
 [![npm](https://img.shields.io/npm/v/@dewtech/dare-cli?label=%40dewtech%2Fdare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
@@ -461,7 +461,7 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 - [x] **v2.12:** estrutura Rust monorepo corrigida para `crates/server` + `crates/web` (padrão Cargo workspace); `--vcs none` automático em crates membros; opção de layout single-crate vs multi-crate (`{name}-core / server / web / cli`) no `dare init`
 - [x] **v2.13:** templates de DESIGN e BLUEPRINT reestruturados com RF/RNF/RS numerados, stakeholders, métricas de sucesso e critérios de DONE por fase; Ralph Loop expandido com auditoria de dependências (`npm audit` / `cargo audit` / `pip-audit` / `composer audit`) — CVE HIGH/CRITICAL bloqueia task; skill de segurança reescrita (OWASP A01–A10 completo, supply chain, prompt injection, examples por stack); novo slash command `/dare-security`; blueprint phase separation enforced (`/dare-blueprint` gera somente `BLUEPRINT.md`); `cratePrefix` prompt para layout multi-crate Rust; `Cargo.lock` removido de crates membros do workspace
 - [x] **v2.14:** fix sync de templates — `dare init` agora instala corretamente os comandos de blueprint com phase separation (tasks só após aprovação humana via `/generate-tasks` / `/dare-tasks`)
-- [x] **v2.15:** fix package names por crate em monorepo Rust (sem colisão de nomes); `Cargo.lock` removido após `cargo fetch` em bootstraps Leptos
+- [x] **v2.15:** fix package names por crate em monorepo Rust (sem colisão de nomes); `Cargo.lock` removido após `cargo fetch` em bootstraps Leptos; package names com hífens idiomáticos Cargo (`ars-server`, `ars-web`)
 
 ### Próximos passos 🔜
 
@@ -486,7 +486,7 @@ PRs são muito bem-vindos. Veja [CONTRIBUTING.md](CONTRIBUTING.md) pra:
 
 ## 📜 Licença
 
-MIT — veja [LICENSE](LICENSE).
+Este projeto est� licenciado sob a **GNU Affero General Public License v3.0 (AGPL-3.0)** - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 

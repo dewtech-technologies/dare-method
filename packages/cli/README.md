@@ -324,7 +324,7 @@ guide the IDE agent through this loop.
 #### Stack-specific skills
 
 `dare init` also ships skills focused on architectural decisions for
-specific stacks. As of v2.15.0:
+specific stacks. As of v2.15.1:
 
 - **`skill-rust-workspace.mdc`** (Cursor) /
   **`dare-rust-workspace/SKILL.md`** (Antigravity) /
