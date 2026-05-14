@@ -8,7 +8,9 @@
 
 **A structured methodology for AI-assisted software development with mandatory human-in-the-loop reviews.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+> **Versão atual:** `2.15.1`
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Built by Dewtech](https://img.shields.io/badge/built%20by-Dewtech-0070f3)](https://dewtech.tech)
 [![npm](https://img.shields.io/npm/v/@dewtech/dare-cli?label=%40dewtech%2Fdare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)

@@ -4,8 +4,10 @@ CLI tool for the **DARE Framework** — Design, Architect, Review, Execute.
 
 A structured methodology for AI-assisted software development with mandatory human-in-the-loop reviews and parallel task execution.
 
+> **Current version:** `2.15.1`
+
 [![npm](https://img.shields.io/npm/v/@dewtech/dare-cli)](https://www.npmjs.com/package/@dewtech/dare-cli)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/dewtech-technologies/dare-method/blob/main/LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://github.com/dewtech-technologies/dare-method/blob/main/LICENSE)
 
 ---
 
