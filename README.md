@@ -14,6 +14,8 @@
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
+> 📢 **[RFC Open] v3.0.0 será AGPL v3** — Leia a proposta em [docs/RFC-AGPL-v3-ADOPTION.md](docs/RFC-AGPL-v3-ADOPTION.md) ou [GitHub Discussions](#). Sua opinião importa!
+
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
 [**Ralph Loop**](#-ralph-loop) ·
