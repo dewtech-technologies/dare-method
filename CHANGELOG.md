@@ -11,7 +11,7 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-## [2.15.1] — 2026-05
+## [2.15.2] — 2026-05
 
 ### Alterado — Licença migrada de MIT para AGPL-3.0
 A licença do projeto foi alterada de **MIT** para **GNU Affero General Public License v3.0 (AGPL-3.0)**.
@@ -19,8 +19,9 @@ Esta mudança garante que qualquer uso do DARE Framework em serviços de rede (S
 do código-fonte modificado, protegendo a abertura do método e da comunidade.
 
 - Arquivo `LICENSE` atualizado com o texto completo da AGPL-3.0
-- Campo `license` no `package.json` raiz e em `packages/cli/package.json` já refletia `AGPL-3.0-only`
-- READMEs atualizados com badge e seção de licença
+- Badge e seção de licença atualizados em todos os READMEs (`README.md`, `packages/cli/README.md`, `implementations/cursor/README.md`, `implementations/antigravity/README.md`)
+
+## [2.15.1] — 2026-05
 
 ### Corrigido — `sanitizeCrateName` preserva hífens no nome do package Cargo
 `sanitizeCrateName` substituía hífens por underscores, gerando `name = "ars_server"` e
