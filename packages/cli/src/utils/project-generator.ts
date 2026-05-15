@@ -1,6 +1,15 @@
 import fs from 'fs-extra';
 import path from 'path';
 import chalk from 'chalk';
+import { createRequire } from 'module';
+
+const requireFromHere = createRequire(import.meta.url);
+
+/** Reads the CLI's own version from its bundled package.json. */
+function getFrameworkVersion(): string {
+  const pkg = requireFromHere('../../package.json') as { version: string };
+  return pkg.version;
+}
 import {
   generateCursorRules,
   generateAntigravityRules,
@@ -79,7 +88,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     graphrag,
     mcp,
     toolchain: config.toolchain ?? 'auto',
-    version: '0.1.0',
+    version: getFrameworkVersion(),
   };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;
@@ -197,7 +206,7 @@ export async function installDareToExistingProject(
   await fs.ensureDir(path.join(outputDir, 'DARE'));
   await fs.ensureDir(path.join(outputDir, 'DARE', 'EXECUTION'));
 
-  const configData: Record<string, unknown> = { name, structure, backend, frontend, ide, graphrag, mcp, version: '0.1.0', installedAt: new Date().toISOString() };
+  const configData: Record<string, unknown> = { name, structure, backend, frontend, ide, graphrag, mcp, version: getFrameworkVersion(), installedAt: new Date().toISOString() };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;
     configData.mcpLanguage = config.mcpLanguage;

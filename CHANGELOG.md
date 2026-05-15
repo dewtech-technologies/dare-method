@@ -9,6 +9,91 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [2.17.0] — 2026-05
+
+### ✨ Adicionado — Comando `dare update`
+
+Novo comando para **sincronizar projetos existentes** com a versão atual do DARE CLI — sem reescrever artefatos do dev (`DESIGN.md`, `BLUEPRINT.md`, `TASKS.md`, `dare-dag.yaml`):
+
+```bash
+# Dev já tem v2.16.0 instalada num projeto:
+$ npm install -g @dewtech/dare-cli@2.17   # atualiza CLI globalmente
+$ cd meu-projeto-dare
+$ dare update                              # ← sincroniza setup do projeto
+
+🔄 DARE Update
+
+  Projeto      : meu-projeto-dare
+  Versão atual : 2.16.0
+  CLI instalado: 2.17.0
+  Alvo         : 2.17.0
+  IDE          : cursor
+
+📋 Mudanças que serão aplicadas:
+  v2.17.0 (2026-05-15)
+  ...
+
+? Aplicar atualização de 2.16.0 → 2.17.0? (Y/n)
+```
+
+**Recursos:**
+
+- 📋 **Changelog declarativo:** Cada release escreve uma entrada em `templates/UPDATE-MANIFEST.json` listando arquivos alterados, removidos, renomeados e migrações de schema
+- 🎯 **Filtro por IDE:** Só aplica templates relevantes ao IDE configurado (`cursor`, `claude-code`, `antigravity`, `hybrid`, `claude-hybrid`)
+- 🔍 **Detecção de customizações:** Se o dev editou um template do DARE, o `update` detecta via hash SHA-256 e pergunta (`keep` / `replace`) antes de sobrescrever
+- 💾 **Backup automático:** Snapshot dos arquivos alterados em `.dare/backup-<from-version>/` antes de aplicar
+- 🧪 **`--dry-run`:** Preview completo sem escrever nada
+- 🚀 **`--yes`:** Não interativo (CI) — aplica tudo, preserva customizações
+- 🎯 **`--target <version>`:** Atualiza para uma versão específica (default: CLI instalado)
+
+**Flags:**
+
+```bash
+dare update                  # interativo, default
+dare update --dry-run        # preview
+dare update --yes            # CI: aplica, mantém customizações
+dare update --force          # sobrescreve customizações (perigoso)
+dare update --target 2.17.0  # versão específica
+```
+
+### 🔧 Mudança — Campo `version` no `dare.config.json` agora rastreia release DARE
+
+Antes da v2.17, `dare init` escrevia um `version: "0.1.0"` hardcoded que nada lia nem atualizava (placeholder zombie copiado por inércia de `package.json`/`Cargo.toml`). Agora o campo `version` rastreia a **versão do DARE** com que o projeto foi inicializado/atualizado pela última vez:
+
+```jsonc
+// Antes (zombie):
+{ "version": "0.1.0" }
+
+// Depois (significativo):
+{
+  "version": "2.17.0",
+  "updatedAt": "2026-05-15T12:54:37.371Z"
+}
+```
+
+A migração `unify-version-field` (parte da release 2.17.0 no manifest) cuida automaticamente de projetos pré-2.17:
+
+- Projeto com `version: "0.1.0"` → assume `2.16.0` como baseline antes de aplicar mudanças subsequentes
+- Projeto que passou por algum prototipo com `dareVersion` → consolida em `version`, remove campo redundante
+
+**Versão do app do dev** (separada da versão DARE) continua no lugar canônico: `package.json`, `Cargo.toml`, `composer.json`, etc.
+
+### 🧪 Testes
+
+- `src/__tests__/update.test.ts` — 16 testes cobrindo `version-compare`, `changeAppliesToIde`, `buildUpdatePlan`, `resolveProjectVersion`
+- Suite total: **136 testes** passando
+
+### 📂 Arquivos
+
+- `packages/cli/src/commands/update.ts` — comando CLI
+- `packages/cli/src/utils/UpdateDetector.ts` — leitura e planejamento (puro, testável)
+- `packages/cli/src/utils/UpdateApplier.ts` — backup, escrita, conflict resolution, migrations
+- `packages/cli/src/utils/version-compare.ts` — semver minimal
+- `packages/cli/src/types/UpdateManifest.types.ts` — schema do manifest
+- `packages/cli/templates/UPDATE-MANIFEST.json` — manifest de releases (precisa ser atualizado a cada release)
+
+---
+
 ## [2.16.0] — 2026-05
 
 ### ✨ Adicionado — Visualização Excalidraw para DAG

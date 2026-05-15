@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "releases": {
+    "2.16.0": {
+      "releasedAt": "2026-05-10",
+      "summary": "Excalidraw DAG visualization",
+      "changelog": "Adiciona renderer Excalidraw para visualizar o DAG (tasks + dependências) em diagrama interativo.",
+      "changes": []
+    },
+    "2.17.0": {
+      "releasedAt": "2026-05-15",
+      "summary": "Comando `dare update` para sincronizar projetos com versões mais novas",
+      "changelog": "Novo comando `dare update` permite atualizar templates, skills e commands de projetos existentes para a versão atual do DARE CLI — sem mexer nos seus artefatos (DESIGN, BLUEPRINT, TASKS).\n\nDestaques:\n- Compara `version` no `dare.config.json` com o CLI instalado\n- Mostra changelog específico de cada versão pendente\n- Detecta customizações antes de sobrescrever (keep / replace / diff)\n- Backup automático em `.dare/backup-<version>/`\n\nMudança em `dare.config.json`: o campo `version` agora rastreia a versão do DARE (antes era um placeholder hardcoded `0.1.0`). A migração `unify-version-field` cuida disso automaticamente.",
+      "changes": [
+        {
+          "type": "modified",
+          "path": "dare.config.json#version",
+          "description": "Campo `version` agora rastreia a release do DARE (antes era placeholder `0.1.0` zombie)",
+          "appliesTo": ["*"]
+        }
+      ],
+      "migrations": [
+        {
+          "id": "unify-version-field",
+          "description": "Migra `dareVersion` → `version` e substitui o placeholder legacy `0.1.0` por `2.16.0` quando necessário",
+          "optional": false
+        }
+      ]
+    }
+  }
+}

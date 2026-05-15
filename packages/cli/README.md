@@ -375,6 +375,52 @@ of each canonical DARE artifact, active GraphRAG backend, and task progress.
 dare info
 ```
 
+### `dare update` ← new in v2.17.0
+
+Sync the **project's DARE setup** (templates, slash commands, skills, schema)
+with the version of the CLI currently installed. Useful when you upgrade the
+CLI globally (`npm install -g @dewtech/dare-cli@latest`) and want a previous
+project to pick up the new improvements — **without touching your DESIGN /
+BLUEPRINT / TASKS / dare-dag.yaml artifacts**.
+
+Different from upgrading the CLI itself: `npm update -g @dewtech/dare-cli`
+changes the binary on your machine; `dare update` changes the *project files
+on disk* to match what that binary now ships.
+
+```bash
+dare update                  # interactive (recommended)
+dare update --dry-run        # preview: shows changelog + affected files, writes nothing
+dare update --yes            # CI: apply, preserve customizations, no prompts
+dare update --force          # also overwrite files the dev customized (dangerous)
+dare update --target 2.17.0  # update to a specific release instead of the installed CLI
+```
+
+**What it does:**
+
+1. Reads `version` from `dare.config.json` (the project's last-known DARE version).
+2. Loads `templates/UPDATE-MANIFEST.json` (ships with the CLI) and lists every
+   release between the project's version and the CLI's version.
+3. Prints the changelog for each pending release and the list of files
+   affected for your IDE (cursor / claude-code / antigravity / hybrid).
+4. For each file, classifies the situation:
+   - **identical** → skip
+   - **missing** → create
+   - **apply** → file matches the previous template hash, safe to overwrite
+   - **customized** → file diverges from the previous template; prompt
+     (`keep` / `replace`) unless `--yes` (keep) or `--force` (replace).
+5. Backs up every affected file to `.dare/backup-<from-version>/` before
+   writing.
+6. Runs any schema migrations declared by the release (e.g. renaming a
+   config field).
+7. Stamps `version` and `updatedAt` in `dare.config.json`.
+
+**Adding entries when you cut a release:** each new CLI version that ships
+template changes needs a corresponding entry in `templates/UPDATE-MANIFEST.json`
+listing `changes` (added / modified / removed / renamed) and optional
+`migrations`. The applier filters changes by `appliesTo: [ide]`, so a
+template that's cursor-only won't be installed in a Claude Code project and
+vice versa.
+
 ### `dare validate`
 
 Static checks on `dare-dag.yaml` — ideal for pre-commit hooks and CI.

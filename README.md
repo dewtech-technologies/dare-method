@@ -54,6 +54,14 @@ dare design "Quero uma API de autenticação JWT"
 > cd meu-projeto-existente
 > dare discover
 > ```
+>
+> **Atualizou o CLI globalmente?** Use `dare update` em cada projeto para sincronizar os templates / skills / commands com a versão nova do DARE (sem mexer no seu DESIGN/BLUEPRINT/TASKS):
+> ```bash
+> npm install -g @dewtech/dare-cli@latest
+> cd meu-projeto-dare
+> dare update                # interativo, com changelog + confirmação
+> dare update --dry-run      # só preview, não escreve
+> ```
 
 ### Opção 2 — Manual (Cursor)
 
@@ -297,7 +305,7 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 | Componente | Função |
 |------------|--------|
-| CLI `dare` | `init`, `discover`, `design`, `blueprint`, `execute` |
+| CLI `dare` | `init`, `discover`, `design`, `blueprint`, `execute`, `update` |
 | CLI `dare-mcp-server` | Servidor MCP local de contexto (~95% economia de tokens) |
 | Engine GraphRAG | Grafo de conhecimento com SQLite + FTS5 |
 | DAG Task Runner | Execução paralela de tasks (Kahn's algorithm) |

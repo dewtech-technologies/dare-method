@@ -12,6 +12,7 @@ import { dagCommand } from '../commands/dag.js';
 import { infoCommand } from '../commands/info.js';
 import { validateCommand } from '../commands/validate.js';
 import { bootstrapCommand } from '../commands/bootstrap.js';
+import { updateCommand } from '../commands/update.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -33,6 +34,7 @@ program.addCommand(graphCommand);
 program.addCommand(dagCommand);
 program.addCommand(validateCommand);
 program.addCommand(infoCommand);
+program.addCommand(updateCommand);
 
 program.parse(process.argv);
 
