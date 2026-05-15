@@ -13,6 +13,8 @@ import { infoCommand } from '../commands/info.js';
 import { validateCommand } from '../commands/validate.js';
 import { bootstrapCommand } from '../commands/bootstrap.js';
 import { updateCommand } from '../commands/update.js';
+import { reviewCommand } from '../commands/review.js';
+import { refineCommand } from '../commands/refine.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -35,6 +37,8 @@ program.addCommand(dagCommand);
 program.addCommand(validateCommand);
 program.addCommand(infoCommand);
 program.addCommand(updateCommand);
+program.addCommand(reviewCommand);
+program.addCommand(refineCommand);
 
 program.parse(process.argv);
 

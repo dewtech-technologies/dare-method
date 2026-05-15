@@ -209,6 +209,21 @@ async function runMigration(
       await fs.writeJSON(configPath, cfg, { spaces: 2 });
       return;
     }
+    case 'add-review-refine-defaults': {
+      // Seed the new review/refine objects so dev can see they exist (and
+      // edit). Opt-in stance for legacy projects — review.onComplete: false
+      // means the gate is silent until the dev flips it.
+      const configPath = path.join(projectRoot, 'dare.config.json');
+      const cfg = (await readProjectConfig(projectRoot)) as Record<string, unknown>;
+      if (!cfg.review) {
+        cfg.review = { onComplete: false, strict: false };
+      }
+      if (!cfg.refine) {
+        cfg.refine = { thresholds: { low: 5, med: 12, high: 20 } };
+      }
+      await fs.writeJSON(configPath, cfg, { spaces: 2 });
+      return;
+    }
     default:
       console.log(
         chalk.yellow(

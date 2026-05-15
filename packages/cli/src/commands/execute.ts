@@ -28,6 +28,8 @@ import {
   runRalphLoop,
   type GateName,
 } from '../dag-runner/ralph-loop.js';
+import { runReview } from '../utils/ReviewRunner.js';
+import { readProjectConfig } from '../utils/UpdateDetector.js';
 
 /**
  * `dare execute` — orchestrate DAG execution.
@@ -229,6 +231,29 @@ async function handleComplete(
     process.exit(1);
   }
 
+  // Gates passed — but optionally run `dare review` before marking DONE.
+  // Opt-in via `dare.config.json#review.onComplete: true`. The review
+  // catches mocks/stubs/TODOs that Ralph's build/test/lint don't see.
+  const reviewBlocked = await maybeRunReviewGate(cwd, taskId);
+  if (reviewBlocked) {
+    markFailed(dag, taskId, {
+      error: reviewBlocked,
+      durationMs: reportedDuration ?? ralphMs,
+      graph,
+    });
+    console.log(
+      chalk.red.bold(`\n❌ ${taskId} FAILED — \`dare review\` blocked DONE.`),
+    );
+    console.log(chalk.gray(reviewBlocked.split('\n').slice(0, 20).join('\n')));
+    console.log(
+      chalk.yellow(
+        `\nResolva os achados do review e rode \`dare execute --reset ${taskId}\` antes de tentar novamente.\n`,
+      ),
+    );
+    await persist(dag, stateFile, canvasPath);
+    process.exit(1);
+  }
+
   // Gates passed — mark DONE
   const task = markDone(dag, taskId, {
     output: options.output,
@@ -403,4 +428,73 @@ function printTaskBriefing(dag: Dag, task: DagTask): void {
   const prompt = buildTaskPrompt(dag, task);
   for (const line of prompt.split('\n')) console.log(`    ${line}`);
   console.log();
+}
+
+/**
+ * If `dare.config.json#review.onComplete` is `true`, run `dare review` over
+ * the just-finished task and return a non-null error string when the review
+ * fails. Returning `null` means either the gate is disabled or the review
+ * passed — caller can proceed to mark DONE.
+ *
+ * Reads optional knobs:
+ *   review.onComplete  : boolean   — enable the gate (default: false)
+ *   review.strict      : boolean   — treat warnings as errors (default: false)
+ *   review.fromAgent   : string    — path to JSON verdict produced by IDE skill
+ */
+async function maybeRunReviewGate(
+  cwd: string,
+  taskId: string,
+): Promise<string | null> {
+  let cfg: Record<string, unknown>;
+  try {
+    cfg = (await readProjectConfig(cwd)) as Record<string, unknown>;
+  } catch {
+    return null; // no config → no opt-in
+  }
+  const review = cfg.review as
+    | { onComplete?: boolean; strict?: boolean; fromAgent?: string }
+    | undefined;
+  if (!review?.onComplete) return null;
+
+  console.log(chalk.cyan(`\n🔎 dare review (gate opt-in) — ${taskId}`));
+
+  let report;
+  try {
+    report = await runReview(taskId, {
+      projectRoot: cwd,
+      strict: Boolean(review.strict),
+      fromAgent: review.fromAgent,
+    });
+  } catch (err) {
+    return `Review gate threw: ${err instanceof Error ? err.message : String(err)}`;
+  }
+
+  if (!report.failed) {
+    console.log(
+      chalk.green(
+        `  ✓ review limpa (${report.filesScanned.length} arquivo(s), ${report.totals.errors} erro(s))`,
+      ),
+    );
+    return null;
+  }
+
+  const lines: string[] = [`Review gate falhou para ${taskId}:`];
+  lines.push(
+    `  totals: ${report.totals.errors} erro(s), ${report.totals.warnings} aviso(s) em ${report.totals.filesWithFindings} arquivo(s)`,
+  );
+  for (const r of report.reports) {
+    if (r.violations.length === 0) continue;
+    lines.push(`  ${r.file}:`);
+    for (const v of r.violations.slice(0, 10)) {
+      lines.push(`    L${v.line} [${v.kind}] ${v.message}`);
+    }
+    if (r.violations.length > 10) {
+      lines.push(`    … +${r.violations.length - 10} mais`);
+    }
+  }
+  if (report.semantic && !report.semantic.passed) {
+    lines.push(`  verdito semântico: FAIL`);
+    for (const c of report.semantic.unmetCriteria) lines.push(`    · ${c}`);
+  }
+  return lines.join('\n');
 }

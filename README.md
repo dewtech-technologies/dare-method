@@ -62,6 +62,13 @@ dare design "Quero uma API de autenticação JWT"
 > dare update                # interativo, com changelog + confirmação
 > dare update --dry-run      # só preview, não escreve
 > ```
+>
+> **Task ficou com mock/stub/TODO escondido?** v2.17+ traz dois gates anti-stub:
+> ```bash
+> dare review task-034       # detecta TODO/FIXME, stubs, mocks fora de testes, funções vazias
+> dare refine task-034 --split  # mede complexidade e propõe quebra em sub-tasks
+> ```
+> Ative o gate automático no Ralph Loop com `review.onComplete: true` em `dare.config.json` — `dare execute --complete` bloqueia DONE se a review reprovar.
 
 ### Opção 2 — Manual (Cursor)
 
@@ -305,10 +312,11 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 | Componente | Função |
 |------------|--------|
-| CLI `dare` | `init`, `discover`, `design`, `blueprint`, `execute`, `update` |
+| CLI `dare` | `init`, `discover`, `design`, `blueprint`, `execute`, `update`, `review`, `refine` |
 | CLI `dare-mcp-server` | Servidor MCP local de contexto (~95% economia de tokens) |
 | Engine GraphRAG | Grafo de conhecimento com SQLite + FTS5 |
 | DAG Task Runner | Execução paralela de tasks (Kahn's algorithm) |
+| Anti-stub gates (v2.17+) | `dare review` detecta mocks/stubs/TODOs; `dare refine` quebra tasks gigantes |
 
 > **Histórico:** até a v1.x existiam 4 pacotes separados (`dare-cli`, `dare-core`,
 > `dare-graphrag`, `dare-mcp-server`). A partir da v2.0 todos foram consolidados

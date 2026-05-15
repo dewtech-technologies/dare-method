@@ -8,14 +8,26 @@
       "changes": []
     },
     "2.17.0": {
-      "releasedAt": "2026-05-15",
-      "summary": "Comando `dare update` para sincronizar projetos com versões mais novas",
-      "changelog": "Novo comando `dare update` permite atualizar templates, skills e commands de projetos existentes para a versão atual do DARE CLI — sem mexer nos seus artefatos (DESIGN, BLUEPRINT, TASKS).\n\nDestaques:\n- Compara `version` no `dare.config.json` com o CLI instalado\n- Mostra changelog específico de cada versão pendente\n- Detecta customizações antes de sobrescrever (keep / replace / diff)\n- Backup automático em `.dare/backup-<version>/`\n\nMudança em `dare.config.json`: o campo `version` agora rastreia a versão do DARE (antes era um placeholder hardcoded `0.1.0`). A migração `unify-version-field` cuida disso automaticamente.",
+      "releasedAt": "2026-05-16",
+      "summary": "dare update + dare review + dare refine + Anti-Stub Contract",
+      "changelog": "Release grande, três frentes complementares que resolvem três problemas reais:\n\n## 1. `dare update` — sincronizar projeto com CLI\n\nDev atualiza o CLI globalmente (npm install -g @dewtech/dare-cli@latest) e roda `dare update` em cada projeto pra puxar templates / skills / commands novos — sem mexer em DESIGN, BLUEPRINT, TASKS, dare-dag.yaml. UPDATE-MANIFEST.json declarativo lista changes + migrations por release. Backup automático em `.dare/backup-<version>/`. Detecção de customizações por hash SHA-256 (keep / replace / force). Filtro por IDE configurado.\n\nFlags: `--dry-run`, `--yes`, `--force`, `--target <version>`.\n\n## 2. `dare review` + `dare refine` — Anti-stub gates\n\nProblema: tasks marcadas como DONE com código mockado, stubs, esqueletos de função, TODOs pendentes.\n\n`dare review <task-id>`:\n- Camada estática (regex): TODO/FIXME/XXX/HACK, throw new Error('not implemented'), unimplemented!(), todo!(), NotImplementedError, funções vazias, retorno-fantasma (return null como única statement), mocks fora de testes (jest.fn, vi.mock, sinon.stub, MagicMock), placeholders\n- Camada semântica (opt-in via `--from-agent <verdict.json>`): IDE agent valida critério-a-critério se implementação satisfaz spec\n- Skills `dare-review` (Claude Code), `review-task` (Cursor), `dare-review` (Antigravity) produzem o verdito semântico\n- Gate opt-in no Ralph Loop: `review.onComplete: true` no dare.config.json bloqueia `dare execute --complete` quando review falha\n\n`dare refine <task-id>`:\n- Heurística determinística de complexidade: # arquivos, # funções/endpoints, # testes, # deps, keywords pesadas (refactor/migrate/integrate)\n- Buckets LOW (0-5) / MED (6-12) / HIGH (13-20) / CRITICAL (21+); thresholds configuráveis em `refine.thresholds`\n- `--split` propõe quebra em sub-tasks agrupadas por diretório\n- Skills `dare-refine` (todas IDEs) produzem split semântico (por camada, por endpoint, por feature, refactor-then-feature, migration-then-code)\n\n## 3. Anti-Stub Contract nos prompts de geração\n\nBlueprint e Tasks agora forçam especificação executável: para cada endpoint, função pública, evento ou job — assinatura completa, request/response shape por status code, validações enumeradas, edge cases, side effects, exemplos concretos. TASK-SPEC-template ganha seção 'PADRÕES PROIBIDOS' explícita e Definition of Done anti-mock obrigatório.\n\n## 4. Mudanças de schema em `dare.config.json`\n\n- Campo `version` agora rastreia a release do DARE (antes era placeholder zombie `0.1.0`).\n- Novo objeto `review`: `{ onComplete: false, strict: false }` (opt-in pra projetos legados, on para novos).\n- Novo objeto `refine`: `{ thresholds: { low: 5, med: 12, high: 20 } }`.\n\nMigrações `unify-version-field` e `add-review-refine-defaults` cuidam de projetos pré-2.17 automaticamente.",
       "changes": [
         {
           "type": "modified",
           "path": "dare.config.json#version",
           "description": "Campo `version` agora rastreia a release do DARE (antes era placeholder `0.1.0` zombie)",
+          "appliesTo": ["*"]
+        },
+        {
+          "type": "added",
+          "path": "dare.config.json#review",
+          "description": "Adiciona objeto `review` ({ onComplete, strict }) em dare.config.json — gate opt-in pré-DONE no Ralph Loop",
+          "appliesTo": ["*"]
+        },
+        {
+          "type": "added",
+          "path": "dare.config.json#refine",
+          "description": "Adiciona objeto `refine.thresholds` em dare.config.json para customizar buckets de complexidade",
           "appliesTo": ["*"]
         }
       ],
@@ -23,6 +35,11 @@
         {
           "id": "unify-version-field",
           "description": "Migra `dareVersion` → `version` e substitui o placeholder legacy `0.1.0` por `2.16.0` quando necessário",
+          "optional": false
+        },
+        {
+          "id": "add-review-refine-defaults",
+          "description": "Adiciona `review: { onComplete: false, strict: false }` e `refine: { thresholds: ... }` em projetos pré-2.17 (opt-in — não ativa o gate automaticamente)",
           "optional": false
         }
       ]

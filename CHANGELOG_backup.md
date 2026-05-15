@@ -9,174 +9,23 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
-## [2.17.0] — 2026-05
+## [Unreleased]
 
-Release grande, **três frentes complementares** que resolvem três problemas reais identificados em uso:
+### 📢 RFC: Adoção de AGPL v3 (v3.0.0)
 
-1. Devs com versão antiga do DARE não conseguiam puxar melhorias sem regenerar projeto
-2. Tasks marcadas DONE com código mockado, stubs e esqueletos de função (inegociável — destrói o valor do método)
-3. Tasks grandes demais forçando o agente a "inventar" pra preencher os vazios
+**[Leia a RFC completa](docs/RFC-AGPL-v3-ADOPTION.md)**
 
-### ✨ Adicionado — Comando `dare update`
+Proposta de migrar `@dewtech/dare-cli` de MIT para AGPL v3 em junho 2026 (v3.0.0).
 
-Sincroniza projetos existentes com a versão atual do CLI — sem reescrever artefatos do dev (`DESIGN.md`, `BLUEPRINT.md`, `TASKS.md`, `dare-dag.yaml`):
+**Resumo:**
+- CLI passa para AGPL v3 (proteção contra "DARE Cloud" competitors)
+- Código **gerado** continua MIT (seus projetos não mudam)
+- Modelo Open Core: CLI gratuito + Desktop/Agents pagos
+- Timeline: RFC (mai 14-28) → 3 features (mai 26 - jun 15) → v3.0.0 (jun 16+)
 
-```bash
-$ npm install -g @dewtech/dare-cli@latest
-$ cd meu-projeto-dare
-$ dare update                  # interativo, com changelog + confirmação
-$ dare update --dry-run        # preview
-$ dare update --yes            # CI: aplica, mantém customizações
-$ dare update --force          # sobrescreve até customizações (perigoso)
-$ dare update --target 2.17.0  # versão específica
-```
-
-**Recursos:**
-
-- 📋 **Changelog declarativo:** `templates/UPDATE-MANIFEST.json` lista changes (added/modified/removed/renamed) + migrations por release
-- 🎯 **Filtro por IDE:** Cursor não recebe templates Antigravity e vice-versa; hybrid recebe os dois
-- 🔍 **Detecção de customizações:** SHA-256 sobre cada arquivo — se o dev editou, pergunta (`keep` / `replace`)
-- 💾 **Backup automático:** `.dare/backup-<from-version>/` antes de aplicar
-- ♻️ **Migrações de schema:** declarativas no manifest, transformam `dare.config.json` (renames, novos campos) sem perder dados
-
-### ✨ Adicionado — Comando `dare review <task-id>` (anti-stub gate)
-
-Audita uma task implementada cruzando spec ↔ código real. Detecta os padrões que o build/test/lint não pegam:
-
-**Camada estática (regex, determinística):**
-
-- `TODO` / `FIXME` / `XXX` / `HACK` em comentários
-- Stubs explícitos: `throw new Error('not implemented')`, `unimplemented!()`, `todo!()`, `raise NotImplementedError`, `panic!('not implemented')`
-- Funções vazias: `function x() {}`, `def x(): pass`, `fn x() {}`, `def x(): ...`
-- Retorno-fantasma: `return null/undefined/{}/[]` como única statement de função pública
-- Mocks **fora** de testes: `jest.fn()`, `vi.mock()`, `sinon.stub()`, `MagicMock()`, `mockReturnValue` em `src/` de produção
-- Comentários-placeholder: `// implement later`, `# stub`, `// fixme implement`
-
-**Camada semântica (opt-in via `--from-agent`):**
-
-A IDE agent re-lê spec + implementação e emite um `SemanticVerdict` JSON. O CLI funde estática + semântica num único veredito.
-
-```bash
-# Manual:
-dare review task-034 --strict
-dare review task-034 --files src/auth/login.ts --format json
-dare review task-034 --from-agent .dare/verdict.json
-```
-
-**Skills nas 3 IDEs** que produzem o verdito semântico:
-- Claude Code: `/dare-review task-034`
-- Cursor: `/review-task task-034`
-- Antigravity: skill `dare-review`
-
-**Gate opt-in no Ralph Loop:** com `review.onComplete: true` em `dare.config.json`, `dare execute --complete <id>` bloqueia DONE se a review falhar (cascade-skip dependentes, igual gate de teste).
-
-### ✨ Adicionado — Comando `dare refine <task-id>` (anti-monstro)
-
-Mede complexidade de uma task e propõe quebra quando ela ficou grande demais:
-
-**Heurística determinística:**
-
-- Sinais: # arquivos a criar/modificar, # funções/endpoints declarados, # testes esperados, # dependências, keywords pesadas (`refactor`/`migrate`/`integrate`/`multiple`/`audit`)
-- Score → bucket: LOW (0-5) | MED (6-12) | HIGH (13-20) | CRITICAL (21+)
-- Thresholds configuráveis em `refine.thresholds`
-
-**Split proposal:**
-
-`--split` agrupa os arquivos por diretório raiz e gera sub-tasks `task-034a`, `task-034b`, ... cada uma ≤ 4 arquivos por default. A IDE agent (skills `dare-refine` / `refine-task`) refina o split semanticamente: por camada, por endpoint, por feature, refactor-then-feature, migration-then-code.
-
-```bash
-dare refine task-034                  # mede e reporta
-dare refine task-034 --split          # também propõe quebra
-dare refine task-034 --split --apply  # marca task original como SPLIT em TASKS.md
-dare refine task-034 --strict         # exit 2 se HIGH/CRITICAL (CI-friendly)
-```
-
-### 🔥 Reforço inegociável — Anti-Stub Contract nos prompts de geração
-
-Tasks com `subtask_prompt` ou spec genéricos forçam o agente a inventar. Os prompts agora forçam especificação executável:
-
-**No `/dare-blueprint` / `/generate-blueprint`:**
-
-Para **cada** endpoint, função pública, evento ou job — assinatura completa, request/response shape por status code, validações enumeradas (não "validar email" — a regex), edge cases (input vazio, duplicado, expirado), side effects (tabelas/filas/caches tocados em ordem), exemplos concretos (payload real, response real).
-
-**No `/dare-tasks` / `/generate-tasks`:**
-
-Cada `subtask_prompt` deve incluir caminhos exatos, assinaturas tipadas, validações específicas, edge cases enumerados, lista de testes esperados. Cada `EXECUTION/task-<id>.md` deve ter Definition of Done anti-stub explícito.
-
-**No `TASK-SPEC-template.md` (3 IDEs):**
-
-Nova seção **PADRÕES PROIBIDOS** lista o que `dare review` reprova. DoD obrigatório passa a incluir "`dare review <task-id>` passou" antes de marcar DONE.
-
-### 🔧 Mudança — Campo `version` no `dare.config.json` agora rastreia release DARE
-
-Antes da v2.17, `dare init` escrevia um `version: "0.1.0"` hardcoded que nada lia nem atualizava. Agora rastreia a versão do DARE com que o projeto foi inicializado/atualizado pela última vez:
-
-```jsonc
-// Antes (zombie):
-{ "version": "0.1.0" }
-
-// Depois (significativo):
-{
-  "version": "2.17.0",
-  "updatedAt": "2026-05-16T...",
-  "review": { "onComplete": true, "strict": false },
-  "refine": { "thresholds": { "low": 5, "med": 12, "high": 20 } }
-}
-```
-
-Migrações cuidam de projetos pré-2.17 automaticamente (`unify-version-field` + `add-review-refine-defaults`). Versão do app do dev continua no lugar canônico: `package.json`, `Cargo.toml`, `composer.json`.
-
-### 🧪 Testes
-
-- `update.test.ts` — 16 testes (version-compare, changeAppliesToIde, buildUpdatePlan, resolveProjectVersion)
-- `review.test.ts` — 27 testes (isTestFile, parseFilesFromSpec, detectores estáticos, runStaticAnalysis, runReview end-to-end)
-- `refine.test.ts` — 12 testes (levelFromScore, analyzeTaskComplexity, proposeSplit)
-- Suite total: **175 testes** passando
-
-### 📂 Arquivos novos
-
-```
-packages/cli/src/commands/
-  ├── update.ts
-  ├── review.ts
-  └── refine.ts
-
-packages/cli/src/utils/
-  ├── UpdateDetector.ts       (planejamento puro)
-  ├── UpdateApplier.ts        (backup, write, conflict, migrations)
-  ├── version-compare.ts      (semver minimal)
-  ├── ReviewRunner.ts         (orquestra spec → files → analyzer)
-  ├── static-analyzer.ts      (detectores regex + multi-line)
-  └── complexity-analyzer.ts  (heurística + proposeSplit)
-
-packages/cli/src/types/
-  ├── UpdateManifest.types.ts
-  ├── Review.types.ts
-  └── Refine.types.ts
-
-packages/cli/templates/
-  └── UPDATE-MANIFEST.json    (atualizar a cada release)
-
-implementations/claude/.claude/commands/
-  ├── dare-review.md          (skill semântica)
-  └── dare-refine.md          (skill de split)
-
-implementations/cursor/.cursor/commands/
-  ├── review-task.md
-  └── refine-task.md
-
-implementations/antigravity/.agents/skills/
-  ├── dare-review/SKILL.md
-  └── dare-refine/SKILL.md
-```
-
-### 📝 Modificados
-
-- Prompts de blueprint nas 3 IDEs (Anti-Stub Contract)
-- Prompts de tasks nas 3 IDEs (Anti-Stub Contract)
-- TASK-SPEC-template.md nas 3 IDEs (seção 7 PADRÕES PROIBIDOS + DoD expandido)
-- `src/commands/execute.ts` (gate opt-in `maybeRunReviewGate` antes de markDone)
-- `src/utils/project-generator.ts` (init grava `review` + `refine` defaults)
+**Seu feedback importa:**
+- [GitHub Discussions](#link-será-adicionado-após-publicação)
+- Email: suporte@dewtech.tech
 
 ---
 

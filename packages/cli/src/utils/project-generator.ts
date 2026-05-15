@@ -89,6 +89,18 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     mcp,
     toolchain: config.toolchain ?? 'auto',
     version: getFrameworkVersion(),
+    // Anti-stub gates introduced in v2.17.
+    // `review.onComplete` is opt-in (default off) so existing projects don't
+    // change behavior on upgrade; new projects get it on.
+    review: {
+      onComplete: true,
+      strict: false,
+    },
+    refine: {
+      // Thresholds map heuristic score → LOW/MED/HIGH/CRITICAL. See
+      // `complexity-analyzer.ts` for defaults; override per project here.
+      thresholds: { low: 5, med: 12, high: 20 },
+    },
   };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;

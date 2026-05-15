@@ -85,16 +85,57 @@ Execute **todos** antes de marcar a task como DONE. Se qualquer um falhar, leia 
 
 ---
 
-## 7. CRITÉRIOS DE DONE
+## 7. PADRÕES PROIBIDOS (ANTI-STUB / ANTI-MOCK)
 
-- [ ] Todos os 4 validation gates passaram sem erros
-- [ ] Testes cobrem caminho feliz + erros + edge cases da seção 4
+> Esta seção é **inegociável**. O comando `dare review` (v2.17+) escaneia o código modificado por esta task e reprova se encontrar qualquer padrão abaixo.
+
+### Em código de produção (qualquer arquivo **fora** de `*.test.*`, `*.spec.*`, `__tests__/`, `tests/`, `spec/`)
+
+- ❌ **TODO / FIXME / XXX / HACK** — qualquer um desses marcadores em comentário
+- ❌ **Função vazia** — `fn x() {}`, `function x() {}`, `def x(): pass`, `def x(): ...`
+- ❌ **Stub explícito** — `throw new Error('not implemented')`, `unimplemented!()`, `todo!()`, `raise NotImplementedError`
+- ❌ **Retorno-fantasma** — `return null` / `return undefined` / `return {}` / `return []` como **única** statement de função pública declarada nesta task
+- ❌ **Mocks fora de testes** — `jest.fn()`, `sinon.stub()`, `mockReturnValue`, dados hardcoded fingindo ser do banco, fixtures injetadas em controllers/services
+- ❌ **Comentário de placeholder** — `// implement later`, `# placeholder`, `// stub`, `// FIXME implement`
+
+### Mocks são permitidos APENAS em
+
+- Arquivos de teste (`*.test.*`, `*.spec.*`, `__tests__/`, `tests/`, `spec/`)
+- Seeds / fixtures dentro de `database/seeders/`, `tests/fixtures/`
+- Helpers explicitamente marcados como auxiliares de teste
+
+### Verificação automática
+
+Antes de marcar a task como DONE, rode:
+
+```bash
+dare review <task-id>
+```
+
+Output esperado:
+
+```
+✅ task-XYZ: nenhum padrão proibido detectado em N arquivos modificados.
+```
+
+Se a review falhar, a task **não pode** ir para DONE — corrija os achados e re-rode.
+
+---
+
+## 8. CRITÉRIOS DE DONE
+
+- [ ] Todos os 4 validation gates passaram sem erros (build + test + lint + audit)
+- [ ] Testes cobrem caminho feliz + erros enumerados + edge cases da seção 4
 - [ ] Considerações de segurança da seção 5 todas checadas
 - [ ] Arquivos listados na seção 3 criados/modificados conforme spec
+- [ ] **`dare review <task-id>` passou** (seção 7 — sem stubs, mocks, TODOs)
+- [ ] Cada validação declarada na spec tem teste demonstrando o erro real (não placeholder)
+- [ ] Cada edge case enumerado tem teste cobrindo
+- [ ] Endpoints retornam dados reais do banco/service, não hardcoded
 - [ ] `DARE/TASKS.md` atualizado com status `DONE`
 
 ---
 
-## 8. PRÓXIMA TASK SUGERIDA
+## 9. PRÓXIMA TASK SUGERIDA
 
 `[task-id]` — [título] _(desbloqueada após conclusão desta task)_

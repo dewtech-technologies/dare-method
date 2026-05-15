@@ -122,34 +122,90 @@ Crie um documento `DARE/BLUEPRINT.md` com a seguinte estrutura:
 
 ## Estrutura de Diretórios
 
+> Mantenha esta seção **stack-agnóstica**. Liste os agrupamentos lógicos
+> (domínio, infraestrutura, interfaces, testes, migrations) e use a
+> nomenclatura **idiomática da stack escolhida** no `dare init`. Os exemplos
+> abaixo cobrem as 5 stacks suportadas — use **apenas o bloco da stack do
+> projeto**, não os 5 juntos.
+
+<details>
+<summary>Exemplo — Node.js / NestJS</summary>
+
+```
+projeto/
+├── src/
+│   ├── auth/
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── auth.module.ts
+│   │   └── dto/{register,login}.dto.ts
+│   ├── users/{users.entity.ts,users.service.ts}
+│   └── main.ts
+├── migrations/{001_users.ts,002_refresh_tokens.ts}
+└── test/auth.e2e-spec.ts
+```
+</details>
+
+<details>
+<summary>Exemplo — Rust / Axum</summary>
+
+```
+projeto/
+├── src/
+│   ├── domain/{user.rs,refresh_token.rs}
+│   ├── handlers/{register.rs,login.rs,refresh.rs,logout.rs}
+│   ├── middleware/jwt.rs
+│   └── main.rs
+├── migrations/{001_users.sql,002_refresh_tokens.sql}
+└── tests/auth_integration.rs
+```
+</details>
+
+<details>
+<summary>Exemplo — Python / FastAPI</summary>
+
 ```
 projeto/
 ├── app/
-│   ├── Models/
-│   │   ├── User.php
-│   │   └── RefreshToken.php
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   │   └── AuthController.php
-│   │   ├── Requests/
-│   │   │   ├── RegisterRequest.php
-│   │   │   └── LoginRequest.php
-│   │   └── Resources/
-│   │       └── UserResource.php
-│   ├── Services/
-│   │   └── AuthService.php
-│   └── Exceptions/
-│       └── AuthException.php
-├── database/
-│   └── migrations/
-│       ├── create_users_table.php
-│       └── create_refresh_tokens_table.php
-├── routes/
-│   └── api.php
-└── tests/
-    └── Feature/
-        └── AuthTest.php
+│   ├── routers/auth.py
+│   ├── models/{user.py,refresh_token.py}
+│   ├── schemas/{register.py,login.py}
+│   ├── services/auth.py
+│   └── main.py
+├── alembic/versions/{001_users.py,002_refresh_tokens.py}
+└── tests/test_auth.py
 ```
+</details>
+
+<details>
+<summary>Exemplo — PHP / Laravel</summary>
+
+```
+projeto/
+├── app/Http/Controllers/AuthController.php
+├── app/Http/Requests/{RegisterRequest,LoginRequest}.php
+├── app/Models/{User,RefreshToken}.php
+├── app/Services/AuthService.php
+├── database/migrations/{create_users,create_refresh_tokens}_table.php
+├── routes/api.php
+└── tests/Feature/AuthTest.php
+```
+</details>
+
+<details>
+<summary>Exemplo — Go / Gin</summary>
+
+```
+projeto/
+├── cmd/server/main.go
+├── internal/
+│   ├── handlers/{register,login,refresh,logout}.go
+│   ├── models/{user,refresh_token}.go
+│   └── middleware/jwt.go
+├── migrations/{001_users.sql,002_refresh_tokens.sql}
+└── handlers_test.go
+```
+</details>
 
 ## Plano de Execução
 
@@ -175,26 +231,71 @@ projeto/
 
 ## Comandos de Setup
 
-```bash
-# Instalar dependências
-composer install
+> Liste **somente os comandos da stack do projeto** (definida em
+> `dare init` / `dare.config.json#backend`). Não inclua todos os blocos
+> abaixo — use o que casa com a stack escolhida.
 
-# Criar arquivo .env
+<details>
+<summary>Node.js / NestJS</summary>
+
+```bash
+npm install
+cp .env.example .env
+npm run migration:run
+npm test
+npm run start:dev
+```
+</details>
+
+<details>
+<summary>Rust / Axum</summary>
+
+```bash
+cargo build
+cp .env.example .env
+sqlx migrate run
+cargo test
+cargo run
+```
+</details>
+
+<details>
+<summary>Python / FastAPI</summary>
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+alembic upgrade head
+pytest
+uvicorn app.main:app --reload
+```
+</details>
+
+<details>
+<summary>PHP / Laravel</summary>
+
+```bash
+composer install
 cp .env.example .env
 php artisan key:generate
-
-# Rodar migrations
 php artisan migrate
-
-# Gerar JWT secret
-php artisan jwt:secret
-
-# Rodar testes
 php artisan test
-
-# Iniciar servidor
 php artisan serve
 ```
+</details>
+
+<details>
+<summary>Go / Gin</summary>
+
+```bash
+go mod download
+cp .env.example .env
+migrate -path ./migrations -database "$DATABASE_URL" up
+go test ./...
+go run ./cmd/server
+```
+</details>
 
 ## Próximas Etapas
 1. Revisar e aprovar este Blueprint
@@ -202,7 +303,50 @@ php artisan serve
 3. Continuar com o Método DARE
 ```
 
-### Passo 5: Pedir Aprovação
+### Passo 5: Aplicar ANTI-STUB CONTRACT (regra inegociável)
+
+> **Por que existe esta regra:** a skill `dare-tasks` que vem depois usa este Blueprint como **única fonte de verdade**. Se um endpoint, função ou regra ficar genérico aqui, o agente que implementar a task **será forçado a inventar** — e vai produzir mocks, stubs e esqueletos para "preencher o vazio". Detalhe agora.
+>
+> Tasks que produzem mock/stub/skeleton **falham** no `dare review` (v2.17+) e bloqueiam o `dare execute --complete`.
+
+Para **cada** endpoint, função pública, evento ou job declarado no Blueprint, especifique de forma **executável**:
+
+**Endpoints HTTP/RPC:**
+- Assinatura completa (método, path, headers obrigatórios, content-type)
+- Request schema (todos os campos com tipo, restrições, opcionalidade)
+- Response schema **por status code** (2xx, 4xx, 5xx — não só "200 OK")
+- Validações server-side (lista exaustiva: `email único`, `senha ≥ 8 chars + maiúscula + dígito`)
+- Edge cases enumerados (input vazio, duplicado, expirado, sem permissão)
+- Side effects (tabelas/filas/caches/emails tocados, em ordem)
+- Exemplo concreto (payload real, response real — não placeholder)
+
+**Funções de domínio / services:**
+- Assinatura tipada (`fn name(args: Types) -> ReturnType`)
+- Pré-condições e pós-condições verificáveis
+- Estados de erro com tipo de exceção/Result esperado
+- Comportamento em concorrência (idempotência, locking, retry)
+
+**Jobs / event handlers / workers:**
+- Trigger (evento/cron/fila — nome canônico)
+- Payload schema tipado
+- Retry policy (backoff, max attempts, DLQ)
+- Idempotência (chave + estratégia)
+
+**Modelos de dados:**
+- Cada campo com tipo, nullable, default, constraints (unique, fk, check), índices
+- Triggers ou hooks (soft-delete, audit, encryption-at-rest)
+
+**Critério "Blueprint detalhado o suficiente"** (auto-validação antes de salvar):
+
+- [ ] Para cada endpoint, um humano não-familiarizado consegue escrever request/response sem perguntar nada?
+- [ ] Para cada função pública, está claro **o que retorna** em todos os caminhos (sucesso + erros enumerados)?
+- [ ] Edge cases foram **enumerados** ou só listados como "tratar edge cases"?
+- [ ] Cada validação tem uma regra concreta (não só "validar email")?
+- [ ] Cada decisão arquitetural tem **justificativa** (não só "escolhemos X")?
+
+**Anti-padrão a evitar:** seções como _"implementar autenticação"_ ou _"validar dados"_ — isso vira stub. Especifique algoritmo, campos, regras.
+
+### Passo 6: Pedir Aprovação
 Após gerar o Blueprint, peça ao usuário:
 - Revisar a arquitetura
 - Aprovar endpoints e modelos

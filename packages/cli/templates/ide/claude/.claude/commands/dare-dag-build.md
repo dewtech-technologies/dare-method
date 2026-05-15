@@ -65,6 +65,47 @@ tasks:
 - Cadeia linear é antipattern
 - `complexity` honesta
 
+### 3.1 ANTI-STUB CONTRACT (inegociável)
+
+> Tasks geradas com `subtask_prompt` ou spec genéricos forçam o agente a inventar — e ele vai produzir mock, stub ou esqueleto. **Não é negociável**. O comando `dare review <task-id>` (v2.17+) detecta isso e marca a task como FAILED.
+
+Cada `subtask_prompt` e `EXECUTION/task-<id>.md` deve atender este contrato:
+
+**O `subtask_prompt` deve ser auto-suficiente**
+
+O subagente recebe **apenas** o `subtask_prompt` + snippets de 2000 chars dos pais. Tudo que ele precisa para implementar **sem inventar** deve estar ali ou na `spec_file`. Inclua:
+
+- Caminho exato dos arquivos a criar/modificar
+- Assinaturas exatas das funções/endpoints (`fn name(params: T) -> R`)
+- Schema de request/response com tipos
+- Validações específicas (não "validar input" — `email: regex /^.../`, `senha: ≥ 8 chars + 1 maiúscula + 1 dígito`)
+- Edge cases enumerados (input vazio, duplicado, expirado, sem permissão)
+- Lista de testes esperados com nome + comportamento
+
+**A `spec_file` (`EXECUTION/task-<id>.md`) deve ter Definition of Done anti-stub:**
+
+```markdown
+## Definition of Done (ANTI-STUB)
+
+- [ ] Nenhum `TODO`, `FIXME`, `XXX` ou `HACK` em arquivos modificados
+- [ ] Nenhuma função vazia (`fn x() {}`, `def x(): pass`, `function x() {}`)
+- [ ] Nenhum `throw new Error('not implemented')`, `unimplemented!()`, `todo!()`, `NotImplementedError`
+- [ ] Nenhum `return null` / `return undefined` / `return {}` como única statement de função pública
+- [ ] Mocks **somente** dentro de `*.test.*`, `*.spec.*`, `__tests__/`, `tests/`, `spec/` — NUNCA em código de produção
+- [ ] Todos os endpoints declarados na seção 3 retornam dados reais (não fixos / hardcoded)
+- [ ] Cada validação da spec produz erro real com status code correto (testado)
+- [ ] Cada edge case da spec tem teste unitário ou integração demonstrando comportamento
+```
+
+**Verificação automatizável:** o agente vai rodar `dare review <id>` antes de marcar DONE. Se a review falhar, a task volta para revisão.
+
+**Sinais de spec rasa** (auto-validar antes de salvar):
+
+- ❌ "Implementar X" — sem assinatura, sem retorno, sem validações
+- ❌ "Tratar erros adequadamente" — quais erros? como? que código?
+- ❌ "Adicionar validações" — quais regras?
+- ✅ "Implementar `POST /auth/login` retornando `{ token: string, refresh: string }` com 200 se credenciais válidas, 401 se inválidas, 429 se rate limit"
+
 ### 4. Validar consistência com `EXECUTION/task-*.md`
 
 Se uma spec existe em `DARE/EXECUTION/task-<id>.md`:

@@ -66,6 +66,62 @@ Siga o template `templates/BLUEPRINT-template.md`. Seções obrigatórias:
 
 **2.11 Checklist de Aprovação** — checkboxes para o usuário revisar antes de prosseguir
 
+---
+
+## 🚫 ANTI-STUB CONTRACT (regra inegociável)
+
+> **Por que existe esta seção:** o `/dare-tasks` que vem depois usa este Blueprint como **única fonte de verdade**. Se um endpoint, função ou regra ficar genérico aqui, o agente que implementar a task **será forçado a inventar** — e vai produzir mocks, stubs e esqueletos para "preencher o vazio". Detalhe agora.
+>
+> Tasks que produzem mock/stub/skeleton **falham** no `dare review` (introduzido na v2.17) e bloqueiam o `dare execute --complete`.
+
+Para **cada** endpoint, função pública, evento ou job declarado no Blueprint, especifique de forma **executável**:
+
+### Para endpoints HTTP/RPC
+
+- **Assinatura completa:** método, path, headers obrigatórios, content-type
+- **Request schema:** todos os campos com tipo, restrições (min/max/regex), opcionalidade
+- **Response schema por status code:** estrutura para 2xx, 4xx, 5xx — não apenas "200 OK"
+- **Validações server-side:** lista exaustiva de regras (`email único`, `senha ≥ 8 chars + 1 maiúscula + 1 dígito`, etc.)
+- **Edge cases enumerados:** o que acontece com input vazio, duplicado, expirado, sem permissão, com dados inconsistentes
+- **Side effects:** que tabelas/filas/caches/emails são tocados — em ordem
+- **Exemplo concreto (não placeholder):** payload real, response real
+
+### Para funções de domínio / services
+
+- **Assinatura tipada** (`fn name(args: Types) -> ReturnType` ou equivalente)
+- **Pré-condições** verificáveis (estado obrigatório do banco/cache/etc.)
+- **Pós-condições** verificáveis (o que muda no sistema após retornar OK)
+- **Estados de erro** com tipo de exceção/Result/Either esperado
+- **Comportamento em concorrência** quando relevante (idempotência, locking, retry)
+
+### Para jobs / event handlers / workers
+
+- **Trigger:** evento, cron, fila — incluir o **nome canônico**
+- **Payload schema** com tipos
+- **Retry policy** (backoff, max attempts, DLQ)
+- **Idempotência:** chave + estratégia
+- **SLA / timeout**
+
+### Para modelos de dados
+
+- Cada campo: tipo, nullable, default, constraints (unique, fk, check), índices
+- Triggers ou hooks (soft-delete, audit, encryption-at-rest)
+- Estado inicial / seed obrigatório (se aplicável)
+
+### Critério de "Blueprint detalhado o suficiente"
+
+Antes de salvar, valide internamente — se a resposta a **qualquer** pergunta abaixo for "não", o Blueprint ainda está raso e precisa ser expandido:
+
+- [ ] Para cada endpoint, um humano não-familiarizado consegue escrever request/response sem perguntar nada?
+- [ ] Para cada função pública, está claro **o que retorna** em todos os caminhos (sucesso + erros enumerados)?
+- [ ] Edge cases foram **enumerados** ou só listados como "tratar edge cases"?
+- [ ] Cada validação tem uma regra concreta (não "validar email" — `^[a-z0-9._%+-]+@...`)?
+- [ ] Cada decisão arquitetural tem **justificativa** (não só "escolhemos X")?
+
+**Anti-padrão a evitar:** seções como _"implementar autenticação"_ ou _"validar dados"_ — isso vai virar stub. Especifique **qual** algoritmo, **quais** campos, **quais** regras.
+
+---
+
 ### 3. Salvar e aguardar aprovação humana
 
 Salve `DARE/BLUEPRINT.md` e informe:

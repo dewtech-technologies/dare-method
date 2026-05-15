@@ -34,6 +34,51 @@ Avança o DARE para a fase Architect: lê `DARE/DESIGN.md` aprovado e gera **som
    - **Estratégia de Deploy** — por ambiente
    - **Checklist de Aprovação** — checkboxes para revisão humana
 
+   ---
+
+   ### 🚫 ANTI-STUB CONTRACT (regra inegociável)
+
+   > **Por que existe esta seção:** o `/generate-tasks` que vem depois usa este Blueprint como **única fonte de verdade**. Se um endpoint, função ou regra ficar genérico aqui, o agente que implementar a task **será forçado a inventar** — e vai produzir mocks, stubs e esqueletos para "preencher o vazio". Detalhe agora.
+   >
+   > Tasks que produzem mock/stub/skeleton **falham** no `dare review` (v2.17+) e bloqueiam o `dare execute --complete`.
+
+   Para **cada** endpoint, função pública, evento ou job declarado no Blueprint, especifique de forma **executável**:
+
+   **Endpoints HTTP/RPC:**
+   - Assinatura completa (método, path, headers, content-type)
+   - Request schema (campos, tipos, restrições, opcionalidade)
+   - Response schema **por status code** (2xx, 4xx, 5xx)
+   - Validações server-side (lista exaustiva — `email único`, `senha ≥ 8 chars + maiúscula + dígito`)
+   - Edge cases enumerados (input vazio, duplicado, expirado, sem permissão)
+   - Side effects (tabelas/filas/caches/emails tocados — em ordem)
+   - Exemplo concreto (payload real, response real — não placeholder)
+
+   **Funções de domínio / services:**
+   - Assinatura tipada (`fn name(args: Types) -> ReturnType`)
+   - Pré-condições e pós-condições verificáveis
+   - Estados de erro com tipo de exceção esperado
+   - Comportamento em concorrência (idempotência, locking, retry)
+
+   **Jobs / event handlers / workers:**
+   - Trigger (evento, cron, fila — nome canônico)
+   - Payload schema tipado
+   - Retry policy (backoff, max attempts, DLQ)
+   - Idempotência (chave + estratégia)
+
+   **Modelos de dados:**
+   - Cada campo: tipo, nullable, default, constraints (unique, fk, check), índices
+   - Triggers / hooks (soft-delete, audit, encryption-at-rest)
+
+   **Critério de "Blueprint detalhado o suficiente"** (auto-validação antes de salvar):
+
+   - [ ] Para cada endpoint, um humano consegue escrever request/response sem perguntar?
+   - [ ] Para cada função pública, está claro o que retorna em todos os caminhos (sucesso + erros enumerados)?
+   - [ ] Edge cases enumerados explicitamente — não "tratar edge cases"?
+   - [ ] Cada validação tem regra concreta — não só "validar email"?
+   - [ ] Cada decisão arquitetural tem **justificativa**?
+
+   **Anti-padrão a evitar:** seções como _"implementar autenticação"_ ou _"validar dados"_ — isso vira stub. Especifique algoritmo, campos, regras.
+
 4. **Salve `DARE/BLUEPRINT.md`** e informe:
 
    _"Blueprint gerado. Revise a arquitetura, os contratos de API e os critérios de DONE de cada fase. Quando aprovado, execute `/generate-tasks` para gerar o DAG e as specs de execução."_

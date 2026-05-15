@@ -375,6 +375,58 @@ of each canonical DARE artifact, active GraphRAG backend, and task progress.
 dare info
 ```
 
+### `dare review` ← new in v2.17.0
+
+**Anti-stub gate.** Audita os arquivos que uma task tocou e detecta padrões de "fake completeness": `TODO`/`FIXME`, stubs (`throw new Error('not implemented')`, `todo!()`, `NotImplementedError`), funções vazias, retorno-fantasma (`return null` como única statement), mocks fora de testes (`jest.fn`, `vi.mock`, `sinon.stub`, `MagicMock`), comentários-placeholder (`// implement later`).
+
+A camada estática (regex, determinística) é só metade. A IDE agent pode rodar a skill `dare-review` / `review-task` para validar critério-a-critério se a implementação atende a spec, emitir um `SemanticVerdict` JSON, e o CLI funde os dois numa única decisão.
+
+```bash
+# Audita os arquivos listados em DARE/EXECUTION/task-034.md
+dare review task-034
+
+# Em CI:
+dare review task-034 --strict --format json
+
+# Lista explícita de arquivos:
+dare review task-034 --files src/auth/login.ts src/auth/register.ts
+
+# Funde com verdito semântico do agente:
+dare review task-034 --from-agent .dare/verdict-task-034.json
+```
+
+**Gate opt-in no Ralph Loop:** com `review.onComplete: true` em `dare.config.json`, `dare execute --complete <id>` bloqueia DONE se a review falhar. Para projetos novos (`dare init` v2.17+) já vem ligado; projetos legados permanecem off até o dev flipar.
+
+### `dare refine` ← new in v2.17.0
+
+**Anti-monstro.** Mede complexidade de uma task e, opcionalmente, propõe quebra em sub-tasks menores. Heurística determinística pesa # arquivos, # funções/endpoints, # testes, # dependências, keywords "pesadas" (refactor/migrate/integrate/multiple) — produz um score em LOW (0–5) / MED (6–12) / HIGH (13–20) / CRITICAL (21+).
+
+```bash
+# Apenas mede e reporta:
+dare refine task-034
+
+# Mede + propõe quebra em sub-tasks (task-034a, task-034b, ...):
+dare refine task-034 --split
+
+# Anota TASKS.md marcando a task para split (o agente regenera as specs):
+dare refine task-034 --split --apply
+
+# Em CI: exit code 2 se HIGH/CRITICAL:
+dare refine task-034 --strict
+```
+
+A camada determinística agrupa arquivos por diretório raiz. A IDE agent (skills `dare-refine` / `refine-task`) refina o split semanticamente — por camada (Model/Controller/Service), por endpoint, por feature, refactor-then-feature, migration-then-code.
+
+Thresholds configuráveis em `dare.config.json`:
+
+```jsonc
+{
+  "refine": {
+    "thresholds": { "low": 5, "med": 12, "high": 20 }
+  }
+}
+```
+
 ### `dare update` ← new in v2.17.0
 
 Sync the **project's DARE setup** (templates, slash commands, skills, schema)
