@@ -2,10 +2,15 @@
  * `dare skill list` — list skills available in the registry or installed in the project.
  *
  * Usage:
- *   dare skill list                  # all skills in the registry (mock)
+ *   dare skill list                  # all skills in the registry (mock + local)
  *   dare skill list --installed      # only installed skills (reads .dare/skills.yml)
  *   dare skill list --json           # JSON output (dare-ax M-03)
  *   dare skill list --installed --json
+ *
+ * Sources shown:
+ *   - Skills from the mock registry (always available)
+ *   - Skills published locally in ~/.dare/registry/ (marked as [local])
+ *   - No duplicates: local skill with same name+version overwrites mock entry
  *
  * @module skills/commands/list
  */
@@ -13,6 +18,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { registry, type RegistrySkill } from '../registry.js';
+import { LocalRegistry, type LocalRegistrySkill } from '../registry-local.js';
 import { ManifestReader, type SkillEntry } from '../manifest.js';
 
 // ---------------------------------------------------------------------------
@@ -30,6 +36,7 @@ interface SkillRow {
   description: string;
   author?: string;
   enabled?: boolean;
+  local?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -55,9 +62,37 @@ export const skillListCommand = new Command('list')
 // ---------------------------------------------------------------------------
 
 function listRegistry(options: ListOptions): void {
-  const skills = registry.loadAll();
+  const mockSkills = registry.loadAll();
+  const localRegistry = new LocalRegistry();
+  const localSkills = localRegistry.list();
 
-  if (skills.length === 0) {
+  // Merge: start with mock skills, then overlay/append local skills.
+  // Local skills with the same name+version replace the mock entry.
+  const rowMap = new Map<string, SkillRow>();
+
+  for (const s of mockSkills) {
+    rowMap.set(`${s.name}@${s.version}`, {
+      name: s.name,
+      version: s.version,
+      description: s.description,
+      author: s.author,
+      local: false,
+    });
+  }
+
+  for (const s of localSkills) {
+    rowMap.set(`${s.name}@${s.version}`, {
+      name: s.name,
+      version: s.version,
+      description: s.description,
+      author: s.author,
+      local: true,
+    });
+  }
+
+  const rows = Array.from(rowMap.values());
+
+  if (rows.length === 0) {
     if (options.json) {
       process.stdout.write(JSON.stringify({ skills: [] }, null, 2) + '\n');
     } else {
@@ -65,13 +100,6 @@ function listRegistry(options: ListOptions): void {
     }
     return;
   }
-
-  const rows: SkillRow[] = skills.map((s: RegistrySkill) => ({
-    name: s.name,
-    version: s.version,
-    description: s.description,
-    author: s.author,
-  }));
 
   if (options.json) {
     process.stdout.write(JSON.stringify({ skills: rows }, null, 2) + '\n');
@@ -151,7 +179,8 @@ function printTable(rows: SkillRow[], showEnabled: boolean): void {
   console.log(chalk.gray(separator));
 
   for (const row of rows) {
-    const namePart = chalk.cyan(row.name.padEnd(nameW));
+    const localTag = row.local === true ? chalk.blue(' [local]') : '';
+    const namePart = chalk.cyan(row.name.padEnd(nameW)) + localTag;
     const versionPart = chalk.white(row.version.padEnd(versionW));
     const descPart = row.description.padEnd(descW);
 
