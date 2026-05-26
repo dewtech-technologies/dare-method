@@ -15,6 +15,7 @@ import { bootstrapCommand } from '../commands/bootstrap.js';
 import { updateCommand } from '../commands/update.js';
 import { reviewCommand } from '../commands/review.js';
 import { refineCommand } from '../commands/refine.js';
+import { newCommand } from '../commands/new.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -26,6 +27,7 @@ program
   .description('DARE Framework - Design, Architect, Review, Execute methodology for AI-assisted development')
   .version(version);
 
+program.addCommand(newCommand);
 program.addCommand(initCommand);
 program.addCommand(bootstrapCommand);
 program.addCommand(discoverCommand);

@@ -10,7 +10,8 @@
     "pnpm": ">=9.0.0"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/stacks/*"
   ],
   "scripts": {
     "dev": "pnpm --recursive --parallel dev",
