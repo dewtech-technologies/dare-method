@@ -16,6 +16,7 @@ import { updateCommand } from '../commands/update.js';
 import { reviewCommand } from '../commands/review.js';
 import { refineCommand } from '../commands/refine.js';
 import { newCommand } from '../commands/new.js';
+import { skillCommand } from '../skills/index.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json') as { version: string };
@@ -41,6 +42,7 @@ program.addCommand(infoCommand);
 program.addCommand(updateCommand);
 program.addCommand(reviewCommand);
 program.addCommand(refineCommand);
+program.addCommand(skillCommand);
 
 program.parse(process.argv);
 
