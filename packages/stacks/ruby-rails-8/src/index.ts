@@ -114,7 +114,13 @@ export class RailsScaffold {
       await this.generateChannels(opts, result);
     }
 
-    // 6. Spec helpers + factories
+    // 6. SummarizeDocument feature
+    await this.generateSummarizeDocument(opts, result);
+
+    // 7. GitHub Actions CI workflow
+    await this.generateGitHubActions(opts, result);
+
+    // 8. Spec helpers + factories
     await this.generateSpecSupport(opts, result);
 
     this.log(opts, `Done! ${result.filesCreated.length} files created in ${opts.outputDir}`);
@@ -126,7 +132,7 @@ export class RailsScaffold {
   // ── Directory structure ────────────────────────────────────────────────────
 
   private async createDirectories(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
-    const dirs = [
+    const dirs: string[] = [
       // Layered Design (ADR-05)
       'app/handlers',
       'app/services',
@@ -160,6 +166,7 @@ export class RailsScaffold {
       'public',
       'tmp',
       '.dare',
+      '.github/workflows',
     ];
 
     for (const dir of dirs) {
@@ -307,6 +314,35 @@ export class RailsScaffold {
         await fs.copy(src, dest);
         result.filesCreated.push(destRel);
       }
+    }
+  }
+
+  private async generateSummarizeDocument(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+    const summarizeFiles: Array<[string, string]> = [
+      ['app/handlers/summarize_handler.rb',                    'app/handlers/summarize_handler.rb'],
+      ['app/services/summarize_document_service.rb',           'app/services/summarize_document_service.rb'],
+      ['app/repositories/document_repository.rb',             'app/repositories/document_repository.rb'],
+      ['spec/services/summarize_document_service_spec.rb',     'spec/services/summarize_document_service_spec.rb'],
+      ['spec/api/summarize_spec.rb',                          'spec/api/summarize_spec.rb'],
+      ['spec/channels/dare_updates_channel_spec.rb',           'spec/channels/dare_updates_channel_spec.rb'],
+    ];
+
+    for (const [templateRel, destRel] of summarizeFiles) {
+      const src  = path.join(this.TEMPLATES_DIR, templateRel);
+      const dest = path.join(opts.outputDir, destRel);
+      if (await fs.pathExists(src)) {
+        await fs.copy(src, dest);
+        result.filesCreated.push(destRel);
+      }
+    }
+  }
+
+  private async generateGitHubActions(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+    const src  = path.join(this.TEMPLATES_DIR, '.github', 'workflows', 'dare-ci.yml');
+    const dest = path.join(opts.outputDir, '.github', 'workflows', 'dare-ci.yml');
+    if (await fs.pathExists(src)) {
+      await fs.copy(src, dest);
+      result.filesCreated.push('.github/workflows/dare-ci.yml');
     }
   }
 
