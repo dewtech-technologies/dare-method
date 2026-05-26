@@ -1,0 +1,23 @@
+name: dare-llm-integration
+version: 1.0.0
+license: MIT
+description: >
+  Skill transversal DARE para integração com LLMs (Large Language Models).
+  Fornece LLMProvider abstraction, caching em memória com TTL, rate limiting
+  via token bucket, prompt templates versionados e validação de output via JSON Schema.
+author: Dewtech Technologies
+metrics:
+  - id: M-01
+    description: 100% de chamadas LLM via LLMProvider injetado
+  - id: M-02
+    description: 100% de responses LLM cacheadas (cache configurado)
+  - id: M-03
+    description: 100% de requests LLM com rate limit configurado
+  - id: M-04
+    description: 100% de respostas LLM validadas contra schema antes usar
+antipatterns:
+  - AP-01: LLM SDK direto em Handler
+  - AP-02: Sem cache
+  - AP-03: Prompt em código
+  - AP-04: User input direto em prompt
+  - AP-05: Trusting LLM output sem validação
