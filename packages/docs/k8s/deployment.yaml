@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-dare-docs
+  namespace: apps
+  labels:
+    app: ui-dare-docs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui-dare-docs
+  template:
+    metadata:
+      labels:
+        app: ui-dare-docs
+    spec:
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ocirsecret
+      containers:
+        - name: ui-dare-docs
+          image: southamerica-east1-docker.pkg.dev/dewtech-tech/dewtech/ui-dare-docs:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10

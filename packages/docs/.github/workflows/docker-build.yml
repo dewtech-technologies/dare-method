@@ -1,0 +1,46 @@
+name: Build & Push ui-dare-docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker southamerica-east1-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t southamerica-east1-docker.pkg.dev/dewtech-tech/dewtech/ui-dare-docs:latest \
+            -t southamerica-east1-docker.pkg.dev/dewtech-tech/dewtech/ui-dare-docs:${{ github.sha }} \
+            packages/docs/
+
+      - name: Push Docker image (latest)
+        run: docker push southamerica-east1-docker.pkg.dev/dewtech-tech/dewtech/ui-dare-docs:latest
+
+      - name: Push Docker image (sha tag)
+        run: docker push southamerica-east1-docker.pkg.dev/dewtech-tech/dewtech/ui-dare-docs:${{ github.sha }}
