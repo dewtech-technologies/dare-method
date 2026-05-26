@@ -1,0 +1,155 @@
+/* MIT License — DARE Method © 2026 Dewtech Technologies */
+
+/* ============================================================
+   BRAND COLOURS (override Material for MkDocs slate scheme)
+   ============================================================ */
+:root,
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #2d7dd2;
+  --md-primary-fg-color--light: #5ba3e8;
+  --md-primary-fg-color--dark:  #1a4a7a;
+  --md-accent-fg-color:         #00d084;
+  --md-accent-fg-color--transparent: rgba(0, 208, 132, 0.08);
+  --md-default-bg-color:        #0a0e1a;
+  --md-default-bg-color--light: #0d1628;
+  --md-default-bg-color--lighter: #112040;
+  --md-code-bg-color:           #060a12;
+  --md-code-fg-color:           #e8eaf0;
+  --md-typeset-color:           #c5cee0;
+  --md-typeset-a-color:         #5ba3e8;
+  --md-footer-bg-color:         #060a12;
+  --md-footer-bg-color--dark:   #060a12;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.md-typeset h1 { color: #e8eaf0; }
+.md-typeset h2 { color: #c5cee0; border-bottom: 1px solid rgba(45, 125, 210, 0.18); padding-bottom: 0.3em; }
+
+.md-typeset code {
+  background: rgba(45, 125, 210, 0.1);
+  border: 1px solid rgba(45, 125, 210, 0.2);
+  border-radius: 4px;
+  color: #00d084;
+  font-size: 0.85em;
+  padding: 1px 6px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.md-header {
+  background: rgba(10, 14, 26, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(45, 125, 210, 0.15);
+}
+
+.md-header__title {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+.md-nav__title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #4a5a72;
+  padding: 8px 12px 4px;
+}
+
+.md-nav__link--active,
+.md-nav__link--active:hover {
+  color: var(--md-accent-fg-color) !important;
+}
+
+.md-nav__item--active > .md-nav__link {
+  color: var(--md-accent-fg-color);
+}
+
+/* ============================================================
+   CODE BLOCKS
+   ============================================================ */
+.md-typeset pre > code {
+  background: #060a12;
+  border: 1px solid rgba(45, 125, 210, 0.18);
+  border-radius: 8px;
+  padding: 1.2em 1.4em;
+  color: #e8eaf0;
+}
+
+.highlight .hll { background-color: rgba(45, 125, 210, 0.12); }
+
+/* Copy button */
+.md-clipboard { color: #4a5a72; }
+.md-clipboard:hover { color: var(--md-accent-fg-color); }
+
+/* ============================================================
+   ADMONITIONS
+   ============================================================ */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+  border-width: 1px;
+  border-left-width: 4px;
+}
+
+.md-typeset .note   { border-color: #2d7dd2; background: rgba(45, 125, 210, 0.06); }
+.md-typeset .tip    { border-color: #00d084; background: rgba(0, 208, 132, 0.06); }
+.md-typeset .warning{ border-color: #ffbd2e; background: rgba(255, 189, 46, 0.06); }
+.md-typeset .danger { border-color: #ff5f57; background: rgba(255, 95, 87, 0.06); }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.md-footer {
+  background: #060a12;
+  border-top: 1px solid rgba(45, 125, 210, 0.12);
+}
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+.md-search__form {
+  background: rgba(13, 22, 40, 0.9);
+  border: 1px solid rgba(45, 125, 210, 0.2);
+  border-radius: 6px;
+}
+
+.md-search__input { color: #e8eaf0; }
+.md-search__input::placeholder { color: #4a5a72; }
+
+/* ============================================================
+   MERMAID diagrams
+   ============================================================ */
+.mermaid { text-align: center; margin: 24px 0; }
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+.md-typeset table:not([class]) {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(45, 125, 210, 0.18);
+}
+
+.md-typeset table:not([class]) thead th {
+  background: rgba(45, 125, 210, 0.12);
+  color: #e8eaf0;
+}
+
+.md-typeset table:not([class]) tbody tr:nth-child(even) {
+  background: rgba(13, 22, 40, 0.5);
+}
