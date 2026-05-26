@@ -1,0 +1,35 @@
+name: dare-layered-design
+version: 1.0.0
+description: >
+  Layered Design skill — enforces a strict 4-layer architecture (Handlers → Services →
+  Repositories → Models) across all DARE projects, regardless of language or framework.
+  Inspired by Vladimir Dementyev's "Layered Design for Ruby on Rails Applications" and
+  Evil Martians methodology.
+author: Dewtech Technologies
+license: MIT
+dependencies: {}
+metrics:
+  - id: M-01
+    description: 100% of Services have unit tests (no real DB or HTTP)
+  - id: M-02
+    description: 0% Handler→Repository direct calls in codebase
+  - id: M-03
+    description: 100% of Handlers use dependency injection (no new Service() inside)
+  - id: M-04
+    description: 100% of Repositories are agnostic to upper layers (no HTTP status codes returned)
+layers:
+  - name: handlers
+    description: HTTP/gRPC entry points — no business logic
+    aliases: [controllers, routers, routes]
+  - name: services
+    description: Business logic — one operation per class/module
+    aliases: [use_cases, interactors, commands]
+  - name: repositories
+    description: Data access — abstractions over DB/cache/external APIs
+    aliases: [repos, data_access, stores]
+  - name: models
+    description: Domain objects — no HTTP or DB concerns
+    aliases: [entities, domain, structs]
+  - name: presenters
+    description: Serializers — converts Models to JSON/XML/etc
+    aliases: [serializers, formatters, views]

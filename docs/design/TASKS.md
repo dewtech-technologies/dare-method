@@ -121,8 +121,9 @@ Objetivo: Escrever todos os DESIGN.md das 6 skills transversais, 1 stack (Rails)
 
 ## Dia 6: DESIGN.md de Defesa e Operação
 
-### ⏳ dare-ops-and-defense (Legal, Trademark, Infrastructure)
-- **Status:** ⏳ TODO
+### ✅ dare-ops-and-defense (Legal, Trademark, Infrastructure)
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/ops/dare-ops-and-defense/DESIGN.md`
 - **Tarefas:**
   - Registros INPI (Brasil) e USPTO (EUA) da marca "DARE"
   - Contratos-modelo para consultoria (NDA, SOW)
@@ -133,23 +134,27 @@ Objetivo: Escrever todos os DESIGN.md das 6 skills transversais, 1 stack (Rails)
 
 ## Dia 7: Setup dos 5 Agents + Orquestração
 
-### ⏳ Agent Setup
-- **Status:** ⏳ TODO
-- **Tasks:**
-  - Criar worktrees para cada agent (`agent-1-skills`, `agent-2-rails`, etc.)
-  - TASKS.md individual por agent com blockers e gates
-  - Acesso compartilhado a DECISIONS.md (central)
-  - Validação de dependências cruzadas
+### ✅ Agent Setup
+- **Status:** ✅ COMPLETO
+- **Branches criadas:** `agent/1-skills`, `agent/2-rails`, `agent/3-cli`
+- **Worktrees criados:** `../dare-agent-1-skills`, `../dare-agent-2-rails`, `../dare-agent-3-cli`
+- **TASKS.md individuais:** `AGENT_1_TASKS.md`, `AGENT_2_TASKS.md`, `AGENT_3_TASKS.md` em cada worktree
+- **DECISIONS.md central:** `docs/design/DECISIONS.md` com D-001 a D-008
+- **Agents 4 e 5** criam repos `dare-content` e `dare-ops` na semana 1
 
 ---
 
 ## Marcos de Qualidade (Semana 0)
 
-- ✅ dare-ax DESIGN.md: assinado off por Wanderson
-- ⏳ Todos 5 demais DESIGN.md: revisão técnica
-- ⏳ DESIGN.md Rails: assinado off como critical path
-- ⏳ Nenhum DESIGN com ambiguidades ou TODOs flutuantes
-- ⏳ TASKS.md individual para cada agent pronto
+- ✅ dare-ax DESIGN.md: completo
+- ✅ Todos 5 demais DESIGN.md das skills transversais: completos
+- ✅ DESIGN.md Rails: completo (CRÍTICO — Agent 2 pronto)
+- ✅ DESIGN.md CLI: completo (Agent 3 pronto)
+- ✅ DESIGN.md Marketing: completo (Agent 4 pronto)
+- ✅ DESIGN.md Ops: completo (Agent 5 pronto)
+- ✅ Worktrees e TASKS.md individuais por agent: prontos
+- ✅ DECISIONS.md central: criado com D-001 a D-008
+- ✅ Nenhum DESIGN com ambiguidades ou TODOs flutuantes: verificado
 
 ---
 

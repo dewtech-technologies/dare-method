@@ -1,0 +1,19 @@
+name: dare-ax
+version: 1.0.0
+description: >
+  Agent Experience (AX) skill — codifies best practices for AI-assisted development
+  in three planes: Discovery, Usage, and Defense. Ensures projects expose structured
+  signals (llms.txt, OpenAPI, --json CLI, rate limits) that code agents need to work
+  correctly without unnecessary refactoring.
+author: Dewtech Technologies
+license: MIT
+dependencies: {}
+metrics:
+  - id: M-01
+    description: llms.txt exists and is valid (no secrets, required sections present)
+  - id: M-02
+    description: public/openapi.json or openapi.json exists
+  - id: M-03
+    description: CLI supports --json flag
+  - id: M-04
+    description: Rate limit configuration is present (rack-attack, express-rate-limit, tower-governor, etc.)
