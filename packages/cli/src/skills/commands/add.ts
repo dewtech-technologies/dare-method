@@ -23,6 +23,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { registry, type RegistrySkill } from '../registry.js';
+import { LocalRegistry } from '../registry-local.js';
 import { ManifestReader, ManifestWriter, type SkillEntry } from '../manifest.js';
 
 // ---------------------------------------------------------------------------
@@ -91,9 +92,34 @@ export const skillAddCommand = new Command('add')
 
     const { name, version: requestedVersion } = parsePackageSpec(spec);
 
-    // ── 2. Look up in registry ───────────────────────────────────────────────
+    // ── 2. Look up in registry (mock first, then local fallback) ─────────────
 
-    const skillMeta = registry.findByName(name);
+    const mockSkillMeta = registry.findByName(name);
+
+    // Fallback: check local registry when mock doesn't know the skill.
+    let skillMeta: RegistrySkill | undefined = mockSkillMeta;
+    if (!skillMeta) {
+      const localRegistry = new LocalRegistry();
+      const localSkill = requestedVersion
+        ? localRegistry.find(name, requestedVersion)
+        : localRegistry.find(name);
+      if (localSkill) {
+        // Adapt LocalRegistrySkill to RegistrySkill shape.
+        skillMeta = {
+          name: localSkill.name,
+          version: localSkill.version,
+          description: localSkill.description,
+          author: localSkill.author,
+          license: localSkill.license,
+          homepage: localSkill.homepage ?? '',
+          repository: localSkill.repository ?? '',
+          keywords: localSkill.keywords ?? [],
+          dependencies: {},
+          published_at: localSkill.published_at ?? new Date().toISOString(),
+          size_kb: localSkill.size_kb ?? 0,
+        };
+      }
+    }
 
     if (!skillMeta) {
       const msg = `Skill "${name}" not found in the registry.`;

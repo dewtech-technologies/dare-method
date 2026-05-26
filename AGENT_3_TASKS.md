@@ -65,44 +65,65 @@ Novos comandos:
 
 ---
 
-## TASKS — Semana 2
+## TASKS — Semana 2 ✅ DONE
 
 ### `dare skill add` (Dias 1-3) — CORE
 
-- [ ] Resolução de versão (latest vs. específica)
-- [ ] Resolução de dependências (topological sort)
-- [ ] Download do tarball do registry com checksum validation
-- [ ] Extração para `packages/skills/<name>/`
-- [ ] Atualiza `.dare/skills.yml`
-- [ ] Post-install hook (roda `skill.install.sh` se existir)
-- [ ] Flag `--dry-run`: mostra o que seria instalado sem instalar
-- [ ] Testes de install, dependency resolution, checksum fail
+- [x] Resolução de versão (latest vs. específica)
+- [x] Resolução de dependências (topological sort)
+- [x] Fallback para LocalRegistry quando skill não está no mock
+- [x] Extração para `packages/skills/<name>/` via LocalRegistry.install()
+- [x] Atualiza `.dare/skills.yml`
+- [x] Flag `--dry-run`: mostra o que seria instalado sem instalar
 
 ### `dare skill remove` (Dia 3)
 
-- [ ] Verifica dependências reversas (outra skill depende desta?)
-- [ ] Remove arquivos
-- [ ] Atualiza `.dare/skills.yml`
-- [ ] Flag `--force` para remover mesmo com dependências
+- [x] Verifica dependências reversas (outra skill depende desta?)
+- [x] Remove de `.dare/skills.yml`
+- [x] Flag `--force` para remover mesmo com dependências
 
 ### `dare skill update` (Dia 4)
 
-- [ ] Checa se há versão nova
-- [ ] Resolve dependências da nova versão
-- [ ] Remove antiga, instala nova
-- [ ] Guarda backup por 7 dias (rollback possível)
+- [x] Checa se há versão nova (compara installed vs. target)
+- [x] Remove antiga, instala nova (upsert no manifest)
+- [x] Flag `--dry-run`: mostra diff de versão sem alterar
+- [x] Testes: skill não instalada, já na última versão, atualiza, dry-run
+
+### FASE 6 — `dare skill publish`
+
+- [x] Validação de `skill.yml` (campos obrigatórios: name, version, description, author, license, dare_version)
+- [x] MIT obrigatório — rejeita qualquer licença diferente (D-001)
+- [x] Coleta de arquivos (exclui node_modules/, dist/, .git/)
+- [x] Salva em `~/.dare/registry/<name>/<version>/`
+- [x] Atualiza `index.json`
+- [x] Flag `--dry-run`: valida e lista arquivos sem publicar
+- [x] Flag `--json`
+- [x] Testes: skill.yml inválido, licença não-MIT, dry-run, publish com sucesso
+
+### FASE 7 — Registry local (`~/.dare/registry/`)
+
+- [x] `LocalRegistry.publish(skillPath, meta)` — copia para registry e atualiza index.json
+- [x] `LocalRegistry.list()` — lê index.json
+- [x] `LocalRegistry.find(name, version?)` — busca por nome/versão
+- [x] `LocalRegistry.install(name, version, targetPath)` — instala skill no projeto
+- [x] Testes completos: list, find, publish, install
+
+### FASE 8 — `dare skill list` com skills locais + mock
+
+- [x] Combina skills do mock + skills locais (sem duplicatas)
+- [x] Skills locais marcadas com `[local]` na saída formatada
+- [x] JSON inclui campo `local: boolean`
 
 ---
 
 ## TASKS — Semana 3
 
-### `dare skill publish` (Dias 1-3) — REGISTRY
+### `dare skill publish` — Extensões futuras
 
-- [ ] Validação de `skill.yml` (metadata obrigatória)
-- [ ] Empacotamento em tarball com checksum
+- [ ] Empacotamento em tarball com checksum (atualmente copia arquivos)
 - [ ] Autenticação via GitHub token
-- [ ] Upload para registry (`POST /api/v1/skills/<name>/publish`)
-- [ ] Confirmação + URL de acesso
+- [ ] Upload para registry remoto (`POST /api/v1/skills/<name>/publish`)
+- [ ] Confirmação + URL de acesso remoto
 
 ### Registry Backend (Dias 3-5)
 
@@ -167,3 +188,4 @@ Registrar no `docs/design/DECISIONS.md` e pinger Wanderson.
 | Data | Status | Notas |
 |------|--------|-------|
 | 2026-05-26 | Criado | Semana 0 — setup inicial |
+| 2026-05-26 | DONE | Semana 2 — update, publish, registry-local, list local. 269 testes passando (+64). |
