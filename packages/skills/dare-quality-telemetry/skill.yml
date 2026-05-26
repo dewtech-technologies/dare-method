@@ -1,0 +1,18 @@
+name: dare-quality-telemetry
+version: 1.0.0
+description: "Quality metrics collection and regression detection for DARE projects"
+author: Wanderson
+license: MIT
+dare_version: ">=3.0.0"
+dependencies:
+  dare-ax: ">=1.0.0"
+  dare-layered-design: ">=1.0.0"
+metrics:
+  - id: M-01
+    description: 100% of builds include metrics collection (skill installed = always true)
+  - id: M-02
+    description: 0 regressions go undetected (baseline file exists for comparison)
+  - id: M-03
+    description: Metrics history maintained (tmp/dare_metrics.json exists)
+  - id: M-04
+    description: GitHub Actions workflow exists (.github/workflows/dare-metrics.yml)

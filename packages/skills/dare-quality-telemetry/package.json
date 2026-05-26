@@ -1,0 +1,48 @@
+{
+  "name": "@dewtech/dare-skill-quality-telemetry",
+  "version": "1.0.0",
+  "description": "dare-quality-telemetry — Quality metrics collection and regression detection for DARE projects",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "skill.yml"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "dare",
+    "dare-method",
+    "dare-quality-telemetry",
+    "metrics",
+    "ci",
+    "quality",
+    "regression-detection"
+  ],
+  "author": "Wanderson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dewtech-technologies/dare-method.git",
+    "directory": "packages/skills/dare-quality-telemetry"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
