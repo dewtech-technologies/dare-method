@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "sync": "tsx scripts/sync-implementations.ts",
-    "build": "tsx scripts/sync-implementations.ts && tsc",
+    "build": "tsx scripts/sync-implementations.ts && tsc && node -e \"require('fs-extra').copySync('src/skills/registry-mock.json','dist/skills/registry-mock.json')\"",
     "dev": "tsx watch src/bin/dare.ts",
     "test": "vitest run",
     "lint": "eslint src --ext .ts",

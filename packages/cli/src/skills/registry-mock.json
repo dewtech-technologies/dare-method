@@ -1,0 +1,109 @@
+{
+  "skills": [
+    {
+      "name": "dare-ax",
+      "version": "1.0.0",
+      "description": "Agent Experience patterns for DARE projects",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["ax", "agent-experience", "discovery"],
+      "dependencies": {},
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 48
+    },
+    {
+      "name": "dare-layered-design",
+      "version": "1.0.0",
+      "description": "Layered architecture patterns (domain / application / infra)",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["layered", "architecture", "ddd"],
+      "dependencies": {
+        "dare-ax": ">=1.0.0"
+      },
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 72
+    },
+    {
+      "name": "dare-llm-integration",
+      "version": "1.0.0",
+      "description": "LLM integration patterns (prompts, chains, tools)",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["llm", "ai", "prompts", "chains"],
+      "dependencies": {
+        "dare-ax": ">=1.0.0"
+      },
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 96
+    },
+    {
+      "name": "dare-frontend-design",
+      "version": "1.0.0",
+      "description": "Frontend architecture patterns (components, state, routing)",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["frontend", "components", "state", "routing"],
+      "dependencies": {
+        "dare-ax": ">=1.0.0"
+      },
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 84
+    },
+    {
+      "name": "dare-realtime",
+      "version": "1.0.0",
+      "description": "Real-time patterns (WebSocket / SSE / CRDT)",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["realtime", "websocket", "sse", "crdt"],
+      "dependencies": {
+        "dare-ax": ">=1.0.0"
+      },
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 112
+    },
+    {
+      "name": "dare-quality-telemetry",
+      "version": "1.0.0",
+      "description": "Quality metrics collection (M-01 to M-04 tracking)",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["quality", "telemetry", "metrics", "observability"],
+      "dependencies": {
+        "dare-ax": ">=1.0.0"
+      },
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 64
+    },
+    {
+      "name": "ruby-rails-8",
+      "version": "1.0.0",
+      "description": "Rails 8 full-stack with all DARE patterns pre-configured",
+      "author": "Wanderson",
+      "license": "MIT",
+      "homepage": "https://github.com/dewtech-technologies/dare-method",
+      "repository": "https://github.com/dewtech-technologies/dare-method",
+      "keywords": ["rails", "ruby", "fullstack", "hotwire"],
+      "dependencies": {
+        "dare-ax": ">=1.0.0",
+        "dare-layered-design": ">=1.0.0",
+        "dare-realtime": ">=1.0.0"
+      },
+      "published_at": "2026-05-26T00:00:00Z",
+      "size_kb": 240
+    }
+  ]
+}
