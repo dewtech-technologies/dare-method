@@ -116,22 +116,40 @@ Novos comandos:
 
 ---
 
-## TASKS — Semana 3
+## TASKS — Semana 3 ✅ DONE
 
 ### `dare skill publish` — Extensões futuras
 
-- [ ] Empacotamento em tarball com checksum (atualmente copia arquivos)
-- [ ] Autenticação via GitHub token
-- [ ] Upload para registry remoto (`POST /api/v1/skills/<name>/publish`)
-- [ ] Confirmação + URL de acesso remoto
+- [x] Autenticação via GitHub token (Bearer token, fase 1)
+- [x] Upload para registry remoto (`POST /api/publish/:name`) com flag `--remote --token`
+- [x] Confirmação + URL de acesso remoto
+- [ ] Empacotamento em tarball com checksum (atualmente copia arquivos) — v1.1
 
 ### Registry Backend (Dias 3-5)
 
-- [ ] Simples HTTP server (Cloudflare Worker ou Vercel Function)
-- [ ] Endpoints: `GET /skills`, `GET /skills/:name`, `POST /skills/:name/publish`
-- [ ] Storage: JSON files em S3 ou GitHub repo (registry-data)
-- [ ] Auth: GitHub JWT
-- [ ] Rate limiting
+- [x] Vercel Functions backend em `packages/registry/`
+- [x] Endpoints: `GET /api/skills`, `GET /api/skills/:name`, `POST /api/publish/:name`
+- [x] Storage: `data/index.json` pré-populado com 6 skills DARE
+- [x] Auth: Bearer token (fase 1 — aceita qualquer token não-vazio)
+- [x] Rate limiting: in-memory sliding window (100 req/min list, 10 publishes/hora)
+- [x] RFC 7807 error format em todos os endpoints (D-006)
+- [x] MIT license enforcement (D-001)
+- [x] CORS headers
+
+### CLI integrado com registry remoto
+
+- [x] `RemoteRegistry` class com fetch + AbortController timeout 3s
+- [x] `RegistryResolver` com prioridade: remote > local > mock
+- [x] `dare skill list` mostra fonte: `[remote]`, `[local]`, `[mock]`
+- [x] `dare skill publish --remote --token <token>` publica no registry remoto
+- [x] Fallback automático quando remote timeout/offline
+
+### Testes — Semana 3
+
+- [x] `packages/registry/tests/skills.spec.ts` — 23 testes
+- [x] `packages/registry/tests/publish.spec.ts` — 26 testes (auth, license, upsert, rate limit)
+- [x] `packages/registry/tests/rate-limit.spec.ts` — 16 testes
+- [x] `packages/cli/src/skills/tests/remote-registry.spec.ts` — 23 testes
 
 ---
 
@@ -189,3 +207,4 @@ Registrar no `docs/design/DECISIONS.md` e pinger Wanderson.
 |------|--------|-------|
 | 2026-05-26 | Criado | Semana 0 — setup inicial |
 | 2026-05-26 | DONE | Semana 2 — update, publish, registry-local, list local. 269 testes passando (+64). |
+| 2026-05-26 | DONE | Semana 3 — registry backend Vercel Functions, RemoteRegistry, RegistryResolver. 357 testes passando (+88). |

@@ -1,19 +1,21 @@
 /**
- * `dare skill publish <path>` — publish a local skill to the local registry.
+ * `dare skill publish <path>` — publish a local skill to the local or remote registry.
  *
  * Usage:
  *   dare skill publish ./packages/skills/my-skill
  *   dare skill publish ./packages/skills/my-skill --dry-run
  *   dare skill publish ./packages/skills/my-skill --json
+ *   dare skill publish ./packages/skills/my-skill --remote --token ghp_abc123
  *
  * Behaviour:
  *   1. Validate that <path>/skill.yml exists and contains required fields.
  *   2. Enforce MIT license (D-001).
  *   3. List all publishable files (excluding node_modules/, dist/, .git/).
  *   4. If --dry-run: report what would be published without writing.
- *   5. Otherwise: copy files into ~/.dare/registry/<name>/<version>/ and
+ *   5. If --remote: publish to Vercel registry backend (requires --token).
+ *   6. Otherwise: copy files into ~/.dare/registry/<name>/<version>/ and
  *      update index.json.
- *   6. Print the "URL" (local path) where the skill is available.
+ *   7. Print the "URL" where the skill is available.
  *
  * @module skills/commands/publish
  */
@@ -24,6 +26,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse as parseYaml } from 'yaml';
 import { LocalRegistry, type LocalRegistrySkill } from '../registry-local.js';
+import { RemoteRegistry } from '../registry-remote.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +35,8 @@ import { LocalRegistry, type LocalRegistrySkill } from '../registry-local.js';
 interface PublishOptions {
   dryRun: boolean;
   json: boolean;
+  remote: boolean;
+  token?: string;
 }
 
 export interface SkillYml {
@@ -44,6 +49,7 @@ export interface SkillYml {
   homepage?: string;
   repository?: string;
   keywords?: string[];
+  dependencies?: Record<string, string>;
 }
 
 export interface PublishResult {
@@ -52,6 +58,7 @@ export interface PublishResult {
   files: string[];
   published: boolean;
   dryRun: boolean;
+  target?: 'local' | 'remote';
   url?: string;
   error?: string;
 }
@@ -154,10 +161,12 @@ export function collectFiles(dir: string, base: string = dir): string[] {
 // ---------------------------------------------------------------------------
 
 export const skillPublishCommand = new Command('publish')
-  .description('Publish a local skill to the local registry (~/.dare/registry/)')
+  .description('Publish a local skill to the registry (local by default, or remote with --remote)')
   .argument('<path>', 'Path to the skill directory containing skill.yml')
   .option('--dry-run', 'Validate and list files without publishing', false)
   .option('--json', 'Output as JSON (machine-readable)', false)
+  .option('--remote', 'Publish to the remote Vercel registry backend', false)
+  .option('--token <github-token>', 'GitHub Bearer token (required with --remote)')
   .action(async (skillPathArg: string, options: PublishOptions) => {
     const skillPath = path.resolve(process.cwd(), skillPathArg);
 
@@ -168,6 +177,18 @@ export const skillPublishCommand = new Command('publish')
       published: false,
       dryRun: options.dryRun,
     };
+
+    // ── 0. Validate --remote requirements ────────────────────────────────────
+
+    if (options.remote && !options.token) {
+      result.error = '--token <github-token> is required when using --remote';
+      if (options.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } else {
+        console.error(chalk.red(`\n  Error: ${result.error}\n`));
+      }
+      process.exit(1);
+    }
 
     // ── 1. Validate skill.yml ─────────────────────────────────────────────────
 
@@ -207,13 +228,15 @@ export const skillPublishCommand = new Command('publish')
     // ── 3. Dry run ─────────────────────────────────────────────────────────────
 
     if (options.dryRun) {
+      const target = options.remote ? 'remote' : 'local';
       if (options.json) {
-        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        process.stdout.write(JSON.stringify({ ...result, target }, null, 2) + '\n');
       } else {
         console.log(chalk.bold.yellow('\n  Dry run — nothing will be published.\n'));
         console.log(`  Skill  : ${chalk.cyan(meta.name)}@${meta.version}`);
         console.log(`  Author : ${meta.author}`);
         console.log(`  License: ${meta.license}`);
+        console.log(`  Target : ${target}`);
         console.log(`\n  Files (${files.length}):`);
         for (const f of files) {
           console.log(`    ${chalk.gray(f)}`);
@@ -223,8 +246,55 @@ export const skillPublishCommand = new Command('publish')
       return;
     }
 
-    // ── 4. Publish ─────────────────────────────────────────────────────────────
+    // ── 4a. Remote publish ──────────────────────────────────────────────────────
 
+    if (options.remote && options.token) {
+      result.target = 'remote';
+      const remote = new RemoteRegistry();
+
+      try {
+        await remote.publish(
+          meta.name,
+          {
+            version: meta.version,
+            description: meta.description,
+            author: meta.author,
+            license: meta.license,
+            dare_version: meta.dare_version,
+            dependencies: meta.dependencies ?? {},
+            keywords: meta.keywords ?? [],
+            homepage: meta.homepage,
+          },
+          options.token,
+        );
+      } catch (err) {
+        result.error = `Remote publish failed: ${err instanceof Error ? err.message : String(err)}`;
+        if (options.json) {
+          process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        } else {
+          console.error(chalk.red(`\n  ${result.error}\n`));
+        }
+        process.exit(1);
+      }
+
+      result.published = true;
+      result.url = `https://dare-registry.vercel.app/api/skills/${meta.name}`;
+
+      if (options.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      } else {
+        console.log(
+          chalk.green(`\n  Published ${chalk.bold(meta.name)}@${meta.version} to remote registry.`),
+        );
+        console.log(chalk.gray(`  URL: ${result.url}`));
+        console.log('');
+      }
+      return;
+    }
+
+    // ── 4b. Local publish ──────────────────────────────────────────────────────
+
+    result.target = 'local';
     const localRegistry = new LocalRegistry();
 
     const registryMeta: LocalRegistrySkill = {
