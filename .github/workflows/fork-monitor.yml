@@ -1,0 +1,22 @@
+name: DARE Fork Monitor
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # toda segunda-feira às 9h UTC
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run DARE Fork Monitor
+        run: python tools/dare-fork-monitor.py --json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
