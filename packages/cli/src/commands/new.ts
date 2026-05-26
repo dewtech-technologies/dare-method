@@ -64,7 +64,14 @@ export const newCommand = new Command('new')
     skipLlm: boolean;
     skipChannels: boolean;
     json: boolean;
+    noBanner: boolean;
   }) => {
+    // Show banner unless suppressed (--no-banner / DARE_NO_BANNER=1 / non-TTY)
+    if (!options.noBanner) {
+      const { printBanner } = await import('../utils/banner.js');
+      printBanner();
+    }
+
     // Validate stack
     if (!SUPPORTED_STACKS.includes(options.stack as SupportedStack)) {
       const msg = `Unknown stack: "${options.stack}". Supported: ${SUPPORTED_STACKS.join(', ')}`;
