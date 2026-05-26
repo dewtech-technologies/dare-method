@@ -23,56 +23,72 @@ Objetivo: Escrever todos os DESIGN.md das 6 skills transversais, 1 stack (Rails)
 
 ---
 
-### ⏳ dare-layered-design (Layered Design Pattern)
-- **Status:** ⏳ TODO
+### ✅ dare-layered-design (Layered Design Pattern)
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/skills/dare-layered-design/DESIGN.md`
 - **Descrição:** Padrões arquiteturais em camadas (inspirado em Vladimir Dementyev, Evil Martians)
 - **Stack-agnóstico:** Controllers → Services → Repositories → Models
 - **Prioridade:** Crítica para Rails (v1.1)
+- **Estrutura:** 13 seções, 5 ADRs (Composition, DI, Single Resp, Repository Abstraction, Model Separation)
 
 ---
 
-### ⏳ dare-llm-integration (LLM-First Development)
-- **Status:** ⏳ TODO
+### ✅ dare-llm-integration (LLM-First Development)
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/skills/dare-llm-integration/DESIGN.md`
 - **Descrição:** Padrões de integração com LLMs em aplicação (completions, embeddings, streaming)
 - **Aplicável a:** Node, Python, Rust principalmente
 - **Prioridade:** Alta (plataforma TubeMind depende)
+- **Estrutura:** 13 seções, 5 ADRs (LLMProvider, Caching, Prompt Templates, Rate Limit, Output Validation)
 
 ---
 
-### ⏳ dare-frontend-design (Frontend Architecture)
-- **Status:** ⏳ TODO
+### ✅ dare-frontend-design (Frontend Architecture)
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/skills/dare-frontend-design/DESIGN.md`
 - **Descrição:** Padrões para React/Vue (components, state, routing)
 - **Stack-agnóstico:** Agnóstica à UI framework, padrões comportamentais
 - **Prioridade:** Média (depois das skills backend)
+- **Estrutura:** 13 seções, 5 ADRs (Composition, Custom Hooks, State Levels, Error Boundaries, Loading States)
 
 ---
 
-### ⏳ dare-realtime (Real-time Features)
-- **Status:** ⏳ TODO
+### ✅ dare-realtime (Real-time Features)
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/skills/dare-realtime/DESIGN.md`
 - **Descrição:** WebSockets, SSE, polling patterns; integração com Rails via Action Cable, Node via Socket.io
 - **Prioridade:** Média (entra em v1.1 via dare-rails-ax)
+- **Estrutura:** 13 seções, 5 ADRs (Event-Driven, Subscriptions Auth, Automatic Reconnect, Event Schema, Fallback)
 
 ---
 
-### ⏳ dare-quality-telemetry (Quality Metrics & CI Integration)
-- **Status:** ⏳ TODO
+### ✅ dare-quality-telemetry (Quality Metrics & CI Integration)
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/skills/dare-quality-telemetry/DESIGN.md`
 - **Descrição:** Coleta de M-01 a M-04 em CI, dashboard opcional, alertas de regression
 - **Crítico para:** Validar 100% conformidade AX nos repos DARE
 - **Prioridade:** Alta (entra logo após dare-ax)
+- **Estrutura:** 13 seções, 5 ADRs (Centralized Collector, Time-Series Storage, CI Fail on <100%, Regression Detection, Optional Dashboard)
 
 ---
 
 ## Dia 3: DESIGN.md da Stack Rails Completa
 
-### ⏳ ruby-rails-8 (Stack Rails 8)
-- **Status:** ⏳ TODO
-- **Estrutura:** 
+### ✅ ruby-rails-8 (Stack Rails 8) — CRÍTICO
+- **Status:** ✅ COMPLETO
+- **Arquivo:** `docs/design/stacks/ruby-rails-8/DESIGN.md`
+- **Linhas:** 2300+ (conforme estimado)
+- **Integração completa:** 
   - Rails 8 com Rails Omakase (Kamal, Solid Cache, Solid Queue, etc.)
-  - Integração com dare-ax (llms.txt, OpenAPI, CLI)
-  - Integração com dare-layered-design (padrão de pastas)
-  - Integração com dare-realtime (Action Cable defaults)
+  - dare-ax (llms.txt, OpenAPI via rswag, CLI)
+  - dare-layered-design (app/handlers/, app/services/, app/repositories/, app/models/)
+  - dare-llm-integration (app/llm/providers/, prompts/, validators/)
+  - dare-realtime (Action Cable com autorização)
+  - dare-frontend-design (React/Vue scaffold)
+  - dare-quality-telemetry (rake dare:metrics)
 - **Prioridade:** ⚠️ MÁXIMA — Agent 2 depende exclusivamente deste DESIGN.md
-- **Estimado:** 2000-3000 linhas
+- **Estrutura:** 13 seções, 6 ADRs, Example Feature Completo, Scaffold Structure, Metrics Rake Task
+- **Criticidade:** Revisão rigorosa necessária antes de merge (documento espinha dorsal)
 
 ---
 
