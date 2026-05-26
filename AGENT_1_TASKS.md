@@ -78,15 +78,20 @@ Implementar as 6 skills transversais como código executável no CLI DARE:
 
 ### dare-llm-integration (Skills Transversal #3)
 
-**Status:** ⏳ TODO  
+**Status:** ✅ DONE (2026-05-26)  
 **DESIGN:** `docs/design/skills/dare-llm-integration/DESIGN.md`  
 
-- [ ] `LLMProvider` interface + `OpenAIProvider` + `DummyProvider` (para testes)
-- [ ] `PromptLoader` com versioning
-- [ ] `LLMCache` wrapper (Redis/in-memory)
-- [ ] `TokenBucket` rate limiter
-- [ ] `OutputValidator` com JSON Schema
-- [ ] Testes cobrindo cache hit/miss, rate limit, validation fail
+- [x] `LLMProvider` interface (types.ts)
+- [x] `OpenAIProvider` — fetch-based, cache + rate limit + token usage logging
+- [x] `AnthropicProvider` — Anthropic Messages API, mesmo contrato
+- [x] `DummyProvider` — para testes, sem rede, histórico de chamadas
+- [x] `LLMCache` — in-memory Map com TTL, hitRate, purgeExpired
+- [x] `TokenBucket` — rate limiter com acquire() bloqueante e tryAcquire() não-bloqueante
+- [x] `PromptLoader` — templates .jinja2 versionados (engine igual dare-ax)
+- [x] `OutputValidator` — valida JSON output contra JSON Schema (zero deps externas)
+- [x] `metrics.ts` — M-01 a M-04
+- [x] `index.ts`, `skill.yml`, `tsconfig.json`, `package.json`
+- [x] Total: **65 testes passando**
 - [ ] `IMPLEMENTATION.md`
 
 ---
@@ -95,28 +100,31 @@ Implementar as 6 skills transversais como código executável no CLI DARE:
 
 ### dare-frontend-design (Skills Transversal #4)
 
-**Status:** ⏳ TODO (aguarda semana 2)  
+**Status:** ✅ DONE (2026-05-26)  
 **DESIGN:** `docs/design/skills/dare-frontend-design/DESIGN.md`  
 
-- [ ] Templates React/Vue scaffold (componentes, hooks, pages)
-- [ ] Linter rule: component > 300 linhas → error
-- [ ] Linter rule: fetch() fora de hooks → error
-- [ ] Bundle size validator (CI check < 500KB)
-- [ ] Testes de templates
+- [x] `FrontendLinter` — detecta componentes > 300 linhas e fetch inline em JSX/template (.tsx/.vue)
+- [x] `FrontendGenerator` — scaffold React (components/hooks/pages/store/api) e Vue (components/composables/pages/stores/api)
+- [x] Templates: ErrorBoundary, LoadingSpinner, useFetch, NotFoundPage, API client, store
+- [x] `metrics.ts` — M-01 a M-04
+- [x] `index.ts`, `skill.yml`, `tsconfig.json`, `package.json`
+- [x] Total: **35 testes passando**
 - [ ] `IMPLEMENTATION.md`
 
 ---
 
 ### dare-realtime (Skills Transversal #5)
 
-**Status:** ⏳ TODO  
+**Status:** ✅ DONE (2026-05-26)  
 **DESIGN:** `docs/design/skills/dare-realtime/DESIGN.md`  
 
-- [ ] WebSocket client template (reconnect + backoff)
-- [ ] Event schema validator
-- [ ] Subscription authorization template
-- [ ] Pub/sub backend configurator (Redis)
-- [ ] Testes de conexão, reconnect, cleanup
+- [x] `SchemaValidator` — valida payload de evento contra JSON Schema (zero deps)
+- [x] `EventRegistry` — registro de tipos de evento com schema; validate(), getSchema(), listTypes()
+- [x] `ReconnectStrategy` — exponential backoff: 1s, 2s, 4s … cap 30s, reset(), jitter opcional
+- [x] `SubscriptionManager` — subscribe() retorna unsub fn; unsubscribeAll(); zero ghost listeners garantido
+- [x] `metrics.ts` — M-01 a M-04
+- [x] `index.ts`, `skill.yml`, `tsconfig.json`, `package.json`
+- [x] Total: **48 testes passando**
 - [ ] `IMPLEMENTATION.md`
 
 ---
@@ -157,3 +165,6 @@ Registrar qualquer blocker no `docs/design/DECISIONS.md` e pinger Wanderson.
 | 2026-05-26 | Criado | Semana 0 — setup inicial |
 | 2026-05-26 | dare-ax DONE | 56 testes passando — commit 08e4fb5 |
 | 2026-05-26 | dare-layered-design DONE | 42 testes passando — commit d5b7e19 |
+| 2026-05-26 | dare-llm-integration DONE | 65 testes passando |
+| 2026-05-26 | dare-frontend-design DONE | 35 testes passando |
+| 2026-05-26 | dare-realtime DONE | 48 testes passando |

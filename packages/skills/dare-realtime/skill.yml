@@ -1,0 +1,21 @@
+name: dare-realtime
+version: 1.0.0
+license: MIT
+description: >
+  Skill transversal DARE para real-time communication. Fornece schema validation
+  de eventos, registro central de tipos de evento, estratégia de reconexão com
+  exponential backoff, e gerenciamento de subscriptions com limpeza garantida
+  (zero ghost listeners).
+author: Dewtech Technologies
+metrics:
+  - id: M-01
+    description: 100% de event types com JSON Schema definido
+  - id: M-02
+    description: 100% de subscriptions autorizadas
+  - id: M-03
+    description: 0 ghost listeners após desconexão
+  - id: M-04
+    description: Estratégia de reconexão configurada
+transports:
+  - WebSocket
+  - SSE

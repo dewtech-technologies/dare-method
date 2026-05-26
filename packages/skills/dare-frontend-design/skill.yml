@@ -1,0 +1,20 @@
+name: dare-frontend-design
+version: 1.0.0
+license: MIT
+description: >
+  Skill transversal DARE para arquitetura frontend. Detecta componentes grandes
+  (> 300 linhas), chamadas fetch inline em JSX/template, e gera scaffold DARE-compliant
+  para projetos React e Vue com error boundaries e loading states.
+author: Dewtech Technologies
+frameworks:
+  - react
+  - vue
+metrics:
+  - id: M-01
+    description: 100% de componentes < 300 linhas
+  - id: M-02
+    description: 0 fetch() direto em JSX/template
+  - id: M-03
+    description: 100% de páginas com error boundary
+  - id: M-04
+    description: Bundle config presente para monitorar tamanho
