@@ -1,0 +1,50 @@
+{
+  "name": "@dewtech/dare-ax",
+  "version": "1.0.0",
+  "description": "dare-ax — Agent Experience (AX) skill for DARE Method v3.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "templates",
+    "skill.yml"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "keywords": [
+    "dare",
+    "dare-method",
+    "dare-ax",
+    "agent-experience",
+    "llms-txt",
+    "ai-agents",
+    "openapi"
+  ],
+  "author": "Dewtech Technologies",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dewtech-technologies/dare-method.git",
+    "directory": "packages/skills/dare-ax"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
