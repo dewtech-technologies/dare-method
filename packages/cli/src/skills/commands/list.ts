@@ -2,23 +2,24 @@
  * `dare skill list` — list skills available in the registry or installed in the project.
  *
  * Usage:
- *   dare skill list                  # all skills in the registry (mock + local)
+ *   dare skill list                  # all skills (remote > local > mock)
  *   dare skill list --installed      # only installed skills (reads .dare/skills.yml)
  *   dare skill list --json           # JSON output (dare-ax M-03)
  *   dare skill list --installed --json
  *
- * Sources shown:
- *   - Skills from the mock registry (always available)
- *   - Skills published locally in ~/.dare/registry/ (marked as [local])
- *   - No duplicates: local skill with same name+version overwrites mock entry
+ * Sources shown (in priority order):
+ *   - [remote] Skills from the Vercel registry backend
+ *   - [local]  Skills published to ~/.dare/registry/
+ *   - [mock]   Bundled fallback (used when remote is offline)
  *
  * @module skills/commands/list
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { registry, type RegistrySkill } from '../registry.js';
-import { LocalRegistry, type LocalRegistrySkill } from '../registry-local.js';
+import { registry } from '../registry.js';
+import { LocalRegistry } from '../registry-local.js';
+import { RegistryResolver, type ResolvedSkill, type SkillSource } from '../registry-remote.js';
 import { ManifestReader, type SkillEntry } from '../manifest.js';
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,8 @@ interface SkillRow {
   description: string;
   author?: string;
   enabled?: boolean;
+  source?: SkillSource;
+  /** @deprecated kept for backwards compat — use `source === 'local'` */
   local?: boolean;
 }
 
@@ -53,7 +56,8 @@ export const skillListCommand = new Command('list')
     if (options.installed) {
       listInstalled(cwd, options);
     } else {
-      listRegistry(options);
+      // listRegistry is async — wrap in promise so Commander doesn't swallow it
+      void listRegistry(options);
     }
   });
 
@@ -61,36 +65,31 @@ export const skillListCommand = new Command('list')
 // Implementations
 // ---------------------------------------------------------------------------
 
-function listRegistry(options: ListOptions): void {
-  const mockSkills = registry.loadAll();
-  const localRegistry = new LocalRegistry();
-  const localSkills = localRegistry.list();
+async function listRegistry(options: ListOptions): Promise<void> {
+  const resolver = new RegistryResolver();
+  let rows: SkillRow[];
 
-  // Merge: start with mock skills, then overlay/append local skills.
-  // Local skills with the same name+version replace the mock entry.
-  const rowMap = new Map<string, SkillRow>();
-
-  for (const s of mockSkills) {
-    rowMap.set(`${s.name}@${s.version}`, {
+  try {
+    const resolved = await resolver.list();
+    rows = resolved.map((s) => ({
       name: s.name,
       version: s.version,
       description: s.description,
       author: s.author,
+      source: s.source,
+      local: s.source === 'local',
+    }));
+  } catch {
+    // Last-resort fallback: use mock only
+    rows = registry.loadAll().map((s) => ({
+      name: s.name,
+      version: s.version,
+      description: s.description,
+      author: s.author,
+      source: 'mock' as SkillSource,
       local: false,
-    });
+    }));
   }
-
-  for (const s of localSkills) {
-    rowMap.set(`${s.name}@${s.version}`, {
-      name: s.name,
-      version: s.version,
-      description: s.description,
-      author: s.author,
-      local: true,
-    });
-  }
-
-  const rows = Array.from(rowMap.values());
 
   if (rows.length === 0) {
     if (options.json) {
@@ -161,6 +160,15 @@ function listInstalled(projectPath: string, options: ListOptions): void {
 // Rendering helpers
 // ---------------------------------------------------------------------------
 
+function sourceTag(source: SkillSource | undefined): string {
+  switch (source) {
+    case 'remote': return chalk.green(' [remote]');
+    case 'local':  return chalk.blue(' [local]');
+    case 'mock':   return chalk.gray(' [mock]');
+    default:       return '';
+  }
+}
+
 function printTable(rows: SkillRow[], showEnabled: boolean): void {
   const nameW = Math.max(4, ...rows.map((r) => r.name.length));
   const versionW = Math.max(7, ...rows.map((r) => r.version.length));
@@ -170,7 +178,7 @@ function printTable(rows: SkillRow[], showEnabled: boolean): void {
     'Name'.padEnd(nameW),
     'Version'.padEnd(versionW),
     'Description'.padEnd(descW),
-    ...(showEnabled ? ['Status'] : ['Author']),
+    ...(showEnabled ? ['Status'] : ['Author', 'Source']),
   ].join('  ');
 
   const separator = '─'.repeat(header.length);
@@ -179,22 +187,21 @@ function printTable(rows: SkillRow[], showEnabled: boolean): void {
   console.log(chalk.gray(separator));
 
   for (const row of rows) {
-    const localTag = row.local === true ? chalk.blue(' [local]') : '';
-    const namePart = chalk.cyan(row.name.padEnd(nameW)) + localTag;
+    const namePart = chalk.cyan(row.name.padEnd(nameW));
     const versionPart = chalk.white(row.version.padEnd(versionW));
     const descPart = row.description.padEnd(descW);
 
-    let lastCol: string;
+    let lastCols: string;
     if (showEnabled) {
-      lastCol =
+      lastCols =
         row.enabled === false
           ? chalk.yellow('disabled')
           : chalk.green('enabled');
     } else {
-      lastCol = chalk.gray(row.author ?? '');
+      lastCols = chalk.gray(row.author ?? '') + '  ' + sourceTag(row.source);
     }
 
-    console.log(`${namePart}  ${versionPart}  ${descPart}  ${lastCol}`);
+    console.log(`${namePart}  ${versionPart}  ${descPart}  ${lastCols}`);
   }
 
   console.log('');
