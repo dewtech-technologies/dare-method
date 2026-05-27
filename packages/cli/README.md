@@ -627,6 +627,22 @@ npm run inspect
 
 ---
 
+## Skills disponíveis (v3.0.0)
+
+**29 skills em paridade total** nas 3 IDEs (Antigravity, Claude Code, Cursor). Cada skill existe em formato nativo de cada uma e é entregue por `dare init` / `dare update`.
+
+| Categoria | Skills | Exemplos |
+|---|---|---|
+| **Método DARE** | 6 | `dare-design`, `dare-blueprint`, `dare-tasks`, `dare-execute`, `dare-review`, `dare-refine` |
+| **DAG runner** | 4 | `dare-dag-build`, `dare-dag-run`, `dare-dag-runner`, `dare-dag-viz` |
+| **Transversais** | 6 | `dare-ax`, `dare-layered-design`, `dare-llm-integration`, `dare-frontend-design`, `dare-realtime`, `dare-quality-telemetry` |
+| **Stack / Tools** | 8 | `dare-docker`, `dare-security`, `dare-telemetry`, `dare-bugfix-design`, `dare-feature-design`, `dare-rust-workspace`, `dare-rust-leptos`, `dare-laravel-api` |
+| **Stacks novas v3.0.0** | 5 | `dare-nestjs-api`, `dare-fastapi-api`, `dare-go-gin-api`, `dare-mcp-server`, `dare-rails-api` |
+
+Ver tabela cruzada completa em [`docs/skills/INDEX.md`](https://github.com/dewtech-technologies/dare-method/blob/main/docs/skills/INDEX.md).
+
+---
+
 ## O que vem com o pacote (v2.0+)
 
 A partir da v2.0 o `@dewtech/dare-cli` é um **pacote único** que inclui todas as
