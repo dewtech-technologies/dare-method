@@ -284,11 +284,12 @@ vem dentro de `@dewtech/dare-cli`. Não há subpacotes para gerenciar.
 
 #### Para `dare init` scaffoldar a stack escolhida
 O `dare init` **executa o scaffold oficial** da stack (`composer create-project`,
-`npx degit vitejs/vite/...`, `cargo init`, `go mod init`, etc.). Você pode
-escolher de onde a toolchain vem:
+`npx degit vitejs/vite/...`, `cargo init`, `go mod init`, `rails new`, etc.).
+Você pode escolher de onde a toolchain vem:
 
 | Stack | Toolchain nativo | Imagem Docker (fallback) |
 |-------|------------------|---------------------------|
+| `ruby-rails-8` | Ruby 3.3+ · Bundler 2+ · Rails 8 — https://www.ruby-lang.org/ | `ruby:3.3-slim` |
 | `php-laravel` | PHP 8.2+ · Composer 2+ — https://getcomposer.org/ | `composer:latest` |
 | `node-nestjs` | Node 18+ (já vem com `npx`) | `node:20-alpine` |
 | `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
@@ -300,6 +301,8 @@ escolher de onde a toolchain vem:
 | `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+
+> **Nota v3.0.0:** `ruby-rails-8` é a única stack com gerador completo em `packages/stacks/`. As demais (php-laravel, node-nestjs, python-fastapi, go-gin, etc.) executam o scaffold oficial do framework + o template de skills DARE por cima. Stacks com gerador próprio em `packages/stacks/` estão no [roadmap v3.1.x](ROADMAP.md#em-desenvolvimento-ativo---v31x).
 
 > **TL;DR:** se você só tem **Docker Desktop**, o `dare init` consegue
 > scaffoldar qualquer stack. Se você tem o toolchain nativo, ele é mais
@@ -355,7 +358,7 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 ### Stacks suportados
 
-**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
+**Backend:** Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 
 **Frontend:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM)
 
