@@ -213,12 +213,12 @@ Inclui:
 
 ## Licença & Atribuição
 
-Esta skill é parte do **DARE CLI** — AGPL v3.
+Esta skill é parte do **DARE CLI** — licença MIT (D-001).
 
 Você pode:
 - ✅ Usar em seus projetos DARE
 - ✅ Modificar para suas necessidades
-- ✅ Compartilhar — contribuições voltam ao DARE
+- ✅ Compartilhar, distribuir e relicenciar derivados (MIT)
 
 Você não pode:
 - ❌ Vender como produto fechado

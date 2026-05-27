@@ -190,8 +190,8 @@ Ver `/docs/DESIGN-TOKENS-EXCALIDRAW.md` para detalhes de cores, fonts, tamanhos,
 
 ## Licença
 
-Esta skill é parte do DARE CLI e está sob AGPL v3.
+Esta skill é parte do DARE CLI e está sob licença MIT (D-001).
 
-Você pode usar, modificar e compartilhar — mas contribuições voltam ao DARE.
+Você pode usar, modificar, compartilhar e distribuir livremente.
 
 Créditos: Inspiração na [Excalidraw Diagram Skill](https://github.com/coleam00/excalidraw-diagram-skill) por Cole Medin.
