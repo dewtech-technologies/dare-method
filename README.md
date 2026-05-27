@@ -14,7 +14,7 @@
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
-> 📢 **[RFC Open] v3.0.0 será AGPL v3** — Leia a proposta em [docs/RFC-AGPL-v3-ADOPTION.md](docs/RFC-AGPL-v3-ADOPTION.md) ou [GitHub Discussions](#). Sua opinião importa!
+> 🚀 **v3.0.0 lançado!** **29 skills em paridade total nas 3 IDEs** (Antigravity, Claude Code, Cursor) + 5 novas skills de stack (NestJS, FastAPI, Go/Gin, MCP Server, Rails). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
@@ -219,6 +219,37 @@ Porque a IA, igual ao Ralph Wiggum, **persiste confiante** mesmo errando. Não d
 | JetBrains AI Assistant | 🔜 Roadmap | — |
 
 Cada implementação tem README próprio com setup detalhado.
+
+---
+
+## 🔌 Skills disponíveis (v3.0.0)
+
+**29 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
+
+| IDE | Diretório | Formato |
+|---|---|---|
+| Antigravity | `implementations/antigravity/.agents/skills/<name>/SKILL.md` | YAML+markdown |
+| Claude | `implementations/claude/.claude/commands/<name>.md` | slash-command markdown |
+| Cursor | `implementations/cursor/.cursor/rules/skill-<name>.mdc` | rule frontmatter |
+
+Veja o **[índice completo de skills](docs/skills/INDEX.md)** com tabela cruzada IDE × skill.
+
+### Por categoria
+
+**Método DARE (6) — fases canônicas:**
+`dare-design` · `dare-blueprint` · `dare-tasks` · `dare-execute` · `dare-review` · `dare-refine`
+
+**DAG runner (4) — orquestração de tasks paralelas:**
+`dare-dag-build` (só regenera yaml) · `dare-dag-run` (só executa) · `dare-dag-runner` (build+run+viz) · `dare-dag-viz` (Excalidraw)
+
+**Transversais (6) — princípios de engenharia que se aplicam a qualquer stack:**
+`dare-ax` (Agent Experience) · `dare-layered-design` (4 camadas) · `dare-llm-integration` (providers+cache) · `dare-frontend-design` (componentes+estado) · `dare-realtime` (WS/SSE) · `dare-quality-telemetry` (M-01..M-04 + CI)
+
+**Stack/Tools (8) — escopo específico:**
+`dare-bugfix-design` · `dare-feature-design` · `dare-docker` · `dare-security` (OWASP A01-A10) · `dare-telemetry` · `dare-rust-workspace` · `dare-rust-leptos` · `dare-laravel-api`
+
+**Stacks novas (5) — adicionadas na v3.0.0:**
+`dare-nestjs-api` (Node + NestJS + Prisma) · `dare-fastapi-api` (Python + FastAPI + Pydantic) · `dare-go-gin-api` (Go + Gin/stdlib) · `dare-mcp-server` (MCP TS/Py) · `dare-rails-api` (Ruby Rails 8 + Solid Queue + Action Cable)
 
 ---
 

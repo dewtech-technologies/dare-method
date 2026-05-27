@@ -9,6 +9,75 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.0.0] — 2026-05
+
+Release **major** focada em **paridade total entre IDEs** e **expansão de cobertura de stacks**. Sem breaking change funcional — o bump é major porque o número de skills disponíveis em cada IDE +duplicou.
+
+### ✨ Adicionado — 29 skills em paridade nas 3 IDEs
+
+Todas as skills DARE agora existem nas 3 implementations (Antigravity, Claude Code, Cursor) com formato nativo de cada uma. Veja o [índice completo](docs/skills/INDEX.md).
+
+**6 Skills transversais (NEW como skill de IDE)** — antes existiam só como bibliotecas em `packages/skills/`, agora também em cada IDE:
+
+- `dare-ax` — Agent Experience: `llms.txt`, OpenAPI, `--json` flags, rate limits (métricas M-01 a M-04)
+- `dare-layered-design` — Arquitetura em 4 camadas (Handler → Service → Repository → Model) com gate de violação
+- `dare-llm-integration` — Providers LLM, cache de prompt, rate limit, templates versionados
+- `dare-frontend-design` — Componentes, state management, error boundaries, design system first
+- `dare-realtime` — WebSocket/SSE, reconnect automático, subscription manager
+- `dare-quality-telemetry` — Métricas de qualidade, detecção de regressão, GitHub Actions gates
+
+**5 Skills de stack novas** — backend completo da apresentação v2.17 finalmente em forma de skill:
+
+- `dare-nestjs-api` — Node.js + NestJS + Prisma + Swagger
+- `dare-fastapi-api` — Python + FastAPI + Pydantic + uvicorn
+- `dare-go-gin-api` — Go + Gin/stdlib + sqlc
+- `dare-mcp-server` — MCP Server (TypeScript ou Python, stdio/SSE/HTTP)
+- `dare-rails-api` — Ruby + Rails 8 + Solid Queue + Action Cable
+
+**Skills do DAG agora granulares e paritárias nas 3 IDEs:**
+
+- `dare-dag-build` — só regenerar `dare-dag.yaml` a partir do BLUEPRINT existente
+- `dare-dag-run` — só executar grafo já aprovado (sem regenerar)
+- `dare-dag-runner` — wrapper agregador: build + run + viz num único comando
+- `dare-dag-viz` — diagrama Excalidraw com cores por complexidade e status
+
+**Lacunas históricas preenchidas:**
+
+- `dare-bugfix-design` agora no Claude (antes só Antigravity + Cursor)
+- `dare-feature-design` agora no Claude
+- `dare-docker` agora no Antigravity + Claude (antes só Cursor)
+- `dare-security` agora no Antigravity (antes só Claude + Cursor)
+- `dare-telemetry` agora no Antigravity + Claude (antes só Cursor)
+- `dare-laravel-api` agora no Antigravity + Claude
+- `dare-rust-leptos` agora no Antigravity + Cursor
+
+### 🐛 Corrigido
+
+- Limpeza de referências obsoletas de licença em arquivos de skill — DARE é MIT (D-001), sempre foi e continua sendo
+
+### 📁 Mudanças estruturais
+
+- **+53 arquivos novos** em `implementations/` (+11.681 linhas)
+- Cada skill nova inclui seção "Quando NÃO usar" + "Equivalência entre IDEs" para navegação cruzada
+- Paridade nominal: **29/29 skills × 3 IDEs = 87 arquivos de skill** (antes era ~38 com sobreposição parcial)
+- Novo: [`docs/skills/INDEX.md`](docs/skills/INDEX.md) com tabela cruzada IDE × skill
+- Novo: [`ROADMAP.md`](ROADMAP.md) na raiz, alinhado com D-005
+
+### Migração de v2.17.x → v3.0.0
+
+```bash
+# 1. Atualize o CLI
+npm install -g @dewtech/dare-cli@3.0.0
+
+# 2. Em cada projeto DARE existente, sincronize skills/comandos
+cd meu-projeto-dare
+dare update            # adiciona as skills novas; preserva DESIGN/BLUEPRINT/TASKS
+```
+
+Sem breaking change funcional. Toda skill que existia antes continua existindo (só ganhou irmãs nas outras IDEs).
+
+---
+
 ## [2.17.0] — 2026-05
 
 Release grande, **três frentes complementares** que resolvem três problemas reais identificados em uso:

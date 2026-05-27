@@ -3,7 +3,7 @@
 > **Status:** Implementation Complete (Ready for v2.16.0)  
 > **Date:** 2026-05-14  
 > **Author:** Wanderson Leandro (Dewtech Technologies)  
-> **License:** AGPL v3
+> **License:** MIT (D-001)
 
 ---
 
@@ -299,16 +299,13 @@ https://excalidraw.com
 
 ## License
 
-This feature is part of **DARE CLI** — **AGPL v3**.
+This feature is part of **DARE CLI** — **MIT** (D-001 — MIT permanent).
 
 You can:
 - ✅ Use in your DARE projects
 - ✅ Modify for your needs
-- ✅ Contribute improvements (they come back to DARE)
-
-You cannot:
-- ❌ Use as proprietary commercial product
-- ❌ Remove attribution
+- ✅ Contribute improvements via PR
+- ✅ Distribute and re-license derivatives per MIT terms
 
 ---
 
@@ -318,8 +315,7 @@ You cannot:
 2. ✅ Test with real projects (load their dare-dag.yaml)
 3. ✅ Verify colors/layout match design tokens
 4. ✅ Get feedback from users
-5. ⏳ Plan v3.0.0 AGPL v3 migration
-6. ⏳ RFC and merge timeline
+5. ✅ v3.0.0 released under MIT (D-001)
 
 ---
 
