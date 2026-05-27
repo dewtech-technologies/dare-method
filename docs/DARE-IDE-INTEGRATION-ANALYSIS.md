@@ -474,7 +474,7 @@ DARE Explorer
 
 ### Short Term (Next 2 weeks)
 
-1. **Publish RFC for AGPL v3** ✅ (Already in progress)
+1. **License: MIT** (D-001 — MIT permanent)
 2. **Release v2.16.0** (Excalidraw) — May 26
 3. **Plan VSCode Extension** — Option A (MVP + UI phases)
 4. **Release v2.17.0, v2.18.0** — Jun 2-15
@@ -559,4 +559,4 @@ vscode-dare/                   ← New repo
 
 **Document Version:** 1.0  
 **Last Updated:** 2026-05-14  
-**License:** AGPL v3
+**License:** MIT (D-001)

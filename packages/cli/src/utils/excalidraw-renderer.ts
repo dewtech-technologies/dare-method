@@ -7,7 +7,7 @@
  * - Tasks are grouped by rank in swim lanes
  *
  * Design tokens: /docs/DESIGN-TOKENS-EXCALIDRAW.md
- * License: AGPL v3 (part of DARE CLI)
+ * License: MIT (D-001 — part of DARE CLI)
  */
 
 import { Dag, DagTask, TaskStatus, computeRanks } from '../dag-runner/run_dag.js';

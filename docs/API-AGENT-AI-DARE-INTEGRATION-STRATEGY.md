@@ -467,7 +467,7 @@ Result: Skills available as `/skills/*` endpoints on API Agent AI.
 
 | Product | Positioning |
 |---------|---|
-| **DARE CLI (AGPL)** | Free, open-source methodology + orchestration |
+| **DARE CLI (MIT)** | Free, open-source methodology + orchestration |
 | **API Agent AI** | Paid cloud backend OR self-hosted enterprise license |
 | **DARE Desktop** | Paid UI/orchestration for teams ($29-99/mo) |
 | **Integration** | Desktop uses API Agent AI backend (cloud or self-hosted) |
@@ -478,9 +478,9 @@ Result: Skills available as `/skills/*` endpoints on API Agent AI.
 
 ### June 2026 (v3.0.0)
 
-- ✅ Publish RFC (AGPL v3)
+- ✅ License: MIT (D-001 — MIT permanent)
 - ✅ Release v2.16.0 (Excalidraw)
-- 🔄 Release v2.17.0 (Ruby on Rails)
+- ✅ Release v2.17.0 (Ruby on Rails)
 - 🔄 Release v2.18.0 (Flutter)
 - 📋 DECISION: Proceed with Agent AI integration? (Phase 1)
 
@@ -579,7 +579,7 @@ Result: Skills available as `/skills/*` endpoints on API Agent AI.
 
 **When to start Phase 1?**
 
-- 🟢 **After v3.0.0 (mid-June)** — Full focus on AGPL migration first
+- 🟢 **After v3.0.0 (mid-June)** — Full focus on skill parity rollout first
 - 🟡 **In parallel (May-June)** — Can run concurrently if team capacity allows
 
 ### Question 3: Ownership
@@ -595,7 +595,7 @@ Result: Skills available as `/skills/*` endpoints on API Agent AI.
 
 - 🎯 **"DARE: The AI-First Development Framework"**
 - Emphasis: End-to-end, from design to autonomous execution
-- Pricing: DARE (free AGPL) + API Agent AI (cloud/self-hosted)
+- Pricing: DARE (free MIT) + API Agent AI (cloud/self-hosted)
 
 ---
 
@@ -609,14 +609,14 @@ Result: Skills available as `/skills/*` endpoints on API Agent AI.
 
 ### Short Term (Next 2 Weeks)
 
-1. Publish RFC (AGPL v3) ✅ (ready)
+1. License: MIT (D-001 — MIT permanent)
 2. Release v2.16.0 (Excalidraw)
 3. Decide on Agent API integration
 4. Start Phase 1 implementation (if approved)
 
 ### Medium Term (June-September)
 
-1. v3.0.0 AGPL release (with or without Phase 1)
+1. v3.0.0 MIT release with skill parity 29/29 (with or without Phase 1)
 2. v3.1.0 - v3.3.0 Phase integration rollout
 3. Unified DARE + API Agent AI platform
 
@@ -639,7 +639,7 @@ Result: Skills available as `/skills/*` endpoints on API Agent AI.
 
 **Document Version:** 1.0  
 **Last Updated:** 2026-05-14  
-**License:** AGPL v3
+**License:** MIT (D-001)
 
 ---
 

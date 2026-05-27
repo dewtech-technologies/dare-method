@@ -1,7 +1,7 @@
 # DARE Design Tokens — Excalidraw Visualization
 
 > **Propósito:** Padrões visuais consistentes para diagramas DAG (task graphs) no DARE  
-> **Licença:** AGPL v3 (parte do DARE CLI)  
+> **Licença:** MIT (parte do DARE CLI — D-001)  
 > **Referência:** Análise original em [DARE-Excalidraw-Skill-Analysis.md](../Projetos/fermio-plataform/DARE-Excalidraw-Skill-Analysis.md)  
 > **Créditos:** Inspiração na [Excalidraw Diagram Skill](https://github.com/coleam00/excalidraw-diagram-skill) por Cole Medin
 
@@ -367,14 +367,11 @@ Veja exemplo renderizado em: `DARE/dag-graph.excalidraw` (gerado por `dare dag v
 
 ## Licença
 
-Este documento e as convenções aqui definidas são parte do **DARE CLI** e licenciadas sob **AGPL v3**.
+Este documento e as convenções aqui definidas são parte do **DARE CLI** e licenciadas sob **MIT** (D-001 — MIT permanente).
 
 Você é livre para:
 - ✅ Usar essas cores em seus projetos DARE
 - ✅ Customizar para sua organização
-- ✅ Contribuir com melhorias (que voltarão ao DARE via AGPL)
-
-Você **não** pode:
-- ❌ Usar como "seu sistema de design" fechado comercialmente
-- ❌ Remover atribuições/créditos
+- ✅ Contribuir com melhorias via PR
+- ✅ Distribuir e relicenciar derivados conforme MIT permite
 
