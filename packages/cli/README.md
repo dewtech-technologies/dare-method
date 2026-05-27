@@ -16,6 +16,7 @@ means it literally runs:
 
 | Stack | What `dare init` runs |
 |-------|----------------------|
+| `ruby-rails-8` | `rails new . --api --skip-test --skip-bundle --database=postgresql` + DARE templates (`packages/stacks/ruby-rails-8/` generator with Layered Design, OpenAPI, LLM integration, Action Cable, RSpec) |
 | `php-laravel` | `composer create-project laravel/laravel:^11 .` |
 | `node-nestjs` | `npx @nestjs/cli new . --strict --skip-git` |
 | `python-fastapi` | `python -m venv .venv && python -m pip install -r requirements.txt` |
@@ -28,7 +29,7 @@ means it literally runs:
 | `mcp-server-node-ts` | `npm init` + `@modelcontextprotocol/sdk` |
 | `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
 
-These need a working `composer` / `npm` / `cargo` / `python` / `go`
+These need a working `ruby` / `composer` / `npm` / `cargo` / `python` / `go`
 **somewhere**. There are three ways to provide it — you pick at init time
 (prompt below), and the choice is saved in `dare.config.json` so
 `dare bootstrap` reuses it later.
@@ -139,6 +140,7 @@ Pick **one** of the two paths per stack:
 
 | Stack | Native toolchain | Docker fallback (used if native missing) |
 |-------|------------------|------------------------------------------|
+| `ruby-rails-8` | Ruby 3.3+ · Bundler 2+ · Rails 8 — https://www.ruby-lang.org/ | `ruby:3.3-slim` |
 | `php-laravel` | PHP 8.2+ · Composer 2+ — https://getcomposer.org/ | `composer:latest` |
 | `node-nestjs` | Node 18+ (bundles `npx`) | `node:20-alpine` |
 | `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
@@ -150,6 +152,8 @@ Pick **one** of the two paths per stack:
 | `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** — `cargo install trunk` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+
+> **v3.0.0:** `ruby-rails-8` is the only stack with a full generator in `packages/stacks/`. All others run the framework's official scaffold + DARE skill templates on top. Full generators for `node-nestjs`, `python-fastapi`, `go-gin`, `php-laravel` and MCP servers are on the [v3.1.x roadmap](https://github.com/dewtech-technologies/dare-method/blob/main/ROADMAP.md#em-desenvolvimento-ativo---v31x).
 
 > **TL;DR:** if you have **Docker Desktop** installed, you don't strictly need
 > any other toolchain — `dare init` will pull the right image on demand.
@@ -620,7 +624,7 @@ npm run inspect
 
 | Type | Options |
 |------|---------|
-| **Backend** | Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib |
+| **Backend** | Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib |
 | **Frontend** | React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM) |
 | **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
 | **IDE / Agent** | Claude Code · Cursor · Antigravity · Hybrid |

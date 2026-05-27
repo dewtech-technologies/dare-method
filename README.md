@@ -284,11 +284,12 @@ vem dentro de `@dewtech/dare-cli`. Não há subpacotes para gerenciar.
 
 #### Para `dare init` scaffoldar a stack escolhida
 O `dare init` **executa o scaffold oficial** da stack (`composer create-project`,
-`npx degit vitejs/vite/...`, `cargo init`, `go mod init`, etc.). Você pode
-escolher de onde a toolchain vem:
+`npx degit vitejs/vite/...`, `cargo init`, `go mod init`, `rails new`, etc.).
+Você pode escolher de onde a toolchain vem:
 
 | Stack | Toolchain nativo | Imagem Docker (fallback) |
 |-------|------------------|---------------------------|
+| `ruby-rails-8` | Ruby 3.3+ · Bundler 2+ · Rails 8 — https://www.ruby-lang.org/ | `ruby:3.3-slim` |
 | `php-laravel` | PHP 8.2+ · Composer 2+ — https://getcomposer.org/ | `composer:latest` |
 | `node-nestjs` | Node 18+ (já vem com `npx`) | `node:20-alpine` |
 | `python-fastapi` | Python 3.11+ — https://www.python.org/downloads/ | `python:3.12-slim` |
@@ -300,6 +301,8 @@ escolher de onde a toolchain vem:
 | `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
 | `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+
+> **Nota v3.0.0:** `ruby-rails-8` é a única stack com gerador completo em `packages/stacks/`. As demais (php-laravel, node-nestjs, python-fastapi, go-gin, etc.) executam o scaffold oficial do framework + o template de skills DARE por cima. Stacks com gerador próprio em `packages/stacks/` estão no [roadmap v3.1.x](ROADMAP.md#em-desenvolvimento-ativo---v31x).
 
 > **TL;DR:** se você só tem **Docker Desktop**, o `dare init` consegue
 > scaffoldar qualquer stack. Se você tem o toolchain nativo, ele é mais
@@ -355,7 +358,7 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 ### Stacks suportados
 
-**Backend:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
+**Backend:** Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
 
 **Frontend:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM)
 
@@ -492,33 +495,14 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 
 ## 🗺️ Roadmap
 
-### Concluído ✅
+Veja o [**ROADMAP.md**](ROADMAP.md) na raiz do repositório com:
 
-- [x] CLI standalone (`dare init`, `dare design`, `dare blueprint`, `dare execute`)
-- [x] **`dare discover`** — detecta e instala DARE em projetos existentes sem tocar no código
-- [x] **Tipo de projeto `mcp-server`** — templates TypeScript e Python com stdio/SSE/HTTP Stream
-- [x] **Suporte ao Claude Code** — `CLAUDE.md`, `.claude/commands/`, `.claude/settings.json` com hooks
-- [x] Templates por linguagem: Rust/Axum, Node.js/NestJS, Python/FastAPI, PHP/Laravel
-- [x] Templates frontend: React 18+, Vue 3+, Leptos fullstack (SSR+WASM), Leptos CSR (WASM)
-- [x] Execução paralela de tasks com DAG Task Runner
-- [x] MCP Server local para economia de tokens (90% de redução)
-- [x] GraphRAG com SQLite para contexto persistente
-- [x] Publicação no npm registry (`@dewtech/dare-cli`)
-- [x] GitHub Actions para CI/CD (build, test, release)
-- [x] **v2.0:** consolidação dos pacotes em `@dewtech/dare-cli` único
-- [x] **v2.11:** suporte a Leptos 0.7 — fullstack (cargo-leptos + Axum) e CSR (trunk); skill `/dare-rust-leptos` com idioms, antipatterns e templates de tasks
-- [x] **v2.12:** estrutura Rust monorepo corrigida para `crates/server` + `crates/web` (padrão Cargo workspace); `--vcs none` automático em crates membros; opção de layout single-crate vs multi-crate (`{name}-core / server / web / cli`) no `dare init`
-- [x] **v2.13:** templates de DESIGN e BLUEPRINT reestruturados com RF/RNF/RS numerados, stakeholders, métricas de sucesso e critérios de DONE por fase; Ralph Loop expandido com auditoria de dependências (`npm audit` / `cargo audit` / `pip-audit` / `composer audit`) — CVE HIGH/CRITICAL bloqueia task; skill de segurança reescrita (OWASP A01–A10 completo, supply chain, prompt injection, examples por stack); novo slash command `/dare-security`; blueprint phase separation enforced (`/dare-blueprint` gera somente `BLUEPRINT.md`); `cratePrefix` prompt para layout multi-crate Rust; `Cargo.lock` removido de crates membros do workspace
-- [x] **v2.14:** fix sync de templates — `dare init` agora instala corretamente os comandos de blueprint com phase separation (tasks só após aprovação humana via `/generate-tasks` / `/dare-tasks`)
-- [x] **v2.15:** fix package names por crate em monorepo Rust (sem colisão de nomes); `Cargo.lock` removido após `cargo fetch` em bootstraps Leptos
+- **Shipped** — tudo que está em produção na v3.0.0 (29 skills nas 3 IDEs, stack Ruby on Rails 8, CLI/GraphRAG/MCP/DAG)
+- **Em desenvolvimento ativo (v3.1.x)** — stacks de scaffold completas para NestJS/FastAPI/Go-Gin/MCP/Laravel, frontend stacks, registry remoto público
+- **Planejado (v3.2.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
+- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.0.0 atual
 
-### Próximos passos 🔜
-
-- [ ] Implementação para **VS Code + Continue**
-- [ ] Templates para Go e Kotlin
-- [ ] Site dedicado em `dare-method.dev`
-- [ ] Curso / certificação
-- [ ] DARE Cloud (GraphRAG remoto para times)
+Detalhes técnicos de cada release ficam no [**CHANGELOG.md**](CHANGELOG.md).
 
 ---
 
