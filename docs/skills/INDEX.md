@@ -1,6 +1,6 @@
 # DARE Skills - Indice de paridade
 
-> **v3.0.0** - 30 skills x 3 IDEs = **90 arquivos de skill** em paridade total.
+> **v3.0.0** - 31 skills x 3 IDEs = **93 arquivos de skill** em paridade total.
 > Toda skill listada aqui esta implementada e funcional nas 3 implementations.
 
 ---
@@ -81,11 +81,12 @@ Cliques nas colunas vao direto para os arquivos.
 
 ---
 
-## Brownfield (1 skill) - projetos legados
+## Brownfield (2 skills) - projetos legados
 
 | Skill | Funcao | Antigravity | Claude | Cursor |
 |---|---|---|---|---|
 | dare-reverse | Fase 0: camada semantica da engenharia reversa - preenche IDEIA.md + module-*.md (pareia com o comando `dare reverse`) | [SKILL.md](../../implementations/antigravity/.agents/skills/dare-reverse/SKILL.md) | [dare-reverse.md](../../implementations/claude/.claude/commands/dare-reverse.md) | [skill-reverse.mdc](../../implementations/cursor/.cursor/rules/skill-reverse.mdc) |
+| dare-dna | Camada semantica do DNA: transforma fatos de convencao em regras acionaveis no PROJECT-DNA.md (pareia com o comando `dare dna`) | [SKILL.md](../../implementations/antigravity/.agents/skills/dare-dna/SKILL.md) | [dare-dna.md](../../implementations/claude/.claude/commands/dare-dna.md) | [skill-dna.mdc](../../implementations/cursor/.cursor/rules/skill-dna.mdc) |
 
 ---
 
@@ -98,8 +99,8 @@ Cliques nas colunas vao direto para os arquivos.
 | Transversais | 6 | 18 |
 | Stack / Tools | 8 | 24 |
 | Stacks novas v3.0.0 | 5 | 15 |
-| Brownfield | 1 | 3 |
-| **Total** | **30** | **90** |
+| Brownfield | 2 | 6 |
+| **Total** | **31** | **93** |
 
 ---
 
