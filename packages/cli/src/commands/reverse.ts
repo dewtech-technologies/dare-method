@@ -12,12 +12,20 @@ import {
   renderArchitectureExcalidraw,
   moduleSpecFilename,
 } from '../utils/reverse-facts.js';
+import {
+  parseSpecConfidence,
+  renderConfidenceReport,
+  renderCodeSpecMatrix,
+  aggregate,
+  type SpecConfidence,
+} from '../utils/confidence.js';
 
 interface ReverseOptions {
   dir?: string;
   check?: boolean;
   modules?: string;
   excalidraw?: boolean; // commander sets this false for --no-excalidraw
+  report?: boolean;
 }
 
 export const reverseCommand = new Command('reverse')
@@ -28,8 +36,15 @@ export const reverseCommand = new Command('reverse')
   .option('--check', 'Only show detected modules without writing artifacts')
   .option('--modules <list>', 'Limit to specific modules (comma-separated ids/names)')
   .option('--no-excalidraw', 'Skip generating the editable .excalidraw architecture canvas')
+  .option('--report', 'Compute the confidence report + code-spec matrix from already-marked specs')
   .action(async (opts: ReverseOptions) => {
     const targetDir = path.resolve(opts.dir ?? process.cwd());
+
+    // ── Report mode: parse markers from existing specs, no code re-scan ────
+    if (opts.report) {
+      await runConfidenceReport(targetDir);
+      return;
+    }
 
     console.log(chalk.blue.bold('\n🔁 DARE Framework - Reverse Engineering (Phase 0)\n'));
     console.log(chalk.gray(`  Scanning: ${targetDir}\n`));
@@ -113,6 +128,82 @@ export const reverseCommand = new Command('reverse')
     console.log(`  ${chalk.gray('2.')} Review DARE/IDEIA.md and correct any wrong inference.`);
     console.log(`  ${chalk.gray('3.')} Promote to a DESIGN with: dare design "<what this project does>"\n`);
   });
+
+async function runConfidenceReport(targetDir: string): Promise<void> {
+  const dareDir = path.join(targetDir, 'DARE');
+  const reverseDir = path.join(dareDir, 'REVERSE');
+
+  console.log(chalk.blue.bold('\n🔎 DARE Reverse - Confidence Report\n'));
+
+  if (!(await fs.pathExists(reverseDir))) {
+    console.log(chalk.red('No DARE/REVERSE/ found. Run `dare reverse` (and /dare-reverse) first.'));
+    process.exit(1);
+  }
+
+  const specs: SpecConfidence[] = [];
+  const ideiaPath = path.join(dareDir, 'IDEIA.md');
+  if (await fs.pathExists(ideiaPath)) {
+    specs.push(parseSpecConfidence('IDEIA.md', await fs.readFile(ideiaPath, 'utf-8')));
+  }
+  const moduleFiles = (await fs.readdir(reverseDir))
+    .filter((f) => /^module-.*\.md$/.test(f))
+    .sort();
+  for (const f of moduleFiles) {
+    specs.push(parseSpecConfidence(f, await fs.readFile(path.join(reverseDir, f), 'utf-8')));
+  }
+
+  const { counts, index } = aggregate(specs);
+  if (counts.total === 0) {
+    console.log(chalk.yellow('No confidence markers (🟢/🟡/🔴) found yet.'));
+    console.log(chalk.gray('Run /dare-reverse in your IDE to mark claims, then re-run --report.\n'));
+    return;
+  }
+
+  const generatedAt = new Date().toISOString();
+  const spinner = ora('Computing confidence report...').start();
+  try {
+    await fs.writeFile(
+      path.join(reverseDir, 'confidence-report.md'),
+      renderConfidenceReport(specs, generatedAt),
+    );
+    await fs.ensureDir(path.join(reverseDir, 'traceability'));
+    await fs.writeFile(
+      path.join(reverseDir, 'traceability', 'code-spec-matrix.md'),
+      renderCodeSpecMatrix(specs, generatedAt),
+    );
+
+    const factsPath = path.join(reverseDir, 'reverse-facts.json');
+    if (await fs.pathExists(factsPath)) {
+      const facts = await fs.readJSON(factsPath).catch(() => null);
+      if (facts) {
+        facts.confidence = {
+          computedAt: generatedAt,
+          index,
+          counts,
+          perSpec: specs.map((s) => ({ spec: s.spec, ...s.counts, index: s.index })),
+        };
+        await fs.writeJSON(factsPath, facts, { spaces: 2 });
+      }
+    }
+    spinner.succeed(chalk.green('Confidence report generated.'));
+  } catch (err) {
+    spinner.fail(chalk.red('Failed to write confidence report'));
+    console.error(err);
+    process.exit(1);
+  }
+
+  console.log('');
+  console.log(`  🟢 ${counts.confirmed}  🟡 ${counts.inferred}  🔴 ${counts.gap}  ` + chalk.bold(`· index ${index}%`));
+  console.log(chalk.gray(`  (${counts.total} claims across ${specs.length} spec(s))`));
+  console.log(chalk.cyan('\n📋 Generated:'));
+  console.log(`  ${chalk.gray('·')} DARE/REVERSE/confidence-report.md`);
+  console.log(`  ${chalk.gray('·')} DARE/REVERSE/traceability/code-spec-matrix.md`);
+  if (counts.gap > 0) {
+    console.log(chalk.yellow(`\n  ⚠️  ${counts.gap} gap(s) need human validation — see DARE/REVERSE/gaps.md\n`));
+  } else {
+    console.log('');
+  }
+}
 
 function formatModuleReport(
   modules: { name: string; path: string; size: string; fileCount: number; loc: number; depends_on: string[] }[],

@@ -20,6 +20,17 @@ inferências** que o CLI determinístico não faz: propósito, domínio, respons
 - Acabou de rodar `dare reverse` e os artefatos têm seções `<!-- AGENT: ... -->` em aberto.
 - O objetivo é gerar uma **pré-arquitetura** (`IDEIA.md`) que depois vira `DESIGN.md`.
 
+## Marcação de confiança (obrigatória)
+
+Ao preencher cada `<!-- AGENT -->`, marque **cada afirmação** com seu nível de confiança + evidência:
+
+- `- 🟢 <claim>. ` + `` `arquivo:linha` `` — **CONFIRMED**: evidência direta no código.
+- `- 🟡 <claim>. ` + `` `arquivo:linha` `` — **INFERRED**: padrão/dedução; pode estar errado.
+- `- 🔴 <claim>. → ver gaps.md` — **GAP**: não determinável pelo código.
+
+Regra: só 🟢 com evidência direta; na dúvida, 🟡; sem base, 🔴 (e registre em `gaps.md`). Os fatos
+estruturais (caminho, LOC, deps) já vêm pré-marcados 🟢 pelo CLI — **não os altere**.
+
 ## O que fazer
 
 ### 1. Carregar os fatos (não re-varrer tudo)
@@ -79,9 +90,20 @@ Para cada módulo, substitua os `<!-- AGENT -->`:
 Mostre um resumo: propósito inferido, nº de módulos, principais incertezas. Reforce que o
 `IDEIA.md` é um **rascunho a ser validado** — peça para o humano revisar antes de promover a DESIGN.
 
+## Passo final — Gaps, Questions e Reviewer
+
+1. **`gaps.md`** — consolide todos os 🔴 em `DARE/REVERSE/gaps.md`, classificados por severidade
+   (crítico / moderado / cosmético / fora-escopo) e com o tratamento sugerido.
+2. **`questions.md`** — perguntas objetivas ao humano em `DARE/REVERSE/questions.md`.
+3. **Reviewer (releia e reclassifique)** — reabra os arquivos-chave e revise os claims; rebaixe os
+   que não têm evidência suficiente (🟢→🟡 ou 🟡→🔴). Um spec honesto sobre suas incertezas vale mais
+   que um spec fluente que apresenta suposição como fato.
+4. **Rode `dare reverse --report`** — o CLI conta os marcadores e gera `confidence-report.md` +
+   `traceability/code-spec-matrix.md` com o índice determinístico. Mostre o índice ao usuário.
+
 ## Regras de ouro
 
-1. **Não invente.** Se um fluxo não está claro no código, marque em "⚠️ Incertezas" em vez de chutar.
+1. **Não invente.** Se um fluxo não está claro no código, marque 🔴 (gap) em vez de chutar.
 2. **Fidelidade ao código real** — descreva o que o código faz, não o que deveria fazer.
 3. **Diagramas enxutos** — um fluxo legível vale mais que um diagrama exaustivo e ilegível.
 4. **Não re-varra** — os fatos já estão em `reverse-facts.json`; foque na inferência semântica.
@@ -96,6 +118,7 @@ Mostre um resumo: propósito inferido, nº de módulos, principais incertezas. R
 | AP-03 | `sequenceDiagram` gigante e ilegível | Anula o propósito do diagrama |
 | AP-04 | Pular a seção de Incertezas | Remove o ponto de validação humana |
 | AP-05 | Ler o projeto inteiro arquivo a arquivo | Desperdiça contexto; os fatos já estão no JSON |
+| AP-06 | Marcar tudo 🟢 sem evidência `file:line` | Infla a confiança e engana o humano — o valor está em separar 🟢/🟡/🔴 |
 
 $ARGUMENTS
 

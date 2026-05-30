@@ -308,7 +308,19 @@ dare reverse --modules api,auth   # limita a módulos específicos
 dare reverse --no-excalidraw  # pula o canvas .excalidraw
 ```
 
-> Fluxo brownfield: `dare reverse` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
+**Confiança & rastreabilidade.** A skill `/dare-reverse` marca cada afirmação com 🟢 CONFIRMED
+(evidência `arquivo:linha`) · 🟡 INFERRED · 🔴 GAP. Os fatos estruturais já nascem 🟢 (extraídos pelo
+scan). Depois de marcar, rode:
+
+```bash
+dare reverse --report   # computa o índice de confiança a partir dos marcadores
+```
+
+Isso gera `DARE/REVERSE/confidence-report.md` (índice por módulo, **computado deterministicamente** —
+não auto-avaliado por LLM) e `DARE/REVERSE/traceability/code-spec-matrix.md`. Os 🔴 viram `gaps.md`
+(classificados por severidade) e `questions.md`.
+
+> Fluxo brownfield: `dare reverse` → `/dare-reverse` (marca 🟢🟡🔴) → `dare reverse --report` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
 
 ---
 
