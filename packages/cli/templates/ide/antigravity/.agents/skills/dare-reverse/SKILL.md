@@ -1,0 +1,80 @@
+---
+name: dare-reverse
+description: Camada semântica da engenharia reversa (Fase 0 / brownfield). Roda depois do comando `dare reverse` e preenche as inferências — propósito, domínio, responsabilidades e diagramas de fluxo — nos artefatos DARE/IDEIA.md e DARE/REVERSE/module-*.md.
+---
+
+# DARE Reverse Skill — Engenharia Reversa (Fase 0)
+
+Você é o agente da **Fase 0 (brownfield)** do método DARE no Antigravity. Esta skill é a
+**camada semântica** da engenharia reversa: roda **depois** do comando `dare reverse`, que já
+varreu o código e gerou os esqueletos determinísticos. Sua função é **preencher as inferências**
+que o CLI não faz: propósito, domínio, responsabilidades e os **diagramas de fluxo**
+("como a coisa funciona").
+
+> Pré-requisito: o comando `dare reverse` precisa ter rodado antes (gera `DARE/IDEIA.md`,
+> `DARE/REVERSE/module-*.md` e `DARE/REVERSE/reverse-facts.json`). Se não existirem, peça ao
+> usuário para rodar `dare reverse` primeiro.
+
+## Quando usar esta skill
+
+- O usuário quer entender / documentar um projeto **legado** antes de adotar o DARE.
+- Acabou de rodar `dare reverse` e os artefatos têm seções `<!-- AGENT: ... -->` em aberto.
+- O objetivo é gerar uma **pré-arquitetura** (`IDEIA.md`) que depois vira `DESIGN.md`.
+
+## Passo a passo
+
+### 1. Carregar os fatos (não re-varrer tudo)
+
+- Leia `DARE/REVERSE/reverse-facts.json` — fonte de fatos determinística (stack, módulos, LOC,
+  grafo de dependências). **Confie nela** para o inventário; não reconte arquivos.
+- Por módulo, abra **2-5 arquivos representativos** (entrypoints, controllers, services, models)
+  — o suficiente para inferir responsabilidade e fluxo. Não leia o módulo inteiro.
+
+### 2. Preencher `DARE/IDEIA.md`
+
+Substitua cada bloco `<!-- AGENT: ... -->`:
+
+- **Propósito Inferido** — 2-4 frases: o que o software faz e por quê.
+- **Domínio & Conceitos** — entidades de negócio + glossário.
+- **Modelo de Dados (reconstruído)** — entidades, campos-chave, relacionamentos.
+- **Superfície de API** — endpoints inferidos de rotas/controllers.
+- **Fluxo do Sistema** — um `flowchart TD` Mermaid do caminho principal de request/dados
+  atravessando os módulos.
+- **⚠️ Incertezas / Gaps** — o que NÃO deu pra inferir + perguntas objetivas para o humano.
+
+**Não toque** no Mapa de Módulos nem na tabela (determinísticos, gerados pelo CLI).
+
+### 3. Preencher cada `DARE/REVERSE/module-*.md`
+
+- **Responsabilidade** — papel do módulo no sistema (1-3 frases).
+- **Superfície Pública** — o que expõe (funções/classes/endpoints/tipos exportados).
+- **Como Funciona (fluxo)** — um `sequenceDiagram` Mermaid do fluxo típico
+  (entrypoint → service → repository → DB/externo).
+- **Dependências & Acoplamento** — comente o acoplamento e riscos (circular, hotspot HIGH).
+
+### 4. Apresentar ao usuário
+
+Resumo: propósito inferido, nº de módulos, principais incertezas. Reforce que o `IDEIA.md` é um
+**rascunho a validar** antes de promover a DESIGN com `dare design`.
+
+## Regras de ouro
+
+1. **Não invente** — fluxo não-claro vai para "⚠️ Incertezas", não para chute.
+2. **Fidelidade ao código real** — descreva o que o código faz, não o que deveria fazer.
+3. **Diagramas enxutos** — legibilidade acima de exaustividade.
+4. **Não re-varra** — os fatos já estão em `reverse-facts.json`.
+5. **Preserve o determinístico** — nunca edite o Mapa de Módulos/tabela/grafo do CLI.
+
+## Antipatterns
+
+| AP | Antipattern | Por quê |
+|---|---|---|
+| AP-01 | Inventar endpoints/entidades inexistentes | Polui a pré-arquitetura com ficção |
+| AP-02 | Reescrever a tabela de módulos do CLI | Quebra a fonte determinística |
+| AP-03 | `sequenceDiagram` gigante e ilegível | Anula o propósito do diagrama |
+| AP-04 | Pular a seção de Incertezas | Remove o ponto de validação humana |
+| AP-05 | Ler o projeto inteiro arquivo a arquivo | Desperdiça contexto; os fatos já estão no JSON |
+
+---
+
+Skill MIT — parte do DARE Method. Fase 0 (brownfield). Pareia com o comando `dare reverse`.
