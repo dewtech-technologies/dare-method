@@ -4,7 +4,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import { convertYamlToDag } from '../utils/dag-converter.js';
 import {
-  computeRanks,
   type Dag,
   type DagTask,
   type TaskStatus,
@@ -17,6 +16,12 @@ import {
   renderDagExcalidraw,
   serializeExcalidraw,
 } from '../utils/excalidraw-renderer.js';
+import {
+  renderGraphMermaid,
+  renderGraphDot,
+  escapeMermaid,
+  type GraphNode,
+} from '../utils/graph-renderer.js';
 
 /**
  * `dare dag` — inspect and visualize the static task DAG declared in
@@ -118,105 +123,58 @@ const MERMAID_CLASSES = [
   'classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;',
 ];
 
+const DOT_FILL: Record<TaskStatus, string> = {
+  PENDING: '#f3f4f6',
+  RUNNING: '#dbeafe',
+  DONE: '#dcfce7',
+  FAILED: '#fee2e2',
+  SKIPPED: '#e5e7eb',
+};
+const DOT_BORDER: Record<TaskStatus, string> = {
+  PENDING: '#9ca3af',
+  RUNNING: '#2563eb',
+  DONE: '#16a34a',
+  FAILED: '#dc2626',
+  SKIPPED: '#6b7280',
+};
+
+function taskLabelLines(task: DagTask): string[] {
+  const status = task.status ?? 'PENDING';
+  return [task.id, task.title, `${STATUS_ICON[status]} ${status}`];
+}
+
 export function renderDagMermaid(dag: Dag): string {
-  const lines: string[] = [
-    `%% DARE DAG — ${escapeMermaid(dag.title)}`,
-    `%% Generated: ${new Date().toISOString()}`,
-    'graph LR',
-  ];
-
-  // Group nodes by rank using subgraphs so the diagram visually flows by rank
-  const ranks = computeRanks(dag.tasks);
-  const byRank = new Map<number, DagTask[]>();
-  for (const task of dag.tasks) {
-    const r = ranks.get(task.id) ?? 0;
-    if (!byRank.has(r)) byRank.set(r, []);
-    byRank.get(r)!.push(task);
-  }
-
-  const sortedRanks = [...byRank.keys()].sort((a, b) => a - b);
-  for (const r of sortedRanks) {
-    lines.push(`  subgraph rank_${r} ["Rank ${r}"]`);
-    lines.push(`    direction TB`);
-    for (const task of byRank.get(r)!) {
-      const id = sanitizeId(task.id);
-      const status = task.status ?? 'PENDING';
-      const icon = STATUS_ICON[status];
-      const label = `${task.id}\\n${escapeMermaid(task.title)}\\n${icon} ${status}`;
-      lines.push(`    ${id}["${label}"]`);
-    }
-    lines.push('  end');
-  }
-
-  // Edges
-  for (const task of dag.tasks) {
-    for (const dep of task.depends_on) {
-      lines.push(`  ${sanitizeId(dep)} --> ${sanitizeId(task.id)}`);
-    }
-  }
-
-  // Status classes
-  for (const task of dag.tasks) {
-    const status = task.status ?? 'PENDING';
-    lines.push(`  class ${sanitizeId(task.id)} st_${status.toLowerCase()};`);
-  }
-  for (const cls of MERMAID_CLASSES) lines.push(`  ${cls}`);
-
-  return lines.join('\n');
+  const nodes: GraphNode[] = dag.tasks.map((task) => ({
+    id: task.id,
+    depends_on: task.depends_on,
+    labelLines: taskLabelLines(task),
+    bg: '',
+    stroke: '',
+    mermaidClass: `st_${(task.status ?? 'PENDING').toLowerCase()}`,
+  }));
+  return renderGraphMermaid(nodes, {
+    headerComment: `DARE DAG — ${escapeMermaid(dag.title)}`,
+    direction: 'LR',
+    styling: 'class',
+    classDefs: MERMAID_CLASSES,
+  });
 }
 
 export function renderDagDot(dag: Dag): string {
-  const lines: string[] = [
-    'digraph DareDAG {',
-    '  rankdir=LR;',
-    '  node [shape=box style=filled fontname=Helvetica];',
-  ];
-
-  const colors: Record<TaskStatus, string> = {
-    PENDING: '"#f3f4f6"',
-    RUNNING: '"#dbeafe"',
-    DONE: '"#dcfce7"',
-    FAILED: '"#fee2e2"',
-    SKIPPED: '"#e5e7eb"',
-  };
-  const borders: Record<TaskStatus, string> = {
-    PENDING: '"#9ca3af"',
-    RUNNING: '"#2563eb"',
-    DONE: '"#16a34a"',
-    FAILED: '"#dc2626"',
-    SKIPPED: '"#6b7280"',
-  };
-
-  for (const task of dag.tasks) {
+  const nodes: GraphNode[] = dag.tasks.map((task) => {
     const status = task.status ?? 'PENDING';
-    const id = JSON.stringify(task.id);
-    const label = JSON.stringify(
-      `${task.id}\n${task.title}\n${STATUS_ICON[status]} ${status}`,
-    );
-    lines.push(
-      `  ${id} [label=${label} fillcolor=${colors[status]} color=${borders[status]}];`,
-    );
-  }
-
-  for (const task of dag.tasks) {
-    for (const dep of task.depends_on) {
-      lines.push(`  ${JSON.stringify(dep)} -> ${JSON.stringify(task.id)};`);
-    }
-  }
-
-  lines.push('}');
-  return lines.join('\n');
+    return {
+      id: task.id,
+      depends_on: task.depends_on,
+      labelLines: taskLabelLines(task),
+      bg: DOT_FILL[status],
+      stroke: DOT_BORDER[status],
+    };
+  });
+  return renderGraphDot(nodes, { name: 'DareDAG' });
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function sanitizeId(id: string): string {
-  return id.replace(/[^a-zA-Z0-9_]/g, '_');
-}
-
-function escapeMermaid(s: string): string {
-  return s.replace(/"/g, '&quot;').replace(/[\r\n]+/g, ' ');
-}
 
 function countEdges(dag: Dag): number {
   return dag.tasks.reduce((sum, t) => sum + t.depends_on.length, 0);

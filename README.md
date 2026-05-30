@@ -224,7 +224,7 @@ Cada implementação tem README próprio com setup detalhado.
 
 ## 🔌 Skills disponíveis (v3.0.0)
 
-**29 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
+**30 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
 
 | IDE | Diretório | Formato |
 |---|---|---|
@@ -248,6 +248,9 @@ Veja o **[índice completo de skills](docs/skills/INDEX.md)** com tabela cruzada
 **Stack/Tools (8) — escopo específico:**
 `dare-bugfix-design` · `dare-feature-design` · `dare-docker` · `dare-security` (OWASP A01-A10) · `dare-telemetry` · `dare-rust-workspace` · `dare-rust-leptos` · `dare-laravel-api`
 
+**Brownfield (1) — projetos legados:**
+`dare-reverse` (Fase 0: reconstrói arquitetura módulo a módulo → `IDEIA.md`, pareia com o comando `dare reverse`)
+
 **Stacks novas (5) — adicionadas na v3.0.0:**
 `dare-nestjs-api` (Node + NestJS + Prisma) · `dare-fastapi-api` (Python + FastAPI + Pydantic) · `dare-go-gin-api` (Go + Gin/stdlib) · `dare-mcp-server` (MCP TS/Py) · `dare-rails-api` (Ruby Rails 8 + Solid Queue + Action Cable)
 
@@ -268,6 +271,44 @@ O CLI detecta automaticamente a stack (NestJS, FastAPI, Laravel, React, Vue, MCP
 dare discover --check   # só mostra o que detectou, sem instalar
 dare discover --dir ./outro-projeto
 ```
+
+---
+
+## 🔁 dare reverse — engenharia reversa de legado (Fase 0)
+
+Enquanto `dare discover` só detecta a stack e instala os arquivos, `dare reverse` faz
+**engenharia reversa do código** para reconstruir a arquitetura **módulo a módulo** — uma
+**Fase 0** antes do DESIGN, pensada para projetos legados/brownfield.
+
+```bash
+cd meu-projeto-legado
+dare reverse
+```
+
+O CLI varre o código (sem tocá-lo), detecta as fronteiras de módulo, mede tamanho por LOC e
+infere o grafo de dependências, gerando:
+
+```
+DARE/
+├── IDEIA.md                       ← pré-arquitetura: o QUE é o software, com mapa de módulos
+└── REVERSE/
+    ├── reverse-facts.json         ← fatos determinísticos
+    ├── architecture.excalidraw    ← canvas editável da arquitetura
+    └── module-*.md                ← um mini-spec por módulo
+```
+
+O `IDEIA.md` traz um **diagrama Mermaid** do mapa de módulos (renderiza nativo no GitHub) com cor
+por tamanho (🔵 LOW · 🟠 MED · 🔴 HIGH). Depois, a skill **`/dare-reverse`** na sua IDE preenche
+as inferências semânticas (propósito, domínio, fluxos via `sequenceDiagram`). É um **rascunho a
+validar**: você revisa o `IDEIA.md` e o promove a `DESIGN.md` com `dare design`.
+
+```bash
+dare reverse --check          # só mostra os módulos detectados, sem escrever
+dare reverse --modules api,auth   # limita a módulos específicos
+dare reverse --no-excalidraw  # pula o canvas .excalidraw
+```
+
+> Fluxo brownfield: `dare reverse` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
 
 ---
 

@@ -10,7 +10,7 @@
  * License: MIT (D-001)
  */
 
-import figlet from 'figlet';
+import figlet, { type FontName } from 'figlet';
 import { createRequire } from 'module';
 
 // gradient-string is CommonJS — use createRequire for safe ESM interop
@@ -25,7 +25,7 @@ const { version } = _require('../../package.json') as { version: string };
 // Dewtech official green palette
 const DEWTECH_GREEN = gradient('#7FD93A', '#5BCB1B', '#3FA00C');
 
-const FONT_FALLBACKS: figlet.Fonts[] = [
+const FONT_FALLBACKS: FontName[] = [
   'Alligator',
   'Larry 3D',
   'Big',
