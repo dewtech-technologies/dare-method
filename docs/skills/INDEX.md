@@ -1,6 +1,6 @@
 # DARE Skills - Indice de paridade
 
-> **v3.0.0** - 31 skills x 3 IDEs = **93 arquivos de skill** em paridade total.
+> **v3.0.0** - 32 skills x 3 IDEs = **96 arquivos de skill** em paridade total.
 > Toda skill listada aqui esta implementada e funcional nas 3 implementations.
 
 ---
@@ -81,12 +81,13 @@ Cliques nas colunas vao direto para os arquivos.
 
 ---
 
-## Brownfield (2 skills) - projetos legados
+## Brownfield (3 skills) - projetos legados
 
 | Skill | Funcao | Antigravity | Claude | Cursor |
 |---|---|---|---|---|
 | dare-reverse | Fase 0: camada semantica da engenharia reversa - preenche IDEIA.md + module-*.md (pareia com o comando `dare reverse`) | [SKILL.md](../../implementations/antigravity/.agents/skills/dare-reverse/SKILL.md) | [dare-reverse.md](../../implementations/claude/.claude/commands/dare-reverse.md) | [skill-reverse.mdc](../../implementations/cursor/.cursor/rules/skill-reverse.mdc) |
 | dare-dna | Camada semantica do DNA: transforma fatos de convencao em regras acionaveis no PROJECT-DNA.md (pareia com o comando `dare dna`) | [SKILL.md](../../implementations/antigravity/.agents/skills/dare-dna/SKILL.md) | [dare-dna.md](../../implementations/claude/.claude/commands/dare-dna.md) | [skill-dna.mdc](../../implementations/cursor/.cursor/rules/skill-dna.mdc) |
+| dare-migrate | Fase 2: plano de migracao + Gherkin de paridade no DARE/MIGRATION/ (pareia com o comando `dare migrate`) | [SKILL.md](../../implementations/antigravity/.agents/skills/dare-migrate/SKILL.md) | [dare-migrate.md](../../implementations/claude/.claude/commands/dare-migrate.md) | [skill-migrate.mdc](../../implementations/cursor/.cursor/rules/skill-migrate.mdc) |
 
 ---
 
@@ -99,8 +100,8 @@ Cliques nas colunas vao direto para os arquivos.
 | Transversais | 6 | 18 |
 | Stack / Tools | 8 | 24 |
 | Stacks novas v3.0.0 | 5 | 15 |
-| Brownfield | 2 | 6 |
-| **Total** | **31** | **93** |
+| Brownfield | 3 | 9 |
+| **Total** | **32** | **96** |
 
 ---
 

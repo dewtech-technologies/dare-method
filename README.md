@@ -224,7 +224,7 @@ Cada implementação tem README próprio com setup detalhado.
 
 ## 🔌 Skills disponíveis (v3.0.0)
 
-**31 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
+**32 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
 
 | IDE | Diretório | Formato |
 |---|---|---|
@@ -248,8 +248,8 @@ Veja o **[índice completo de skills](docs/skills/INDEX.md)** com tabela cruzada
 **Stack/Tools (8) — escopo específico:**
 `dare-bugfix-design` · `dare-feature-design` · `dare-docker` · `dare-security` (OWASP A01-A10) · `dare-telemetry` · `dare-rust-workspace` · `dare-rust-leptos` · `dare-laravel-api`
 
-**Brownfield (2) — projetos legados:**
-`dare-reverse` (Fase 0: reconstrói arquitetura módulo a módulo → `IDEIA.md`) · `dare-dna` (extrai convenções do codebase → `PROJECT-DNA.md`)
+**Brownfield (3) — projetos legados:**
+`dare-reverse` (Fase 0: reconstrói arquitetura módulo a módulo → `IDEIA.md`) · `dare-dna` (extrai convenções → `PROJECT-DNA.md`) · `dare-migrate` (plano de migração + Gherkin de paridade → `MIGRATION/`)
 
 **Stacks novas (5) — adicionadas na v3.0.0:**
 `dare-nestjs-api` (Node + NestJS + Prisma) · `dare-fastapi-api` (Python + FastAPI + Pydantic) · `dare-go-gin-api` (Go + Gin/stdlib) · `dare-mcp-server` (MCP TS/Py) · `dare-rails-api` (Ruby Rails 8 + Solid Queue + Action Cable)
@@ -321,6 +321,39 @@ não auto-avaliado por LLM) e `DARE/REVERSE/traceability/code-spec-matrix.md`. O
 (classificados por severidade) e `questions.md`.
 
 > Fluxo brownfield: `dare reverse` → `/dare-reverse` (marca 🟢🟡🔴) → `dare reverse --report` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
+
+---
+
+## 🚚 dare migrate — migração com paridade (Fase 2)
+
+Fecha o loop brownfield: depois de entender o legado (`reverse` + `dna`), o `dare migrate` planeja
+uma **reimplementação segura** numa stack-alvo, com **cenários Gherkin de paridade** que garantem que
+o comportamento não quebra.
+
+```bash
+cd meu-projeto-legado        # após dare reverse (+ /dare-reverse --report)
+dare migrate --to go-gin     # ou rust-axum, node-nestjs, python-fastapi, php-laravel, ruby-rails-8…
+```
+
+O CLI consome `reverse-facts.json` + `dna-facts.json`, herda os **blocking gaps** (🔴 da Fase 1) como
+riscos, e gera:
+
+```
+DARE/MIGRATION/
+├── MIGRATION.md          ← paradigma, estratégia, risco, arquitetura-alvo, cutover
+├── migration-facts.json
+└── parity/<módulo>.feature  ← contrato Gherkin de paridade (um por módulo)
+```
+
+A skill **`/dare-migrate`** escreve a estratégia (big-bang vs. strangler), trata os blocking gaps,
+desenha a arquitetura-alvo alinhada ao DNA e preenche os **cenários de paridade reais** (derivados do
+comportamento legado). Os `.feature` viram o **contrato de aceite** da reimplementação.
+
+```bash
+dare migrate --check         # mostra origem/alvo/módulos/blocking gaps, sem escrever
+```
+
+> Loop completo: `reverse` (o quê) → `dna` (como) → `migrate` (reimplementar com paridade) → `design`/`blueprint`/`execute` na stack-alvo.
 
 ---
 
