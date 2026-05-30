@@ -224,7 +224,7 @@ Cada implementação tem README próprio com setup detalhado.
 
 ## 🔌 Skills disponíveis (v3.0.0)
 
-**30 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
+**31 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
 
 | IDE | Diretório | Formato |
 |---|---|---|
@@ -248,8 +248,8 @@ Veja o **[índice completo de skills](docs/skills/INDEX.md)** com tabela cruzada
 **Stack/Tools (8) — escopo específico:**
 `dare-bugfix-design` · `dare-feature-design` · `dare-docker` · `dare-security` (OWASP A01-A10) · `dare-telemetry` · `dare-rust-workspace` · `dare-rust-leptos` · `dare-laravel-api`
 
-**Brownfield (1) — projetos legados:**
-`dare-reverse` (Fase 0: reconstrói arquitetura módulo a módulo → `IDEIA.md`, pareia com o comando `dare reverse`)
+**Brownfield (2) — projetos legados:**
+`dare-reverse` (Fase 0: reconstrói arquitetura módulo a módulo → `IDEIA.md`) · `dare-dna` (extrai convenções do codebase → `PROJECT-DNA.md`)
 
 **Stacks novas (5) — adicionadas na v3.0.0:**
 `dare-nestjs-api` (Node + NestJS + Prisma) · `dare-fastapi-api` (Python + FastAPI + Pydantic) · `dare-go-gin-api` (Go + Gin/stdlib) · `dare-mcp-server` (MCP TS/Py) · `dare-rails-api` (Ruby Rails 8 + Solid Queue + Action Cable)
@@ -309,6 +309,38 @@ dare reverse --no-excalidraw  # pula o canvas .excalidraw
 ```
 
 > Fluxo brownfield: `dare reverse` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
+
+---
+
+## 🧬 dare dna — convenções de projeto legado
+
+Enquanto `dare reverse` reconstrói **o QUE** o software é, `dare dna` extrai **COMO** o codebase faz as
+coisas — suas convenções. Em legado você não pode reescrever, então o método precisa **se adaptar ao
+padrão do projeto**. O `dare dna` persiste essas convenções num ruleset reutilizável.
+
+```bash
+cd meu-projeto-legado
+dare dna
+```
+
+O CLI extrai (sem tocar no código): tooling de lint/format (+ regras-chave do Prettier/EditorConfig),
+convenção de nomenclatura por extensão, arquitetura/camadas, framework e cobertura de teste,
+bibliotecas-chave (ORM/HTTP/auth/validação) e a convenção de commits (do `git log`). Gera:
+
+```
+DARE/
+├── PROJECT-DNA.md     ← ruleset de convenções (o agente segue ao trabalhar no projeto)
+└── dna-facts.json     ← fatos determinísticos
+```
+
+Depois, a skill **`/dare-dna`** transforma os fatos em **regras acionáveis** ("ao criar um controller,
+siga X"; "validação sempre via Y") e descreve padrões que o CLI não infere (tratamento de erro,
+estilo de teste). Se você já rodou `dare reverse`, o `dna` reaproveita o `reverse-facts.json`.
+
+```bash
+dare dna --check          # só mostra as convenções detectadas, sem escrever
+dare dna --dir ./outro-projeto
+```
 
 ---
 
