@@ -82,3 +82,60 @@ describe('renderErd / renderApiSurface', () => {
     expect(renderApiSurface(dm, 'now')).toContain('nenhum endpoint detectado');
   });
 });
+
+// ── Fase 3.1: framework-agnostic por linguagem ──────────────────────────────
+
+describe('framework-agnostic — legacy PHP (no Laravel)', () => {
+  it('extracts inline SQL DDL, query-only tables, plain model classes and Slim routes', async () => {
+    const root = await makeProject({
+      'db/install.php': `<?php\n$pdo->exec("CREATE TABLE clientes (id INT PRIMARY KEY, nome VARCHAR(120));");\n$rows = $pdo->query("SELECT * FROM produtos WHERE ativo = 1");\n`,
+      'models/Cliente.php': `<?php\nclass Cliente {\n  public int $id;\n  private ?string $email;\n}\n`,
+      'public/index.php': `<?php\n$app->get('/clientes', 'h');\n$app->post('/pedidos', 'h');\n`,
+    });
+    const dm = await extractDataModel(root);
+    const names = dm.entities.map((e) => e.name);
+    expect(names).toContain('clientes'); // inline CREATE TABLE
+    expect(names).toContain('produtos'); // referenced only in a SELECT
+    expect(names).toContain('Cliente'); // plain typed class in models/
+    const cliente = dm.entities.find((e) => e.name === 'Cliente')!;
+    expect(cliente.fields.map((f) => f.name)).toEqual(['id', 'email']);
+    const routes = dm.endpoints.map((e) => `${e.method} ${e.route}`);
+    expect(routes).toContain('GET /clientes');
+    expect(routes).toContain('POST /pedidos');
+  });
+});
+
+describe('framework-agnostic — multi-dialect routing', () => {
+  it('parses Flask (methods array), Django (any), Go stdlib (any), Rust/Axum and Ruby', async () => {
+    const root = await makeProject({
+      'app.py': `@app.route('/items', methods=['GET', 'POST'])\ndef items(): pass\n@app.route('/health')\ndef health(): pass\n`,
+      'urls.py': `urlpatterns = [\n  path('admin/', admin),\n]\n`,
+      'main.go': `mux.HandleFunc("/go-route", handler)\n`,
+      'routes.rs': `let app = Router::new().route("/users", get(list_users));\n`,
+      'config/routes.rb': `Rails.application.routes.draw do\n  get '/ruby-route', to: 'x#y'\nend\n`,
+    });
+    const dm = await extractDataModel(root);
+    const routes = dm.endpoints.map((e) => `${e.method} ${e.route}`);
+    expect(routes).toContain('GET /items');
+    expect(routes).toContain('POST /items'); // expanded from methods array
+    expect(routes).toContain('GET /health'); // Flask route without methods → GET
+    expect(routes).toContain('ANY admin/'); // Django path (method-less)
+    expect(routes).toContain('ANY /go-route'); // Go stdlib HandleFunc
+    expect(routes).toContain('GET /users'); // Rust/Axum (path then method)
+    expect(routes).toContain('GET /ruby-route'); // Rails/Sinatra
+  });
+});
+
+describe('framework-agnostic — type extraction across languages', () => {
+  it('extracts Go structs and Python dataclasses in data dirs', async () => {
+    const root = await makeProject({
+      'models/user.go': `type User struct {\n  ID int\n  Name string\n}\n`,
+      'domain/order.py': `@dataclass\nclass Order:\n    id: int\n    total: float\n`,
+    });
+    const dm = await extractDataModel(root);
+    const go = dm.entities.find((e) => e.name === 'User')!;
+    expect(go.fields.map((f) => f.name)).toEqual(['ID', 'Name']);
+    const py = dm.entities.find((e) => e.name === 'Order')!;
+    expect(py.fields.map((f) => f.name)).toEqual(['id', 'total']);
+  });
+});

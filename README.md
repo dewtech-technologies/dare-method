@@ -326,10 +326,17 @@ não auto-avaliado por LLM) e `DARE/REVERSE/traceability/code-spec-matrix.md`. O
 dare reverse --deep   # + ERD, API surface, regras de negócio, state machines, permissões, C4
 ```
 
-O CLI extrai **deterministicamente** o modelo de dados (`erd.md`, de migrations/Prisma/ORM) e os
-endpoints (`api-surface.md`, de rotas Express/Nest/Laravel/FastAPI/Gin) — com evidência `arquivo:linha`
-— e o nível *component* do C4 (do mapa de módulos). A skill `/dare-reverse` completa as partes
-semânticas: `domain-rules.md`, `state-machines.md` (Mermaid), `permissions.md` e o C4 context/container.
+O CLI extrai **deterministicamente** o modelo de dados (`erd.md`) e os endpoints (`api-surface.md`) —
+com evidência `arquivo:linha` — e o nível *component* do C4 (do mapa de módulos). A skill
+`/dare-reverse` completa as partes semânticas: `domain-rules.md`, `state-machines.md` (Mermaid),
+`permissions.md` e o C4 context/container.
+
+**Framework-agnostic por linguagem.** A extração não depende de framework: pega **SQL inline** (DDL e
+tabelas referenciadas em queries — ex.: PHP legado com PDO), **tipos/classes/structs** em pastas de
+modelo (PHP/Python/TS/Go/Ruby/Rust), além de Prisma e dos ORMs (TypeORM/Eloquent/ActiveRecord/
+SQLAlchemy). Rotas cobrem múltiplos dialetos por linguagem: Express/Nest/Fastify, Laravel/Slim/Symfony,
+FastAPI/Flask/Django, Rails/Sinatra, Gin/stdlib, Axum. Onde um framework existe, ele enriquece; onde
+não, o baseline da linguagem ainda extrai.
 
 > Fluxo brownfield: `dare reverse` → `/dare-reverse` (marca 🟢🟡🔴) → `dare reverse --report` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
 

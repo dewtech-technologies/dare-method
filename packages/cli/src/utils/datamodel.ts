@@ -46,8 +46,11 @@ const IGNORE_DIRS = new Set([
 ]);
 
 const SCAN_EXT = new Set([
-  '.sql', '.prisma', '.ts', '.tsx', '.js', '.mjs', '.cjs', '.py', '.php', '.rb', '.go',
+  '.sql', '.prisma', '.ts', '.tsx', '.js', '.mjs', '.cjs', '.py', '.php', '.rb', '.go', '.rs',
 ]);
+
+/** Directories whose classes/types are treated as domain entities (framework-agnostic). */
+const DATA_DIR_RE = /(^|\/)(models?|entities|entity|domain|dto|dtos|schemas?)\//i;
 
 interface ScanFile {
   rel: string;
@@ -88,8 +91,14 @@ export async function extractDataModel(root: string): Promise<DataModel> {
     const lower = f.rel.toLowerCase();
 
     if (base === 'schema.prisma') entities.push(...parsePrisma(f));
-    if (f.rel.endsWith('.sql') || lower.includes('/migrations/')) entities.push(...parseSql(f));
+    // Inline SQL DDL anywhere — migrations, .sql, or SQL inside code strings (PDO/mysqli/etc).
+    entities.push(...parseSql(f));
+    // Table names referenced in queries — covers legacy whose schema lives only in the DB.
+    entities.push(...parseSqlTableRefs(f));
+    // ORM relations (framework enrichment).
     if (/\.(ts|js|php|rb|py)$/.test(f.rel)) entities.push(...parseOrm(f));
+    // Plain types/classes/structs in data dirs — framework-agnostic baseline (no ORM needed).
+    if (DATA_DIR_RE.test(lower)) entities.push(...parseTypes(f));
 
     endpoints.push(...parseEndpoints(f));
   }
@@ -205,29 +214,229 @@ function parseOrm(f: ScanFile): Entity[] {
   return out;
 }
 
-// ── Parsers: endpoints ─────────────────────────────────────────────────────
+// ── Parsers: endpoints (multi-dialect, framework-agnostic per language) ──────
 
+/** Per-method patterns where both the verb and the path are captured on one line. */
 const ENDPOINT_PATTERNS: RegExp[] = [
   /@(Get|Post|Put|Patch|Delete|Options|Head)\(\s*['"`]([^'"`]*)['"`]/g, // NestJS decorators
-  /\b(?:app|router|r|route|api)\.(get|post|put|patch|delete|options|head)\(\s*['"`]([^'"`]+)['"`]/g, // Express/Gin-js
+  /\b(?:app|router|r|route|api)\.(get|post|put|patch|delete|options|head)\(\s*['"`]([^'"`]+)['"`]/g, // Express/Koa/Fastify
   /Route::(get|post|put|patch|delete|options|any|match)\(\s*['"]([^'"]+)['"]/g, // Laravel
   /@(?:app|router)\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/g, // FastAPI
-  /\.(GET|POST|PUT|PATCH|DELETE)\(\s*"([^"]+)"/g, // Go/Gin
+  /\.(GET|POST|PUT|PATCH|DELETE)\(\s*"([^"]+)"/g, // Go/Gin/Echo
+  /\$\w+->(get|post|put|patch|delete|options|head|map)\(\s*['"]([^'"]+)['"]/g, // PHP Slim/microframeworks
+  /\.route\(\s*"([^"]+)"\s*,\s*(get|post|put|patch|delete)\s*\(/g, // Rust/Axum (path THEN method)
 ];
+
+function lineAt(content: string, index: number): number {
+  return content.slice(0, index).split(/\r?\n/).length;
+}
 
 function parseEndpoints(f: ScanFile): Endpoint[] {
   const out: Endpoint[] = [];
   const lines = f.content.split(/\r?\n/);
+  const isRuby = f.rel.endsWith('.rb');
+
+  // 1. Per-method, single-line patterns.
   for (let i = 0; i < lines.length; i++) {
     for (const re of ENDPOINT_PATTERNS) {
       re.lastIndex = 0;
       let m: RegExpExecArray | null;
       while ((m = re.exec(lines[i])) !== null) {
-        out.push({ method: m[1].toUpperCase(), route: m[2], source: `${f.rel}:${i + 1}` });
+        // Axum captures (path, method); the others capture (method, path).
+        const axum = re.source.startsWith('\\.route');
+        const method = (axum ? m[2] : m[1]).toUpperCase();
+        const route = axum ? m[1] : m[2];
+        out.push({ method, route, source: `${f.rel}:${i + 1}` });
       }
+    }
+    // Ruby Sinatra / Rails routes.rb: `get '/x'`.
+    if (isRuby) {
+      const rm = /^\s*(get|post|put|patch|delete|match)\s+['"]([^'"]+)['"]/.exec(lines[i]);
+      if (rm) out.push({ method: rm[1].toUpperCase(), route: rm[2], source: `${f.rel}:${i + 1}` });
+    }
+  }
+
+  // 2. Methods-array dialects (Flask / Symfony attribute): path + methods list → expand.
+  const arrayRe = /(?:@\w+\.route|#\[\s*Route)\(\s*['"]([^'"]+)['"][\s\S]{0,80}?methods\s*[:=]\s*\[([^\]]+)\]/g;
+  let am: RegExpExecArray | null;
+  while ((am = arrayRe.exec(f.content)) !== null) {
+    const route = am[1];
+    const ln = lineAt(f.content, am.index);
+    for (const part of am[2].split(',')) {
+      const meth = /([A-Za-z]+)/.exec(part);
+      if (meth) out.push({ method: meth[1].toUpperCase(), route, source: `${f.rel}:${ln}` });
+    }
+  }
+  // Flask route without explicit methods → GET.
+  const flaskGetRe = /@\w+\.route\(\s*['"]([^'"]+)['"]\s*\)/g;
+  let fm: RegExpExecArray | null;
+  while ((fm = flaskGetRe.exec(f.content)) !== null) {
+    out.push({ method: 'GET', route: fm[1], source: `${f.rel}:${lineAt(f.content, fm.index)}` });
+  }
+
+  // 3. Method-less dialects (Django path/re_path/url, Go stdlib HandleFunc) → ANY.
+  const anyRe = /(?:\b(?:path|re_path|url)\(\s*r?['"]([^'"]+)['"]|\.HandleFunc\(\s*"([^"]+)")/g;
+  let nm: RegExpExecArray | null;
+  while ((nm = anyRe.exec(f.content)) !== null) {
+    const route = nm[1] ?? nm[2];
+    if (route) out.push({ method: 'ANY', route, source: `${f.rel}:${lineAt(f.content, nm.index)}` });
+  }
+
+  return out;
+}
+
+// ── Parsers: SQL table references (queries without DDL) ──────────────────────
+
+const SQL_PRESENCE_RE = /\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b/i;
+const SQL_TABLE_REF_RE = /\b(?:from|join|into|update)\s+[`"[]?([a-zA-Z_]\w*)[`"\]]?/gi;
+const SQL_STOP = new Set([
+  'select', 'where', 'set', 'values', 'dual', 'as', 'on', 'using', 'order', 'group', 'limit', 'having',
+]);
+
+function parseSqlTableRefs(f: ScanFile): Entity[] {
+  if (!SQL_PRESENCE_RE.test(f.content)) return [];
+  const out: Entity[] = [];
+  const seen = new Set<string>();
+  const lines = f.content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    SQL_TABLE_REF_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = SQL_TABLE_REF_RE.exec(lines[i])) !== null) {
+      const name = m[1];
+      const key = name.toLowerCase();
+      if (SQL_STOP.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name, fields: [], relations: [], source: `${f.rel}:${i + 1}` });
     }
   }
   return out;
+}
+
+// ── Parsers: plain types/classes/structs (framework-agnostic, data dirs only) ─
+
+function parseTypes(f: ScanFile): Entity[] {
+  const ext = path.extname(f.rel);
+  if (ext === '.php') return parsePhpClasses(f);
+  if (ext === '.py') return parsePyClasses(f);
+  if (ext === '.go') return parseGoStructs(f);
+  if (ext === '.ts' || ext === '.tsx') return parseTsTypes(f);
+  if (ext === '.rb') return parseRubyClasses(f);
+  if (ext === '.rs') return parseRustStructs(f);
+  return [];
+}
+
+function phpType(t: string): string {
+  return t.replace(/^\\+/, '').slice(0, 24) || 'mixed';
+}
+
+function parsePhpClasses(f: ScanFile): Entity[] {
+  const out: Entity[] = [];
+  const lines = f.content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const cm = /\bclass\s+(\w+)/.exec(lines[i]);
+    if (!cm) continue;
+    const entity: Entity = { name: cm[1], fields: [], relations: [], source: `${f.rel}:${i + 1}` };
+    for (let j = i + 1; j < Math.min(i + 80, lines.length); j++) {
+      if (/\bclass\s+\w+/.test(lines[j])) break;
+      // Constructor-promoted properties.
+      for (const p of lines[j].matchAll(/(?:public|private|protected)\s+(?:readonly\s+)?\??([\w\\]+)\s+\$(\w+)/g)) {
+        entity.fields.push({ name: p[2], type: phpType(p[1]) });
+      }
+      // Typed property declarations.
+      const pm = /^\s*(?:public|private|protected)\s+(?:readonly\s+)?\??([\w\\]+)\s+\$(\w+)/.exec(lines[j]);
+      if (pm) entity.fields.push({ name: pm[2], type: phpType(pm[1]) });
+    }
+    if (entity.fields.length > 0) out.push(dedupeFields(entity));
+  }
+  return out;
+}
+
+function parsePyClasses(f: ScanFile): Entity[] {
+  const out: Entity[] = [];
+  const lines = f.content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const cm = /^class\s+(\w+)/.exec(lines[i]);
+    if (!cm) continue;
+    const entity: Entity = { name: cm[1], fields: [], relations: [], source: `${f.rel}:${i + 1}` };
+    for (let j = i + 1; j < lines.length; j++) {
+      if (/^\S/.test(lines[j])) break; // dedent to top level → end of class
+      const fm = /^\s+(\w+)\s*:\s*([\w[\], .|]+?)(\s*=.*)?$/.exec(lines[j]);
+      if (fm && !/^(def|return|if|for|while|with|class)$/.test(fm[1])) {
+        entity.fields.push({ name: fm[1], type: fm[2].trim() });
+      }
+    }
+    if (entity.fields.length > 0) out.push(entity);
+  }
+  return out;
+}
+
+function parseGoStructs(f: ScanFile): Entity[] {
+  const out: Entity[] = [];
+  const re = /type\s+(\w+)\s+struct\s*\{([\s\S]*?)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(f.content)) !== null) {
+    const entity: Entity = { name: m[1], fields: [], relations: [], source: `${f.rel}:${lineAt(f.content, m.index)}` };
+    for (const raw of m[2].split(/\r?\n/)) {
+      const fm = /^\s*([A-Z]\w*)\s+([\w[\]*.]+)/.exec(raw);
+      if (fm) entity.fields.push({ name: fm[1], type: fm[2] });
+    }
+    if (entity.fields.length > 0) out.push(entity);
+  }
+  return out;
+}
+
+function parseTsTypes(f: ScanFile): Entity[] {
+  const out: Entity[] = [];
+  const re = /(?:interface\s+(\w+)\s*(?:extends\s+[\w<>, ]+)?\{|type\s+(\w+)\s*=\s*\{)([\s\S]*?)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(f.content)) !== null) {
+    const name = m[1] ?? m[2];
+    const entity: Entity = { name, fields: [], relations: [], source: `${f.rel}:${lineAt(f.content, m.index)}` };
+    for (const raw of m[3].split(/\r?\n/)) {
+      const fm = /^\s*(\w+)\??\s*:\s*([\w[\]<>., |]+)/.exec(raw);
+      if (fm) entity.fields.push({ name: fm[1], type: fm[2].trim().replace(/[;,]$/, '') });
+    }
+    if (entity.fields.length > 0) out.push(entity);
+  }
+  return out;
+}
+
+function parseRubyClasses(f: ScanFile): Entity[] {
+  const out: Entity[] = [];
+  const lines = f.content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const cm = /^\s*class\s+(\w+)/.exec(lines[i]);
+    if (!cm) continue;
+    const entity: Entity = { name: cm[1], fields: [], relations: [], source: `${f.rel}:${i + 1}` };
+    for (let j = i + 1; j < Math.min(i + 60, lines.length); j++) {
+      if (/^\s*class\s+\w/.test(lines[j])) break;
+      const am = /\battr_(?:accessor|reader|writer)\s+(.+)/.exec(lines[j]);
+      if (am) for (const sym of am[1].matchAll(/:(\w+)/g)) entity.fields.push({ name: sym[1], type: 'attr' });
+    }
+    if (entity.fields.length > 0) out.push(entity);
+  }
+  return out;
+}
+
+function parseRustStructs(f: ScanFile): Entity[] {
+  const out: Entity[] = [];
+  const re = /struct\s+(\w+)\s*\{([\s\S]*?)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(f.content)) !== null) {
+    const entity: Entity = { name: m[1], fields: [], relations: [], source: `${f.rel}:${lineAt(f.content, m.index)}` };
+    for (const raw of m[2].split(/\r?\n/)) {
+      const fm = /^\s*(?:pub\s+)?(\w+)\s*:\s*([\w<>:[\] ]+)/.exec(raw);
+      if (fm) entity.fields.push({ name: fm[1], type: fm[2].trim().replace(/,$/, '') });
+    }
+    if (entity.fields.length > 0) out.push(entity);
+  }
+  return out;
+}
+
+function dedupeFields(e: Entity): Entity {
+  const seen = new Set<string>();
+  e.fields = e.fields.filter((f) => (seen.has(f.name) ? false : (seen.add(f.name), true)));
+  return e;
 }
 
 // ── Renderers ───────────────────────────────────────────────────────────────
@@ -239,7 +448,8 @@ export function renderErd(model: DataModel, generatedAt: string): string {
     '',
     `*Gerado: ${generatedAt}*`,
     '',
-    '> 🟢 Extraído deterministicamente de migrations/Prisma/ORM (com evidência `arquivo:linha`).',
+    '> 🟢 Extraído deterministicamente de SQL (DDL/queries), Prisma, ORMs e tipos/classes/structs '
+      + 'em pastas de modelo — independe de framework (com evidência `arquivo:linha`).',
     '> Relações ou entidades não-explícitas no schema devem ser completadas pela skill (🟡).',
     '',
   ];
