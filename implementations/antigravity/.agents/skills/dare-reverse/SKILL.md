@@ -75,6 +75,15 @@ Resumo: propósito inferido, nº de módulos, principais incertezas. Reforce que
 3. **Reviewer** — releia os arquivos-chave e rebaixe claims sem evidência (🟢→🟡 ou 🟡→🔴).
 4. **Rode `dare reverse --report`** — gera `confidence-report.md` + `traceability/code-spec-matrix.md` (índice determinístico).
 
+## Modo `--deep` (Fase 3)
+
+Se `dare reverse --deep` foi usado, complete os artefatos extras em `DARE/REVERSE/`:
+- **`erd.md`** — entidades extraídas pelo CLI (🟢); complete relações não-explícitas (🟡).
+- **`domain-rules.md`** — regras de negócio (validações, invariantes, cálculos), 🟢/🟡/🔴.
+- **`state-machines.md`** — `stateDiagram-v2` por entidade/fluxo (estados/transições reais).
+- **`permissions.md`** — papéis, recursos e regras de autorização.
+- **`c4/c4-context.md`** e **`c4/c4-container.md`** — atores/externos e containers (component = mapa de módulos).
+
 ## Regras de ouro
 
 1. **Não invente** — fluxo não-claro vira 🔴 (gap), não chute.

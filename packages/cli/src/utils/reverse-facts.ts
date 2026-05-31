@@ -198,6 +198,99 @@ export function renderIdeiaSkeleton(facts: ReverseFacts, withExcalidraw: boolean
   return lines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
 }
 
+// ── Deep (Fase 3) skeletons ─────────────────────────────────────────────────
+
+/** C4 component view — deterministic from the module map. */
+export function renderC4Component(facts: ReverseFacts): string {
+  return [
+    '# C4 — Nível 3: Componentes',
+    '',
+    `*Gerado: ${facts.generatedAt}*`,
+    '',
+    '> 🟢 Derivado deterministicamente do mapa de módulos do `dare reverse`.',
+    '',
+    '```mermaid',
+    renderModuleMapMermaid(facts),
+    '```',
+    '',
+    '| Componente (módulo) | Caminho | Tamanho | Depende de |',
+    '|---|---|---|---|',
+    ...facts.modules.map(
+      (m) => `| ${m.name} | \`${m.path}\` | ${m.size} | ${m.depends_on.join(', ') || '—'} |`,
+    ),
+    '',
+    '---',
+    '*DARE Method — C4 componentes (determinístico). License: MIT.*',
+  ].join('\n') + '\n';
+}
+
+function deepSkeleton(title: string, generatedAt: string, body: string[]): string {
+  return [
+    `# ${title}`,
+    '',
+    `*Gerado: ${generatedAt}*`,
+    '',
+    '> ⚠️ Esqueleto inferido — preenchido por `/dare-reverse` (Fase 3). Marque 🟢/🟡/🔴 com evidência.',
+    '',
+    ...body,
+    '',
+    '---',
+    '*DARE Method — Fase 3 brownfield. License: MIT.*',
+  ].join('\n') + '\n';
+}
+
+export function renderDomainRulesSkeleton(generatedAt: string): string {
+  return deepSkeleton('Regras de Negócio', generatedAt, [
+    '<!-- AGENT: liste as regras de negócio inferidas do código — validações, invariantes, cálculos, '
+      + 'políticas. Uma por linha, marcada 🟢/🟡/🔴 com `arquivo:linha`. -->',
+  ]);
+}
+
+export function renderStateMachinesSkeleton(generatedAt: string): string {
+  return deepSkeleton('State Machines', generatedAt, [
+    '<!-- AGENT: para cada entidade/fluxo com estados, desenhe um stateDiagram com os estados e '
+      + 'transições observados no código. -->',
+    '',
+    '```mermaid',
+    'stateDiagram-v2',
+    '  %% AGENT: substitua pelos estados/transições reais',
+    '  [*] --> Estado1',
+    '```',
+  ]);
+}
+
+export function renderPermissionsSkeleton(generatedAt: string): string {
+  return deepSkeleton('Permissões & Autorização', generatedAt, [
+    '<!-- AGENT: mapeie papéis, recursos e regras de autorização (quem pode o quê), inferidos do código. -->',
+    '',
+    '| Papel | Recurso | Ação permitida | Evidência |',
+    '|---|---|---|---|',
+    '| <!-- AGENT --> | | | |',
+  ]);
+}
+
+export function renderC4ContextSkeleton(generatedAt: string): string {
+  return deepSkeleton('C4 — Nível 1: Contexto', generatedAt, [
+    '<!-- AGENT: atores (usuários/sistemas) e sistemas externos que interagem com este software. -->',
+    '',
+    '```mermaid',
+    'flowchart TD',
+    '  %% AGENT: ator --> Sistema --> sistemas externos',
+    '```',
+  ]);
+}
+
+export function renderC4ContainerSkeleton(generatedAt: string): string {
+  return deepSkeleton('C4 — Nível 2: Containers', generatedAt, [
+    '<!-- AGENT: containers executáveis/deploys (app, API, worker, DB, cache...) e protocolos entre eles. -->',
+    '',
+    '```mermaid',
+    'flowchart TD',
+    '  %% AGENT: containers e comunicações',
+    '```',
+  ]);
+}
+
 export function renderModuleSpecSkeleton(
   mod: ModuleInfo,
   index: number,

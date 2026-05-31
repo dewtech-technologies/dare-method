@@ -101,6 +101,18 @@ Mostre um resumo: propósito inferido, nº de módulos, principais incertezas. R
 4. **Rode `dare reverse --report`** — o CLI conta os marcadores e gera `confidence-report.md` +
    `traceability/code-spec-matrix.md` com o índice determinístico. Mostre o índice ao usuário.
 
+## Modo `--deep` (Fase 3)
+
+Se `dare reverse --deep` foi usado, há artefatos extras em `DARE/REVERSE/` a completar:
+
+- **`erd.md`** — o CLI extraiu entidades de migrations/Prisma/ORM (🟢, com evidência). Complete
+  relações/entidades **não-explícitas** no schema (🟡) e corrija o que estiver errado.
+- **`domain-rules.md`** — regras de negócio (validações, invariantes, cálculos, políticas), 🟢/🟡/🔴.
+- **`state-machines.md`** — um `stateDiagram-v2` por entidade/fluxo com estados e transições reais.
+- **`permissions.md`** — papéis, recursos e regras de autorização (quem pode o quê).
+- **`c4/c4-context.md`** e **`c4/c4-container.md`** — atores/sistemas externos e containers de deploy.
+  (O nível *component* já é o mapa de módulos em `c4/c4-component.md`, gerado pelo CLI.)
+
 ## Regras de ouro
 
 1. **Não invente.** Se um fluxo não está claro no código, marque 🔴 (gap) em vez de chutar.
