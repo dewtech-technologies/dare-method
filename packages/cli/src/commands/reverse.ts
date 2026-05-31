@@ -11,7 +11,15 @@ import {
   renderModuleSpecSkeleton,
   renderArchitectureExcalidraw,
   moduleSpecFilename,
+  renderC4Component,
+  renderC4ContextSkeleton,
+  renderC4ContainerSkeleton,
+  renderDomainRulesSkeleton,
+  renderStateMachinesSkeleton,
+  renderPermissionsSkeleton,
+  type ReverseFacts,
 } from '../utils/reverse-facts.js';
+import { extractDataModel, renderErd, renderApiSurface } from '../utils/datamodel.js';
 import {
   parseSpecConfidence,
   renderConfidenceReport,
@@ -26,6 +34,7 @@ interface ReverseOptions {
   modules?: string;
   excalidraw?: boolean; // commander sets this false for --no-excalidraw
   report?: boolean;
+  deep?: boolean;
 }
 
 export const reverseCommand = new Command('reverse')
@@ -37,6 +46,7 @@ export const reverseCommand = new Command('reverse')
   .option('--modules <list>', 'Limit to specific modules (comma-separated ids/names)')
   .option('--no-excalidraw', 'Skip generating the editable .excalidraw architecture canvas')
   .option('--report', 'Compute the confidence report + code-spec matrix from already-marked specs')
+  .option('--deep', 'Also extract ERD + API surface (deterministic) and scaffold domain-rules / state-machines / permissions / C4')
   .action(async (opts: ReverseOptions) => {
     const targetDir = path.resolve(opts.dir ?? process.cwd());
 
@@ -72,6 +82,10 @@ export const reverseCommand = new Command('reverse')
     }
 
     if (opts.check) {
+      if (opts.deep) {
+        const dm = await extractDataModel(targetDir);
+        console.log(chalk.yellow(`Deep: ${dm.entities.length} entidade(s) e ${dm.endpoints.length} endpoint(s) detectados.\n`));
+      }
       console.log(chalk.cyan('--check: detection only, no files written.'));
       return;
     }
@@ -107,6 +121,10 @@ export const reverseCommand = new Command('reverse')
         );
       }
 
+      if (opts.deep) {
+        await writeDeepArtifacts(targetDir, reverseDir, facts);
+      }
+
       writeSpinner.succeed(chalk.green('IDEIA.md and module specs generated.'));
     } catch (err) {
       writeSpinner.fail(chalk.red('Failed to write reverse-engineering artifacts'));
@@ -122,12 +140,53 @@ export const reverseCommand = new Command('reverse')
     if (opts.excalidraw !== false) {
       console.log(`  ${chalk.gray('·')} DARE/REVERSE/architecture.excalidraw`);
     }
+    if (opts.deep) {
+      console.log(`  ${chalk.gray('·')} DARE/REVERSE/ erd.md · api-surface.md · domain-rules.md · state-machines.md · permissions.md · c4/`);
+    }
 
     console.log(chalk.cyan('\n📋 Next steps:\n'));
     console.log(`  ${chalk.gray('1.')} Run /dare-reverse in your IDE to fill the inferred sections (purpose, flows).`);
     console.log(`  ${chalk.gray('2.')} Review DARE/IDEIA.md and correct any wrong inference.`);
     console.log(`  ${chalk.gray('3.')} Promote to a DESIGN with: dare design "<what this project does>"\n`);
   });
+
+async function writeDeepArtifacts(
+  targetDir: string,
+  reverseDir: string,
+  facts: ReverseFacts,
+): Promise<void> {
+  const generatedAt = facts.generatedAt;
+  const model = await extractDataModel(targetDir);
+
+  // Deterministic data model + API surface.
+  await fs.writeFile(path.join(reverseDir, 'erd.md'), renderErd(model, generatedAt));
+  await fs.writeFile(path.join(reverseDir, 'api-surface.md'), renderApiSurface(model, generatedAt));
+
+  // C4 — component is deterministic (module map); context/container are skill skeletons.
+  const c4Dir = path.join(reverseDir, 'c4');
+  await fs.ensureDir(c4Dir);
+  await fs.writeFile(path.join(c4Dir, 'c4-component.md'), renderC4Component(facts));
+  await fs.writeFile(path.join(c4Dir, 'c4-context.md'), renderC4ContextSkeleton(generatedAt));
+  await fs.writeFile(path.join(c4Dir, 'c4-container.md'), renderC4ContainerSkeleton(generatedAt));
+
+  // Semantic skeletons for the skill to fill.
+  await fs.writeFile(path.join(reverseDir, 'domain-rules.md'), renderDomainRulesSkeleton(generatedAt));
+  await fs.writeFile(path.join(reverseDir, 'state-machines.md'), renderStateMachinesSkeleton(generatedAt));
+  await fs.writeFile(path.join(reverseDir, 'permissions.md'), renderPermissionsSkeleton(generatedAt));
+
+  // Record a deep summary in reverse-facts.json.
+  const factsPath = path.join(reverseDir, 'reverse-facts.json');
+  const saved = await fs.readJSON(factsPath).catch(() => null);
+  if (saved) {
+    saved.deep = {
+      entities: model.entities.length,
+      endpoints: model.endpoints.length,
+      entityNames: model.entities.map((e) => e.name),
+    };
+    await fs.writeJSON(factsPath, saved, { spaces: 2 });
+  }
+
+}
 
 async function runConfidenceReport(targetDir: string): Promise<void> {
   const dareDir = path.join(targetDir, 'DARE');
