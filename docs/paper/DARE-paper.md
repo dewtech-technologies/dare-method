@@ -393,15 +393,46 @@ controlado** instanciando o protocolo da §7.
 
 ## Referências
 
-1. S. O. de Macedo, R. M. da Costa. *Reversa: A Reverse Documentation Engineering Framework for
+**Agentes de código baseados em LLM e avaliação**
+
+1. C. E. Jimenez, J. Yang, A. Wettig, S. Yao, K. Pei, O. Press, K. Narasimhan.
+   *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* ICLR 2024.
+   arXiv:2310.06770. https://arxiv.org/abs/2310.06770
+2. S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. Narasimhan, Y. Cao.
+   *ReAct: Synergizing Reasoning and Acting in Language Models.* 2022.
+   arXiv:2210.03629. https://arxiv.org/abs/2210.03629
+3. N. Shinn, F. Cassano, E. Berman, A. Gopinath, K. Narasimhan, S. Yao.
+   *Reflexion: Language Agents with Verbal Reinforcement Learning.* NeurIPS 2023.
+   arXiv:2303.11366. https://arxiv.org/abs/2303.11366
+
+**Engenharia reversa de documentação e especificação**
+
+4. S. O. de Macedo, R. M. da Costa. *Reversa: A Reverse Documentation Engineering Framework for
    Converting Legacy Software into Operational Specifications for AI Agents.* arXiv:2605.18684v1,
    2026.
-2. *DARE Method* — repositório e CHANGELOG. Dewtech Technologies, 2026.
-   https://github.com/dewtech-technologies/dare-method
-3. *Keep a Changelog* (1.1.0) e *Semantic Versioning* (2.0.0).
-4. *(a completar)* Literatura de agentes de código, benchmarks de tarefas em repositório,
-   geração de documentação e especificação com LLMs, e práticas de descrição de arquitetura
-   (C4, ADRs).
+
+**Protocolos, algoritmos e práticas de engenharia**
+
+5. Anthropic. *Model Context Protocol (MCP).* 2024. https://modelcontextprotocol.io
+6. A. B. Kahn. *Topological sorting of large networks.* Communications of the ACM, 5(11):558–562,
+   1962.
+7. M. Nygard. *Documenting Architecture Decisions (ADRs).* 2011.
+8. S. Brown. *The C4 model for visualising software architecture.* https://c4model.com
+9. D. North. *Introducing BDD (Behaviour-Driven Development).* 2006.
+   (origem do estilo Given/When/Then usado pelo Gherkin/Cucumber.)
+10. *Conventional Commits 1.0.0* (https://www.conventionalcommits.org);
+    *Keep a Changelog 1.1.0* (https://keepachangelog.com);
+    *Semantic Versioning 2.0.0* (https://semver.org).
+
+**Implementação de referência**
+
+11. *DARE Method* — repositório, CHANGELOG e implementações por IDE. Dewtech Technologies, 2026.
+    https://github.com/dewtech-technologies/dare-method
+
+> *Nota:* todas as referências de arXiv foram verificadas (ID e autoria) em mai/2026. Antes da
+> submissão final, recomenda-se reconferir páginas/edições e adicionar literatura específica de
+> *spec-driven development* e geração de documentação em nível de repositório conforme o foco do
+> *venue* escolhido.
 
 ---
 
