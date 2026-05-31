@@ -253,6 +253,80 @@ Recognizes: NestJS · React · Vue · Nuxt · Rust/Axum · FastAPI · Laravel ·
 
 ---
 
+### `dare reverse` ← brownfield (Phase 0)
+
+Reverse-engineer an existing codebase into a Phase-0 understanding **without touching the source**.
+Deterministically detects module boundaries, sizes them by LOC and infers the dependency graph.
+
+```bash
+cd my-legacy-project
+dare reverse                 # → DARE/IDEIA.md + REVERSE/module-*.md + reverse-facts.json + architecture.excalidraw
+dare reverse --check         # detection only, no files
+dare reverse --modules api,auth
+dare reverse --no-excalidraw
+```
+
+**Confidence & traceability.** The `/dare-reverse` skill marks each claim 🟢 CONFIRMED (with
+`file:line` evidence) · 🟡 INFERRED · 🔴 GAP. Then:
+
+```bash
+dare reverse --report        # deterministic confidence index from the markers (not LLM self-scored)
+```
+
+→ `confidence-report.md` + `traceability/code-spec-matrix.md`; the 🔴 become `gaps.md` + `questions.md`.
+
+**Deep extraction (framework-agnostic per language):**
+
+```bash
+dare reverse --deep          # + ERD, API surface, C4, domain-rules, state-machines, permissions
+```
+
+The CLI extracts the data model (`erd.md`) and endpoints (`api-surface.md`) deterministically from
+**SQL inline (DDL + query tables), Prisma, ORMs and plain types/classes/structs** — so it works on
+legacy projects **with or without a framework** (e.g. raw-PDO PHP without Laravel). Routes cover
+multiple dialects per language (Express/Nest/Fastify, Laravel/Slim/Symfony, FastAPI/Flask/Django,
+Rails/Sinatra, Gin/stdlib, Axum).
+
+---
+
+### `dare dna` ← brownfield
+
+Extract the legacy codebase's **conventions** so the agent follows the house style instead of generic
+defaults — for legacy you can't rewrite.
+
+```bash
+cd my-legacy-project
+dare dna                     # → DARE/PROJECT-DNA.md + dna-facts.json
+dare dna --check
+```
+
+Detects lint/format tooling, naming conventions, architecture layers, test framework, key libraries
+(ORM/HTTP/auth/validation) and commit convention. The `/dare-dna` skill turns the facts into
+actionable rules. Reuses `reverse-facts.json` if `dare reverse` already ran.
+
+---
+
+### `dare migrate` ← brownfield (Phase 2)
+
+Plan a **safe migration** to a target stack, with **Gherkin parity scenarios** that guarantee
+behavior is preserved. Requires `dare reverse` first.
+
+```bash
+cd my-legacy-project
+dare migrate --to go-gin     # or rust-axum, node-nestjs, python-fastapi, php-laravel, ruby-rails-8…
+dare migrate --check
+```
+
+Consumes `IDEIA` + `DNA`, inherits the **blocking gaps** (🔴) as risks, and generates
+`DARE/MIGRATION/MIGRATION.md` (paradigm, strategy, risk register, target architecture, cutover) +
+`parity/<module>.feature` (the behavioral acceptance contract). The `/dare-migrate` skill fills the
+strategy and the real parity scenarios.
+
+> **Brownfield loop:** `reverse` (the *what*) → `dna` (the *how*) → `migrate` (reimplement with
+> parity) → `design`/`blueprint`/`execute` on the target stack.
+
+---
+
 ### `dare design`
 
 Generate `DARE/DESIGN.md` from a project description.
@@ -633,7 +707,7 @@ npm run inspect
 
 ## Skills disponíveis (v3.0.0)
 
-**29 skills em paridade total** nas 3 IDEs (Antigravity, Claude Code, Cursor). Cada skill existe em formato nativo de cada uma e é entregue por `dare init` / `dare update`.
+**32 skills em paridade total** nas 3 IDEs (Antigravity, Claude Code, Cursor). Cada skill existe em formato nativo de cada uma e é entregue por `dare init` / `dare update`.
 
 | Categoria | Skills | Exemplos |
 |---|---|---|
@@ -642,6 +716,7 @@ npm run inspect
 | **Transversais** | 6 | `dare-ax`, `dare-layered-design`, `dare-llm-integration`, `dare-frontend-design`, `dare-realtime`, `dare-quality-telemetry` |
 | **Stack / Tools** | 8 | `dare-docker`, `dare-security`, `dare-telemetry`, `dare-bugfix-design`, `dare-feature-design`, `dare-rust-workspace`, `dare-rust-leptos`, `dare-laravel-api` |
 | **Stacks novas v3.0.0** | 5 | `dare-nestjs-api`, `dare-fastapi-api`, `dare-go-gin-api`, `dare-mcp-server`, `dare-rails-api` |
+| **Brownfield** | 3 | `dare-reverse`, `dare-dna`, `dare-migrate` |
 
 Ver tabela cruzada completa em [`docs/skills/INDEX.md`](https://github.com/dewtech-technologies/dare-method/blob/main/docs/skills/INDEX.md).
 
@@ -660,7 +735,7 @@ Isso já dá:
 
 | Componente | O que é |
 |------------|---------|
-| CLI `dare` | `init`, `design`, `blueprint`, `execute`, `discover` |
+| CLI `dare` | `init`, `design`, `blueprint`, `execute`, `discover`, `reverse`, `dna`, `migrate` |
 | CLI `dare-mcp-server` | Servidor MCP local de contexto (~95% economia de tokens) |
 | Engine GraphRAG | Grafo de conhecimento com SQLite + FTS5 |
 | DAG Task Runner | Execução paralela de tasks com Kahn's algorithm |

@@ -14,7 +14,7 @@
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
-> 🚀 **v3.0.0 lançado!** **29 skills em paridade total nas 3 IDEs** (Antigravity, Claude Code, Cursor) + 5 novas skills de stack (NestJS, FastAPI, Go/Gin, MCP Server, Rails). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.0.0** — **32 skills em paridade total nas 3 IDEs** (Antigravity, Claude Code, Cursor): 5 stacks (NestJS, FastAPI, Go/Gin, MCP, Rails) + a **Suíte Brownfield** (`dare reverse` · `dare dna` · `dare migrate`) para entender, documentar e migrar projetos legados. Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·

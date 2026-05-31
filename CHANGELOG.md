@@ -11,7 +11,25 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [3.0.0] — 2026-05
 
-Release **major** focada em **paridade total entre IDEs** e **expansão de cobertura de stacks**. Sem breaking change funcional — o bump é major porque o número de skills disponíveis em cada IDE +duplicou.
+Release **major** focada em **paridade total entre IDEs**, **expansão de cobertura de stacks** e a **Suíte Brownfield** (engenharia reversa, DNA e migração de projetos legados). Sem breaking change funcional.
+
+### ✨ Adicionado — Suíte Brownfield (projetos legados)
+
+Leva o DARE de *greenfield-first* a também **entender, documentar e migrar projetos legados**. Três comandos novos + dois modos do `reverse`, no padrão da casa (CLI determinístico + skill semântica + Ralph Loop). Mecanismos de incerteza/migração inspirados no framework **Reversa** (Macedo & da Costa, *arXiv:2605.18684*, MIT) — absorção **clean-room**, sem copiar código.
+
+**Comandos novos:**
+
+- **`dare reverse`** — engenharia reversa (Fase 0): detecta fronteiras de módulo, mede tamanho por LOC, infere o grafo de dependências. Gera `DARE/IDEIA.md` (pré-arquitetura + mapa de módulos em Mermaid), `REVERSE/module-*.md`, `reverse-facts.json` e `architecture.excalidraw`. Flags `--check`, `--modules`, `--no-excalidraw`.
+- **`dare dna`** — extrai as **convenções** do codebase (lint/format, nomenclatura, camadas, framework de teste, libs ORM/HTTP/auth/validação, convenção de commits) → `PROJECT-DNA.md` + `dna-facts.json`. O agente passa a seguir o padrão da casa, não o default genérico.
+- **`dare migrate --to <stack>`** — plano de **migração com paridade**: consome `IDEIA` + `DNA`, herda os *blocking gaps* (🔴) como riscos, e gera `MIGRATION.md` (paradigma, estratégia, risco, arquitetura-alvo, cutover) + **cenários Gherkin de paridade** (`parity/<módulo>.feature`).
+
+**Modos do `dare reverse`:**
+
+- **`--report`** — **confiança 3-estados** por claim (🟢 CONFIRMED com evidência `arquivo:linha` · 🟡 INFERRED · 🔴 GAP), com índice **computado deterministicamente** a partir dos marcadores (não auto-avaliado por LLM). Gera `confidence-report.md` + `traceability/code-spec-matrix.md`; os 🔴 viram `gaps.md` e `questions.md`.
+- **`--deep`** — extração profunda: **ERD** (`erd.md`), **API surface** (`api-surface.md`), **C4** (component determinístico + context/container via skill) e skeletons de `domain-rules.md` / `state-machines.md` / `permissions.md`.
+- **Framework-agnostic por linguagem:** o `--deep` funciona em **qualquer projeto** de uma linguagem suportada, com ou sem framework — SQL inline (DDL + tabelas de queries), tipos/classes/structs em pastas de modelo (PHP/Python/TS/Go/Ruby/Rust → ERD sem ORM) e rotas multi-dialeto (Express/Nest/Fastify · Laravel/Slim/Symfony · FastAPI/Flask/Django · Rails/Sinatra · Gin/stdlib · Axum). Provado em PHP legado sem Laravel.
+
+**3 skills brownfield novas** (paridade nas 3 IDEs): `dare-reverse`, `dare-dna`, `dare-migrate`.
 
 ### ✨ Adicionado — 29 skills em paridade nas 3 IDEs
 
@@ -54,12 +72,15 @@ Todas as skills DARE agora existem nas 3 implementations (Antigravity, Claude Co
 ### 🐛 Corrigido
 
 - Limpeza de referências obsoletas de licença em arquivos de skill — DARE é MIT (D-001), sempre foi e continua sendo
+- `banner.ts`: tipo de fonte do `figlet` (`Fonts` → `FontName`) que travava o `tsc`
+- Build do pacote workspace `@dewtech/dare-stack-ruby-rails-8` (gera `dist/`, resolve o import do comando `new`) — `pnpm build` passa limpo de ponta a ponta
 
 ### 📁 Mudanças estruturais
 
 - **+53 arquivos novos** em `implementations/` (+11.681 linhas)
 - Cada skill nova inclui seção "Quando NÃO usar" + "Equivalência entre IDEs" para navegação cruzada
-- Paridade nominal: **29/29 skills × 3 IDEs = 87 arquivos de skill** (antes era ~38 com sobreposição parcial)
+- Paridade nominal: **32/32 skills × 3 IDEs = 96 arquivos de skill** (29 da paridade inicial + 3 brownfield; antes era ~38 com sobreposição parcial)
+- Novos utils determinísticos no CLI: `module-detector`, `dna-detector`, `confidence`, `migration`, `datamodel`, e renderer de grafo generalizado (`graph-renderer`, compartilhado por `dag viz` e `reverse`). Cobertura: **358 testes**
 - Novo: [`docs/skills/INDEX.md`](docs/skills/INDEX.md) com tabela cruzada IDE × skill
 - Novo: [`ROADMAP.md`](ROADMAP.md) na raiz, alinhado com D-005
 
