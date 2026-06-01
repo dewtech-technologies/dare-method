@@ -45,36 +45,7 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 
 ---
 
-## 🚧 Em desenvolvimento ativo — v3.1.x
-
-Próximas releases minor que **não quebram nada**.
-
-### Stacks com gerador completo (além do Ruby on Rails 8)
-
-Stacks atualmente disponíveis **só como skill de IDE** (`dare-*-api`) precisam virar **stack de scaffold** em `packages/stacks/`:
-
-- [ ] **node-nestjs** — gerador completo com Prisma + Swagger
-- [ ] **python-fastapi** — gerador com SQLAlchemy + Alembic
-- [ ] **go-gin** — gerador com sqlc + zerolog
-- [ ] **mcp-server** — TypeScript e Python templates
-- [ ] **php-laravel** — gerador com Eloquent + Sanctum
-
-A diferença: hoje você pode usar a skill para gerar código consistente; com a stack, `dare init --stack node-nestjs` provisiona projeto inteiro.
-
-### Frontend stacks
-
-- [ ] **react** stack completa (Vite + Zustand + React Query)
-- [ ] **vue** stack completa (Vite + Pinia + Vue Query)
-- [ ] **rust-leptos** / **rust-leptos-csr** já existem como skill; falta finalizar como stack
-
-### Registry remoto
-
-- [ ] Publicar `https://registry.dare.dewtech.tech` em produção (backend a (re)implementar — o protótipo em `packages/registry/` foi removido do monorepo)
-- [ ] Permitir `dare skill publish --remote --token <github-pat>` de qualquer dev da comunidade
-
----
-
-## 🔮 Planejado — v3.2.x+
+## 🔮 Planejado — v3.1.x+
 
 ### Novas implementations (IDEs/agentes)
 
@@ -96,19 +67,26 @@ A diferença: hoje você pode usar a skill para gerar código consistente; com a
 
 ---
 
-## ❌ Não está no roadmap (esclarecimento)
-
-- ❌ **Migração para AGPL v3** — RFC formalmente rejeitada. DARE permanece **MIT permanente** (D-001).
-- ❌ **Versão paga / pro / enterprise** — toda funcionalidade do CLI continua MIT. Monetização Dewtech é via consultoria, workshops e SaaS (DARE Cloud quando lançar).
-- ❌ **Lock-in de IDE** — qualquer IDE/agente que implemente o protocolo de skills pode rodar DARE.
-
----
-
 ## 📚 Histórico de releases
 
 Resumo cronológico de todas as releases. Detalhes completos em [`CHANGELOG.md`](CHANGELOG.md).
 
 ### v3.0.0 (2026-05) — Skill parity & stacks novas
+
+✨ Adicionado — Suíte Brownfield (projetos legados)
+Leva o DARE de greenfield-first a também entender, documentar e migrar projetos legados. Três comandos novos + dois modos do reverse, no padrão da casa (CLI determinístico + skill semântica + Ralph Loop). Mecanismos de incerteza/migração inspirados no framework Reversa (Macedo & da Costa, arXiv:2605.18684, MIT) — absorção clean-room, sem copiar código.
+
+Comandos novos:
+
+dare reverse — engenharia reversa (Fase 0): detecta fronteiras de módulo, mede tamanho por LOC, infere o grafo de dependências. Gera DARE/IDEIA.md (pré-arquitetura + mapa de módulos em Mermaid), REVERSE/module-*.md, reverse-facts.json e architecture.excalidraw. Flags --check, --modules, --no-excalidraw.
+dare dna — extrai as convenções do codebase (lint/format, nomenclatura, camadas, framework de teste, libs ORM/HTTP/auth/validação, convenção de commits) → PROJECT-DNA.md + dna-facts.json. O agente passa a seguir o padrão da casa, não o default genérico.
+dare migrate --to <stack> — plano de migração com paridade: consome IDEIA + DNA, herda os blocking gaps (🔴) como riscos, e gera MIGRATION.md (paradigma, estratégia, risco, arquitetura-alvo, cutover) + cenários Gherkin de paridade (parity/<módulo>.feature).
+Modos do dare reverse:
+
+--report — confiança 3-estados por claim (🟢 CONFIRMED com evidência arquivo:linha · 🟡 INFERRED · 🔴 GAP), com índice computado deterministicamente a partir dos marcadores (não auto-avaliado por LLM). Gera confidence-report.md + traceability/code-spec-matrix.md; os 🔴 viram gaps.md e questions.md.
+--deep — extração profunda: ERD (erd.md), API surface (api-surface.md), C4 (component determinístico + context/container via skill) e skeletons de domain-rules.md / state-machines.md / permissions.md.
+Framework-agnostic por linguagem: o --deep funciona em qualquer projeto de uma linguagem suportada, com ou sem framework — SQL inline (DDL + tabelas de queries), tipos/classes/structs em pastas de modelo (PHP/Python/TS/Go/Ruby/Rust → ERD sem ORM) e rotas multi-dialeto (Express/Nest/Fastify · Laravel/Slim/Symfony · FastAPI/Flask/Django · Rails/Sinatra · Gin/stdlib · Axum). Provado em PHP legado sem Laravel.
+3 skills brownfield novas (paridade nas 3 IDEs): dare-reverse, dare-dna, dare-migrate.
 
 Release **major**: 29 skills em paridade total nas 3 IDEs. +45 arquivos de skill em `implementations/`. 5 stacks novas como skill (`dare-nestjs-api`, `dare-fastapi-api`, `dare-go-gin-api`, `dare-mcp-server`, `dare-rails-api`). Split granular do DAG (build/run/runner/viz) padronizado entre IDEs. Purga completa de menções AGPL obsoletas (D-001 ratifica MIT permanente). Novo `ROADMAP.md` e `docs/skills/INDEX.md`.
 
