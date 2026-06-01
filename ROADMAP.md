@@ -69,7 +69,7 @@ A diferença: hoje você pode usar a skill para gerar código consistente; com a
 
 ### Registry remoto
 
-- [ ] Publicar `https://registry.dare.dewtech.tech` em produção (backend Vercel Functions já está em `packages/registry/`)
+- [ ] Publicar `https://registry.dare.dewtech.tech` em produção (backend a (re)implementar — o protótipo em `packages/registry/` foi removido do monorepo)
 - [ ] Permitir `dare skill publish --remote --token <github-pat>` de qualquer dev da comunidade
 
 ---
