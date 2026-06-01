@@ -107,7 +107,7 @@ Cliques nas colunas vao direto para os arquivos.
 
 ## Publicando sua propria skill
 
-Skills da comunidade entram via registry (packages/registry/). Veja contributing/publish-a-skill.md para o passo a passo.
+Skills da comunidade entram via registry remoto (em planejamento). Veja contributing/publish-a-skill.md para o passo a passo.
 
 ---
 
