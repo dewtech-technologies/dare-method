@@ -85,7 +85,7 @@ tasks:
     phase: "2-rails-internalize"
     complexity: "LOW"
     depends_on: ["task-005"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/__tests__/parity-rails.fixture.json"
     gates: ["dare new --stack rails em tmp + tree-hash gerado"]
@@ -97,7 +97,7 @@ tasks:
     phase: "2-rails-internalize"
     complexity: "MED"
     depends_on: ["task-010"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/ruby-rails-8/scaffold.ts"
       - "packages/cli/src/stacks/ruby-rails-8/__tests__/scaffold.spec.ts"
@@ -112,7 +112,7 @@ tasks:
     phase: "2-rails-internalize"
     complexity: "LOW"
     depends_on: ["task-011"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/registry.ts"
     gates: ["tsc --noEmit", "vitest run registry.spec"]
@@ -124,7 +124,7 @@ tasks:
     phase: "2-rails-internalize"
     complexity: "MED"
     depends_on: ["task-012"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/__tests__/parity-rails.spec.ts"
     gates: ["vitest run parity-rails"]

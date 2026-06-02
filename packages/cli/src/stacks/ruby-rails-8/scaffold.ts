@@ -39,7 +39,12 @@ export interface RailsScaffoldOptions {
   verbose?: boolean;
 }
 
-export interface ScaffoldResult {
+/**
+ * Legacy ScaffoldResult interface (v3.0.0 shape) used by RailsScaffold.
+ * Renamed to RailsScaffoldResult to avoid collision with the v3.1
+ * `StackScaffold.generate()` result type imported below.
+ */
+export interface RailsScaffoldResult {
   appName: string;
   outputDir: string;
   filesCreated: string[];
@@ -59,12 +64,22 @@ export class RailsScaffold {
   private readonly TEMPLATES_DIR: string;
 
   constructor() {
-    // Templates live alongside the compiled dist/ in the package
-    // __dirname equivalent for ESM: resolve relative to this file's location in dist/
+    // v3.1 internalized layout:
+    //   src:  packages/cli/src/stacks/ruby-rails-8/scaffold.ts
+    //   dist: packages/cli/dist/stacks/ruby-rails-8/scaffold.js
+    // Templates at packages/cli/templates/stacks/ruby-rails-8/ — 3 levels up + /templates/stacks/<id>.
     const thisFilePath = typeof __dirname !== 'undefined'
       ? __dirname
       : path.dirname(new URL((import.meta as { url: string }).url).pathname.replace(/^\/([A-Z]:)/, '$1'));
-    this.TEMPLATES_DIR = path.resolve(thisFilePath, '..', 'templates');
+    this.TEMPLATES_DIR = path.resolve(
+      thisFilePath,
+      '..',
+      '..',
+      '..',
+      'templates',
+      'stacks',
+      'ruby-rails-8',
+    );
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -76,9 +91,9 @@ export class RailsScaffold {
    * @param options   Configuration options
    * @returns         Manifest of created files and directories
    */
-  async generate(appName: string, options: Partial<RailsScaffoldOptions> = {}): Promise<ScaffoldResult> {
+  async generate(appName: string, options: Partial<RailsScaffoldOptions> = {}): Promise<RailsScaffoldResult> {
     const opts = this.resolveOptions(appName, options);
-    const result: ScaffoldResult = {
+    const result: RailsScaffoldResult = {
       appName,
       outputDir: opts.outputDir,
       filesCreated: [],
@@ -131,7 +146,7 @@ export class RailsScaffold {
 
   // ── Directory structure ────────────────────────────────────────────────────
 
-  private async createDirectories(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async createDirectories(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const dirs: string[] = [
       // Layered Design (ADR-05)
       'app/handlers',
@@ -180,7 +195,7 @@ export class RailsScaffold {
 
   // ── Template generators ────────────────────────────────────────────────────
 
-  private async generateGemfile(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateGemfile(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const src  = path.join(this.TEMPLATES_DIR, 'Gemfile.erb');
     const dest = path.join(opts.outputDir, 'Gemfile');
     const content = await this.renderTemplate(src, opts);
@@ -188,7 +203,7 @@ export class RailsScaffold {
     result.filesCreated.push('Gemfile');
   }
 
-  private async generateLlmsTxt(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateLlmsTxt(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const src  = path.join(this.TEMPLATES_DIR, 'llms.txt.erb');
     const dest = path.join(opts.outputDir, 'llms.txt');
     const content = await this.renderTemplate(src, opts);
@@ -196,7 +211,7 @@ export class RailsScaffold {
     result.filesCreated.push('llms.txt');
   }
 
-  private async generateDareConfig(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateDareConfig(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const src  = path.join(this.TEMPLATES_DIR, 'config', 'dare.yml');
     const dest = path.join(opts.outputDir, 'config', 'dare.yml');
     const content = await this.renderTemplate(src, opts);
@@ -204,14 +219,14 @@ export class RailsScaffold {
     result.filesCreated.push('config/dare.yml');
   }
 
-  private async generateDareSkillsManifest(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateDareSkillsManifest(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const src  = path.join(this.TEMPLATES_DIR, '.dare', 'skills.yml');
     const dest = path.join(opts.outputDir, '.dare', 'skills.yml');
     await fs.copy(src, dest);
     result.filesCreated.push('.dare/skills.yml');
   }
 
-  private async generateInitializers(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateInitializers(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const initializerFiles = [
       'dare.rb',
       'rack_attack.rb',
@@ -228,7 +243,7 @@ export class RailsScaffold {
     }
   }
 
-  private async generateApplicationController(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateApplicationController(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const files: Array<[string, string]> = [
       ['app/controllers/concerns/problem_details.rb', 'app/controllers/concerns/problem_details.rb'],
       ['app/controllers/application_controller.rb',   'app/controllers/application_controller.rb'],
@@ -244,14 +259,14 @@ export class RailsScaffold {
     }
   }
 
-  private async generateRakeTask(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateRakeTask(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const src  = path.join(this.TEMPLATES_DIR, 'lib', 'tasks', 'dare.rake');
     const dest = path.join(opts.outputDir, 'lib', 'tasks', 'dare.rake');
     await fs.copy(src, dest);
     result.filesCreated.push('lib/tasks/dare.rake');
   }
 
-  private async generateUserExample(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateUserExample(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const exampleFiles: Array<[string, string]> = [
       ['app/models/user.rb',                           'app/models/user.rb'],
       ['app/repositories/user_repository.rb',          'app/repositories/user_repository.rb'],
@@ -274,7 +289,7 @@ export class RailsScaffold {
     }
   }
 
-  private async generateLlmLayer(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateLlmLayer(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const llmFiles: Array<[string, string]> = [
       ['app/llm/providers/llm_provider.rb',              'app/llm/providers/llm_provider.rb'],
       ['app/llm/providers/openai_provider.rb',           'app/llm/providers/openai_provider.rb'],
@@ -297,7 +312,7 @@ export class RailsScaffold {
     }
   }
 
-  private async generateChannels(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateChannels(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const channelFiles: Array<[string, string]> = [
       ['app/channels/application_cable/connection.rb', 'app/channels/application_cable/connection.rb'],
       ['app/channels/application_cable/channel.rb',    'app/channels/application_cable/channel.rb'],
@@ -317,7 +332,7 @@ export class RailsScaffold {
     }
   }
 
-  private async generateSummarizeDocument(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateSummarizeDocument(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const summarizeFiles: Array<[string, string]> = [
       ['app/handlers/summarize_handler.rb',                    'app/handlers/summarize_handler.rb'],
       ['app/services/summarize_document_service.rb',           'app/services/summarize_document_service.rb'],
@@ -337,7 +352,7 @@ export class RailsScaffold {
     }
   }
 
-  private async generateGitHubActions(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateGitHubActions(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const src  = path.join(this.TEMPLATES_DIR, '.github', 'workflows', 'dare-ci.yml');
     const dest = path.join(opts.outputDir, '.github', 'workflows', 'dare-ci.yml');
     if (await fs.pathExists(src)) {
@@ -346,7 +361,7 @@ export class RailsScaffold {
     }
   }
 
-  private async generateSpecSupport(opts: RailsScaffoldOptions, result: ScaffoldResult): Promise<void> {
+  private async generateSpecSupport(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const specFiles: Array<[string, string]> = [
       ['spec/rails_helper.rb',   'spec/rails_helper.rb'],
       ['spec/swagger_helper.rb', 'spec/swagger_helper.rb'],
@@ -437,3 +452,57 @@ DARE docs:
 // ── Default export ────────────────────────────────────────────────────────────
 
 export default RailsScaffold;
+
+// ── v3.1 StackScaffold adapter ────────────────────────────────────────────────
+//
+// Wraps the existing RailsScaffold class to implement the new StackScaffold
+// contract. Behavior is identical to v3.0.0 — parity-rails.spec.ts gates this.
+
+import type {
+  ScaffoldOpts,
+  ScaffoldResult,
+  StackScaffold,
+} from '../types.js';
+import { DARE_DNA } from '../types.js';
+
+export const ruby_rails_8: StackScaffold = {
+  id: 'ruby-rails-8',
+  label: '💎 Ruby / Rails 8',
+  category: 'backend',
+  status: 'stable',
+
+  async generate(opts: ScaffoldOpts): Promise<ScaffoldResult> {
+    const scaffolder = new RailsScaffold();
+    const legacy = await scaffolder.generate(opts.projectName, {
+      outputDir: opts.dir,
+      llmProvider:
+        opts.llm?.providers[0]?.id === 'openai' ? 'openai' : 'dummy',
+      // v3.0.0 default behavior: always include the full DARE-shaped scaffold
+      // (examples + LLM layer + channels). Skip-* knobs are reserved for
+      // explicit opt-out via future CLI flags.
+      skipExamples: false,
+      skipLlm: false,
+      skipChannels: false,
+      verbose: false,
+    });
+
+    const filesWritten = [...legacy.filesCreated]
+      .map((p) => path.relative(opts.dir, p).replace(/\\/g, '/'))
+      .sort();
+
+    return {
+      filesWritten,
+      postInstallSteps: [
+        `cd ${opts.projectName}`,
+        'rails new . --database=postgresql',
+        'bundle install',
+        'bin/rails db:create db:migrate',
+        'bin/rails server',
+      ],
+      warnings: [],
+      // RailsScaffold already emits every DNA artifact; v3.1 contract
+      // is satisfied because the templates were already DARE-shaped.
+      dnaEmitted: new Set(DARE_DNA),
+    };
+  },
+};

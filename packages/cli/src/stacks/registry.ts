@@ -13,10 +13,19 @@ import type {
 } from './types.js';
 
 // Entries are populated as scaffolders land:
-//   T-012 → ruby-rails-8
+//   T-012 → ruby-rails-8 ✓
 //   T-030..T-035 → backend stacks
 //   T-040..T-043 → mcp stacks
-const ENTRIES: ReadonlyArray<StackRegistryEntry> = [];
+const ENTRIES: ReadonlyArray<StackRegistryEntry> = [
+  {
+    id: 'ruby-rails-8',
+    label: '💎 Ruby / Rails 8',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./ruby-rails-8/scaffold.js')).ruby_rails_8,
+  },
+];
 
 export const STACK_REGISTRY: ReadonlyMap<StackId, StackRegistryEntry> = new Map(
   ENTRIES.map((e) => [e.id, e] as const),

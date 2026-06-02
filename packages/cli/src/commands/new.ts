@@ -97,7 +97,8 @@ export const newCommand = new Command('new')
       let result;
 
       if (options.stack === 'rails') {
-        const { RailsScaffold } = await import('@dewtech/dare-stack-ruby-rails-8');
+        // v3.1: import from internalized location (was workspace dep).
+        const { RailsScaffold } = await import('../stacks/ruby-rails-8/scaffold.js');
         const scaffold = new RailsScaffold();
 
         result = await scaffold.generate(appName, {
