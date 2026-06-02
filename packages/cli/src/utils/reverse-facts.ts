@@ -15,6 +15,7 @@
 
 import type { DetectedProject } from './project-detector.js';
 import type { ModuleGraph, ModuleInfo, SizeBucket } from './module-detector.js';
+import type { DataModel, Entity, Endpoint } from './datamodel.js';
 import {
   renderGraphMermaid,
   renderGraphExcalidraw,
@@ -115,7 +116,66 @@ export function moduleSpecFilename(index: number, mod: ModuleInfo): string {
   return `module-${num}-${mod.id}.md`;
 }
 
-export function renderIdeiaSkeleton(facts: ReverseFacts, withExcalidraw: boolean): string {
+/** Renders the "Modelo de Dados" section: real entities table when extracted. */
+function renderDataModelSection(model?: DataModel): string[] {
+  if (!model || model.entities.length === 0) {
+    return [
+      '## Modelo de Dados (reconstruído)',
+      '<!-- AGENT: liste as entidades, campos-chave e relacionamentos inferidos de migrations/models. -->',
+    ];
+  }
+  const CAP = 60;
+  const shown = model.entities.slice(0, CAP);
+  const rows = shown.map((e: Entity) => {
+    const fields = e.fields.slice(0, 8).map((f) => f.name).join(', ') || '—';
+    const rels = e.relations.map((r) => `${r.kind} ${r.to}`).join('; ') || '—';
+    return `| \`${e.name}\` | ${fields} | ${rels} | \`${e.source}\` |`;
+  });
+  const more = model.entities.length > CAP ? [`\n_+${model.entities.length - CAP} entidades — ver \`REVERSE/erd.md\` (rode \`--deep\`)._`] : [];
+  return [
+    `## Modelo de Dados (reconstruído) — ${model.entities.length} entidades 🟢`,
+    '',
+    '> Extraído deterministicamente (Prisma/SQL/ORM/`*.entity.*`). `<!-- AGENT -->` deve adicionar significado de negócio + relacionamentos faltantes.',
+    '',
+    '| Entidade | Campos-chave | Relações | Origem |',
+    '|---|---|---|---|',
+    ...rows,
+    ...more,
+  ];
+}
+
+/** Renders the "Superfície de API" section: real endpoints table when extracted. */
+function renderApiSection(model?: DataModel): string[] {
+  if (!model || model.endpoints.length === 0) {
+    return [
+      '## Superfície de API',
+      '<!-- AGENT: liste os endpoints/contratos inferidos de rotas/controllers (método, rota, propósito). -->',
+    ];
+  }
+  const CAP = 80;
+  const sorted = [...model.endpoints].sort((a, b) =>
+    a.route === b.route ? a.method.localeCompare(b.method) : a.route.localeCompare(b.route),
+  );
+  const shown = sorted.slice(0, CAP);
+  const rows = shown.map((e: Endpoint) => `| ${e.method} | \`${e.route}\` | \`${e.source}\` |`);
+  const more = model.endpoints.length > CAP ? [`\n_+${model.endpoints.length - CAP} endpoints — ver \`REVERSE/api-surface.md\` (rode \`--deep\`)._`] : [];
+  return [
+    `## Superfície de API — ${model.endpoints.length} endpoints 🟢`,
+    '',
+    '> Extraído deterministicamente de rotas/controllers (Nest/Express/Laravel/FastAPI/Gin/Axum), com evidência `arquivo:linha`. `<!-- AGENT -->` deve adicionar o propósito de cada endpoint.',
+    '',
+    '| Método | Rota | Origem |',
+    '|---|---|---|',
+    ...rows,
+    ...more,
+  ];
+}
+
+export function renderIdeiaSkeleton(
+  facts: ReverseFacts,
+  withExcalidraw: boolean,
+  model?: DataModel,
+): string {
   const { project, summary } = facts;
   const lines: string[] = [
     `# IDEIA — ${project.name}`,
@@ -174,11 +234,9 @@ export function renderIdeiaSkeleton(facts: ReverseFacts, withExcalidraw: boolean
     '  %% AGENT: substitua pelo fluxo real do sistema',
     '```',
     '',
-    '## Modelo de Dados (reconstruído)',
-    '<!-- AGENT: liste as entidades, campos-chave e relacionamentos inferidos de migrations/models. -->',
+    ...renderDataModelSection(model),
     '',
-    '## Superfície de API',
-    '<!-- AGENT: liste os endpoints/contratos inferidos de rotas/controllers (método, rota, propósito). -->',
+    ...renderApiSection(model),
     '',
     '## ⚠️ Incertezas / Gaps',
     '<!-- AGENT: liste o que NÃO foi possível inferir com segurança e perguntas que o humano precisa responder. -->',
@@ -296,9 +354,47 @@ export function renderModuleSpecSkeleton(
   index: number,
   total: number,
   generatedAt: string,
+  model?: DataModel,
 ): string {
   const sampleFiles = mod.files.slice(0, 30);
   const more = mod.files.length - sampleFiles.length;
+
+  // Endpoints + entities whose source file lives under this module's path.
+  const inModule = (source: string): boolean =>
+    source.replace(/\\/g, '/').startsWith(mod.path.replace(/\\/g, '/'));
+  const modEndpoints = (model?.endpoints ?? []).filter((e) => inModule(e.source));
+  const modEntities = (model?.entities ?? []).filter((e) => inModule(e.source));
+
+  const publicSurface: string[] =
+    modEndpoints.length || modEntities.length
+      ? [
+          '## Superfície Pública 🟢',
+          '',
+          '> Extraído deterministicamente deste módulo. `<!-- AGENT -->` adiciona o propósito.',
+          '',
+          ...(modEndpoints.length
+            ? [
+                `**Endpoints (${modEndpoints.length}):**`,
+                '',
+                ...modEndpoints.slice(0, 30).map((e) => `- \`${e.method} ${e.route}\` — \`${e.source}\``),
+                modEndpoints.length > 30 ? `- … +${modEndpoints.length - 30}` : '',
+                '',
+              ]
+            : []),
+          ...(modEntities.length
+            ? [
+                `**Entidades (${modEntities.length}):**`,
+                '',
+                ...modEntities.slice(0, 30).map((e) => `- \`${e.name}\` — \`${e.source}\``),
+                modEntities.length > 30 ? `- … +${modEntities.length - 30}` : '',
+                '',
+              ]
+            : []),
+        ]
+      : [
+          '## Superfície Pública',
+          '<!-- AGENT: liste o que este módulo expõe para os outros (funções/classes/endpoints/tipos exportados). -->',
+        ];
   const lines: string[] = [
     `# Módulo: ${mod.name}`,
     '',
@@ -319,8 +415,7 @@ export function renderModuleSpecSkeleton(
     '## Responsabilidade',
     '<!-- AGENT: em 1-3 frases, qual a responsabilidade deste módulo no sistema? -->',
     '',
-    '## Superfície Pública',
-    '<!-- AGENT: liste o que este módulo expõe para os outros (funções/classes/endpoints/tipos exportados). -->',
+    ...publicSurface,
     '',
     '## Como Funciona (fluxo)',
     '<!-- AGENT: desenhe um sequenceDiagram do fluxo de execução típico do módulo ' +

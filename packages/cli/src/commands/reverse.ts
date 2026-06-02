@@ -102,21 +102,35 @@ export const reverseCommand = new Command('reverse')
     const dareDir = path.join(targetDir, 'DARE');
     const reverseDir = path.join(dareDir, 'REVERSE');
 
-    const writeSpinner = ora('Writing IDEIA.md + module specs...').start();
+    const writeSpinner = ora('Extracting API surface + data model...').start();
     try {
       await fs.ensureDir(reverseDir);
 
-      await fs.writeJSON(path.join(reverseDir, 'reverse-facts.json'), facts, { spaces: 2 });
+      // v3.2: deterministic API/entity extraction runs by default (was --deep
+      // only) so IDEIA.md + module specs carry real collected data, not just
+      // skeletons. The agent (/dare-reverse) enriches the semantic sections.
+      const model = await extractDataModel(targetDir);
+      writeSpinner.text = 'Writing IDEIA.md + module specs...';
+
+      // Surface the counts in reverse-facts.json (no longer purely structural).
+      const factsWithModel = {
+        ...facts,
+        api: {
+          endpoints: model.endpoints.length,
+          entities: model.entities.length,
+        },
+      };
+      await fs.writeJSON(path.join(reverseDir, 'reverse-facts.json'), factsWithModel, { spaces: 2 });
       await fs.writeFile(
         path.join(dareDir, 'IDEIA.md'),
-        renderIdeiaSkeleton(facts, opts.excalidraw !== false),
+        renderIdeiaSkeleton(facts, opts.excalidraw !== false, model),
       );
 
       for (let i = 0; i < facts.modules.length; i++) {
         const mod = facts.modules[i];
         await fs.writeFile(
           path.join(reverseDir, moduleSpecFilename(i, mod)),
-          renderModuleSpecSkeleton(mod, i, facts.modules.length, generatedAt),
+          renderModuleSpecSkeleton(mod, i, facts.modules.length, generatedAt, model),
         );
       }
 
@@ -128,10 +142,14 @@ export const reverseCommand = new Command('reverse')
       }
 
       if (opts.deep) {
-        await writeDeepArtifacts(targetDir, reverseDir, facts);
+        await writeDeepArtifacts(targetDir, reverseDir, facts, model);
       }
 
-      writeSpinner.succeed(chalk.green('IDEIA.md and module specs generated.'));
+      writeSpinner.succeed(
+        chalk.green(
+          `IDEIA.md + module specs generated (${model.endpoints.length} endpoints, ${model.entities.length} entities).`,
+        ),
+      );
     } catch (err) {
       writeSpinner.fail(chalk.red('Failed to write reverse-engineering artifacts'));
       console.error(err);
@@ -160,9 +178,10 @@ async function writeDeepArtifacts(
   targetDir: string,
   reverseDir: string,
   facts: ReverseFacts,
+  preExtracted?: Awaited<ReturnType<typeof extractDataModel>>,
 ): Promise<void> {
   const generatedAt = facts.generatedAt;
-  const model = await extractDataModel(targetDir);
+  const model = preExtracted ?? (await extractDataModel(targetDir));
 
   // Deterministic data model + API surface.
   await fs.writeFile(path.join(reverseDir, 'erd.md'), renderErd(model, generatedAt));

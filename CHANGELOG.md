@@ -9,6 +9,22 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.2.0] — 2026-06
+
+Release focada na **qualidade dos artefatos de brownfield** (`dare reverse` / `dare dna`). Até a v3.1, os artefatos gerados eram quase só esqueleto: `IDEIA.md` e as specs de módulo continham placeholders `<!-- AGENT -->` em vez de dados reais coletados da aplicação. Agora a camada determinística (sem LLM) **roda por padrão** e renderiza dados reais (endpoints + entidades) nos artefatos; o agente da IDE apenas enriquece a semântica em cima de fatos concretos.
+
+### ✨ Adicionado
+
+- **Coleta determinística por padrão no `dare reverse`.** `extractDataModel()` agora roda em todo `reverse` (antes só com `--deep`), e o modelo extraído é injetado em `IDEIA.md` e nas specs de módulo. Os artefatos passam de esqueleto para tabelas reais de **Superfície de API** e **Modelo de Dados**.
+- **`reverse-facts.json` registra contagens** de `api.endpoints` e `api.entities` coletados.
+
+### 🐛 Corrigido — extração determinística (`utils/datamodel.ts`)
+
+- **Prefixo `@Controller` composto na rota.** Rotas NestJS agora resolvem o path completo (`@Controller('users')` + `@Get(':id')` → `GET /users/:id`), incluindo `@Controller()` vazio e decorators sem argumento (`@Get()`).
+- **Entidades `@Entity` sem relações agora são coletadas.** `parseOrm` só fazia `push` quando havia relação detectada — classes de entidade só-colunas (TypeORM/Eloquent/etc.) eram descartadas. Agora a marca de entidade já confirma o push, e os campos (`@Column`/propriedades) são extraídos junto.
+- **DTOs e value shapes deixam de contar como entidades.** Filtro por sufixo (`Dto`, `Request`, `Response`, `Input`, `UseCase`, `Mapper`, …) e por arquivo (`*.dto.ts`), além de heurística PascalCase.
+- **Palavras-chave SQL deixam de virar entidade.** `CASCADE`, `SET`, `NULL`, etc. são filtradas de refs de FK, preservando nomes de tabela em minúsculas (`produtos`, `pedidos`).
+
 ## [3.1.1] — 2026-06
 
 ### 🐛 Corrigido
