@@ -324,7 +324,7 @@ tasks:
       - "task-041"
       - "task-042"
       - "task-043"
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/commands/new.ts"  # delete
       - "packages/cli/src/bin/dare.ts"
@@ -337,7 +337,7 @@ tasks:
     phase: "6-removal"
     complexity: "LOW"
     depends_on: ["task-050"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/stacks/**"  # delete
       - "pnpm-workspace.yaml"
@@ -350,7 +350,7 @@ tasks:
     phase: "6-removal"
     complexity: "LOW"
     depends_on: ["task-051"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/package.json"
     gates: ["pnpm install", "pnpm -r build", "pnpm -r test"]
