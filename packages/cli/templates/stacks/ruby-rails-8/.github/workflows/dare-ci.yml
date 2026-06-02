@@ -1,6 +1,6 @@
-# DARE v3.0 — CI/CD Pipeline for Rails 8 stack
+# DARE v3.1 — CI/CD Pipeline for Rails 8 stack
 # Runs on every push and pull_request
-# Validates: rspec + dare:metrics (M-01 to M-04)
+# Validates: bundle audit + rubocop + rspec + dare:metrics (M-01 to M-04)
 
 name: DARE CI
 
@@ -11,6 +11,32 @@ on:
     branches: ["**"]
 
 jobs:
+  audit:
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: bundle audit
+        run: |
+          gem install bundler-audit
+          bundle audit check --update
+
+  lint:
+    name: Lint (RuboCop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: rubocop
+        run: bundle exec rubocop
+
   test:
     name: Test (Ruby ${{ matrix.ruby }})
     runs-on: ubuntu-latest

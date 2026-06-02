@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-06-01",
-  "source": "RailsScaffold.generate (v3.0.0 baseline, pre-T-011)",
-  "scaffolder": "@dewtech/dare-stack-ruby-rails-8",
-  "fileCount": 43,
+  "capturedAt": "2026-06-02",
+  "source": "ruby_rails_8.generate (v3.1 internalized, DNA-enriched)",
+  "scaffolder": "packages/cli/src/stacks/ruby-rails-8",
+  "fileCount": 44,
   "files": [
     {
       "path": ".dare/skills.yml",
@@ -10,9 +10,14 @@
       "bytes": 1078
     },
     {
+      "path": ".env.example",
+      "hash": "301e5c6b7776349c9adbbfef41204e5a2a02f7c6e598fc9f8164c3d0437042f8",
+      "bytes": 455
+    },
+    {
       "path": ".github/workflows/dare-ci.yml",
-      "hash": "5398c143d066ccd2895f44a538e521c4ed87ee6b361f1c089a0c60f55c058fbf",
-      "bytes": 2195
+      "hash": "f56498ec8b9277aa9d4b841c7b4e544479f7b4f66731f5b606c85b8a960514e9",
+      "bytes": 2848
     },
     {
       "path": "Gemfile",

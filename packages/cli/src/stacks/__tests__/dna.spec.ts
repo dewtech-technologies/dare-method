@@ -123,8 +123,121 @@ describe.each(REGISTERED_IDS.map((id) => [id]))(
       expect(content).toMatch(/audit|lint|test|build|rspec|rubocop/i);
     });
 
-    // The remaining DNA checks — `openapi`, `cli-json-flag`, `rate-limit` —
-    // are added in T-060 / T-062 (Phase 7) because they vary by stack and
-    // need ecosystem-specific grep patterns.
+  },
+);
+
+// ─── T-060 — env-example secret scan (consolidated across all stacks) ──────
+//
+// Every stack's .env.example is generated, then re-validated by emit()'s
+// secret check inside the scaffolder. This is the single-source gate that
+// proves no stack ships a real-looking secret in its env template.
+
+const SECRET_PATTERNS: ReadonlyArray<[string, RegExp]> = [
+  ['base64-40+', /[A-Za-z0-9+/]{40,}={0,2}/],
+  ['hex-32+', /[a-f0-9]{32,}/],
+  ['openai-key', /sk-[A-Za-z0-9]{40,}/],
+  ['aws-key', /AKIA[0-9A-Z]{16}/],
+  ['pem-block', /-----BEGIN [A-Z ]+ PRIVATE KEY-----/],
+];
+
+describe.each(REGISTERED_IDS.map((id) => [id]))(
+  '.env.example secret scan — %s',
+  (stackId) => {
+    let tmpDir: string;
+
+    beforeAll(async () => {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `dnasec-${stackId}-`));
+      const scaffold = await resolve(stackId);
+      await scaffold.generate({
+        dir: tmpDir,
+        projectName: 'test-app',
+        toolchain: 'auto',
+        features: new Set(DARE_DNA),
+        isMonorepo: false,
+        mcp: scaffold.category === 'mcp' ? { transport: 'stdio' } : undefined,
+      });
+    });
+
+    it('has a .env.example', async () => {
+      expect(await fs.pathExists(path.join(tmpDir, '.env.example'))).toBe(true);
+    });
+
+    it('contains no secret-looking values', async () => {
+      const content = await fs.readFile(path.join(tmpDir, '.env.example'), 'utf8');
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eq = trimmed.indexOf('=');
+        if (eq < 0) continue;
+        const value = trimmed.slice(eq + 1).trim();
+        if (!value) continue;
+        for (const [label, pat] of SECRET_PATTERNS) {
+          expect(
+            pat.test(value),
+            `line ${i + 1} matched ${label}: '${trimmed}'`,
+          ).toBe(false);
+        }
+      }
+    });
+  },
+);
+
+// ─── T-062 — dare-ci.yml has an audit job with the right tool per stack ────
+//
+// Not enough that the file exists (covered above) — it must run an
+// ecosystem-appropriate audit that fails CI on HIGH+ vulnerabilities.
+
+const AUDIT_TOOL: Record<string, string> = {
+  'ruby-rails-8': 'bundle audit',
+  'node-nestjs': 'pnpm audit',
+  'python-fastapi': 'pip-audit',
+  'php-laravel': 'composer audit',
+  'rust-axum': 'cargo audit',
+  'go-gin': 'govulncheck',
+  'go-stdlib': 'govulncheck',
+  'mcp-node-ts': 'pnpm audit',
+  'mcp-python': 'pip-audit',
+  'mcp-rust': 'cargo audit',
+  'mcp-go': 'govulncheck',
+};
+
+describe.each(REGISTERED_IDS.map((id) => [id]))(
+  'dare-ci.yml audit gate — %s',
+  (stackId) => {
+    let ci: string;
+
+    beforeAll(async () => {
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `dnaci-${stackId}-`));
+      const scaffold = await resolve(stackId);
+      await scaffold.generate({
+        dir: tmpDir,
+        projectName: 'test-app',
+        toolchain: 'auto',
+        features: new Set(DARE_DNA),
+        isMonorepo: false,
+        mcp: scaffold.category === 'mcp' ? { transport: 'stdio' } : undefined,
+      });
+      ci = await fs.readFile(
+        path.join(tmpDir, '.github/workflows/dare-ci.yml'),
+        'utf8',
+      );
+    });
+
+    it('declares audit, lint, test jobs', () => {
+      expect(ci).toMatch(/^\s*audit:/m);
+      expect(ci).toMatch(/^\s*lint:/m);
+      expect(ci).toMatch(/^\s*test:/m);
+    });
+
+    it('audit job runs the ecosystem-appropriate tool', () => {
+      const expected = AUDIT_TOOL[stackId];
+      expect(expected, `no AUDIT_TOOL mapping for ${stackId}`).toBeDefined();
+      expect(ci).toContain(expected);
+    });
+
+    it('audit job is not soft-failed (no continue-on-error: true)', () => {
+      expect(ci).not.toMatch(/continue-on-error:\s*true/);
+    });
   },
 );

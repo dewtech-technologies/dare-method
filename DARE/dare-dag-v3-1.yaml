@@ -363,7 +363,7 @@ tasks:
     phase: "7-security"
     complexity: "MED"
     depends_on: ["task-052"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/__tests__/dna.spec.ts"
     gates: ["vitest run dna.spec — sub: env-example-no-secrets"]
@@ -375,7 +375,7 @@ tasks:
     phase: "7-security"
     complexity: "MED"
     depends_on: ["task-052"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - ".github/workflows/ci.yml"  # adicionar step
     gates: ["gitleaks detect — 0 matches"]
@@ -387,7 +387,7 @@ tasks:
     phase: "7-security"
     complexity: "MED"
     depends_on: ["task-052"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/__tests__/dna.spec.ts"  # adicionar sub
     gates: ["vitest run dna.spec — sub: github-ci-has-audit-job"]
@@ -399,7 +399,7 @@ tasks:
     phase: "7-security"
     complexity: "LOW"
     depends_on: ["task-052"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - ".github/workflows/ci.yml"
     gates: ["pnpm audit --audit-level=high — 0 HIGH/CRITICAL"]

@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 /**
- * T-010 — Captures the parity baseline for ruby-rails-8.
+ * Captures / re-baselines the parity fixture for ruby-rails-8.
  *
- * Runs RailsScaffold.generate() in a tmp dir (in-process, not via subprocess —
- * deterministic, no banner/spinner output to filter), then hashes every file
- * with timestamps + UUIDs + secret_key_base normalized.
+ * v3.1: imports the INTERNALIZED scaffold (packages/cli/dist/stacks/...),
+ * since packages/stacks/ was removed. The fixture now reflects the v3.1
+ * Rails output (which includes the DNA-invariant .env.example and the
+ * enriched dare-ci.yml with audit/lint jobs). The parity test guards against
+ * accidental future drift, baselined at v3.1.
+ *
+ * Re-run after any INTENTIONAL change to the Rails scaffold/templates.
  *
  * Output: packages/cli/src/stacks/__tests__/parity-rails.fixture.json
- *
- * Must be run AGAINST THE COMMIT IMMEDIATELY BEFORE T-011 (before the move).
  */
 import path from 'node:path';
 import fsp from 'node:fs/promises';
@@ -24,28 +26,25 @@ const tmpRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'rails-baseline-'));
 const outDir = path.join(tmpRoot, 'test-app');
 await fsp.mkdir(outDir, { recursive: true });
 
-console.log(`[capture] tmpRoot = ${tmpRoot}`);
-console.log(`[capture] outDir  = ${outDir}`);
+console.log(`[capture] outDir = ${outDir}`);
 
-// Import the still-existing workspace package directly.
-const railsModuleUrl = new URL(
-  '../packages/stacks/ruby-rails-8/dist/index.js',
+const scaffoldUrl = new URL(
+  '../packages/cli/dist/stacks/ruby-rails-8/scaffold.js',
   import.meta.url,
 );
-console.log(`[capture] importing ${fileURLToPath(railsModuleUrl)}`);
-const { RailsScaffold } = await import(railsModuleUrl);
+const typesUrl = new URL('../packages/cli/dist/stacks/types.js', import.meta.url);
+console.log(`[capture] importing ${fileURLToPath(scaffoldUrl)}`);
+const { ruby_rails_8 } = await import(scaffoldUrl);
+const { DARE_DNA } = await import(typesUrl);
 
-const scaffold = new RailsScaffold();
-await scaffold.generate('test-app', {
-  outputDir: outDir,
-  llmProvider: 'dummy',
-  skipExamples: false,
-  skipLlm: false,
-  skipChannels: false,
-  verbose: false,
+await ruby_rails_8.generate({
+  dir: outDir,
+  projectName: 'test-app',
+  toolchain: 'auto',
+  features: new Set(DARE_DNA),
+  isMonorepo: false,
 });
 
-// Walk and hash with normalization.
 const files = [];
 async function walk(rel) {
   const abs = path.join(outDir, rel);
@@ -56,33 +55,24 @@ async function walk(rel) {
     return;
   }
   const buf = await fsp.readFile(abs);
-  const normalized = normalize(buf);
-  const hash = crypto.createHash('sha256').update(normalized).digest('hex');
-  files.push({
-    path: rel.split(path.sep).join('/'),
-    hash,
-    bytes: buf.length,
-  });
+  const hash = crypto.createHash('sha256').update(normalize(buf)).digest('hex');
+  files.push({ path: rel.split(path.sep).join('/'), hash, bytes: buf.length });
 }
 await walk('');
 
 function normalize(buf) {
   let s = buf.toString('utf8');
-  // ISO-8601 timestamps
   s = s.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, '<TIMESTAMP>');
-  // UUIDs
   s = s.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, '<UUID>');
-  // Rails secret_key_base (hex 128 chars)
   s = s.replace(/[a-f0-9]{128}/g, '<RAILS_SECRET>');
-  // Master.key / credentials random bytes
   s = s.replace(/[a-f0-9]{64}/g, '<RAILS_HEX64>');
   return Buffer.from(s, 'utf8');
 }
 
 const fixture = {
-  capturedAt: process.env.DARE_FIXTURE_DATE ?? new Date().toISOString().slice(0, 10),
-  source: 'RailsScaffold.generate (v3.0.0 baseline, pre-T-011)',
-  scaffolder: '@dewtech/dare-stack-ruby-rails-8',
+  capturedAt: process.env.DARE_FIXTURE_DATE ?? '2026-06-02',
+  source: 'ruby_rails_8.generate (v3.1 internalized, DNA-enriched)',
+  scaffolder: 'packages/cli/src/stacks/ruby-rails-8',
   fileCount: files.length,
   files,
 };
@@ -91,11 +81,8 @@ const outPath = path.join(
   repoRoot,
   'packages/cli/src/stacks/__tests__/parity-rails.fixture.json',
 );
-await fsp.mkdir(path.dirname(outPath), { recursive: true });
 await fsp.writeFile(outPath, JSON.stringify(fixture, null, 2) + '\n', 'utf8');
-console.log(`[capture] wrote ${outPath}`);
-console.log(`[capture] ${files.length} files captured`);
+console.log(`[capture] wrote ${outPath} (${files.length} files)`);
 
-// Cleanup tmp.
 await fsp.rm(tmpRoot, { recursive: true, force: true });
-console.log('[capture] tmp cleaned. done.');
+console.log('[capture] done.');

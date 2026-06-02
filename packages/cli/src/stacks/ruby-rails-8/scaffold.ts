@@ -136,6 +136,9 @@ export class RailsScaffold {
     // 7. GitHub Actions CI workflow
     await this.generateGitHubActions(opts, result);
 
+    // 7b. .env.example (DARE DNA invariant — v3.1)
+    await this.generateEnvExample(opts, result);
+
     // 8. Spec helpers + factories
     await this.generateSpecSupport(opts, result);
 
@@ -359,6 +362,19 @@ export class RailsScaffold {
     if (await fs.pathExists(src)) {
       await fs.copy(src, dest);
       result.filesCreated.push('.github/workflows/dare-ci.yml');
+    }
+  }
+
+  // v3.1 — DNA invariant: every stack ships a .env.example with no real
+  // secrets. Rails normally keeps config in credentials; this documents the
+  // env-driven knobs (DB, Redis, rate limit, LLM) for parity with the other
+  // stacks and the DARE DNA gate.
+  private async generateEnvExample(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
+    const src  = path.join(this.TEMPLATES_DIR, '.env.example');
+    const dest = path.join(opts.outputDir, '.env.example');
+    if (await fs.pathExists(src)) {
+      await fs.copy(src, dest);
+      result.filesCreated.push('.env.example');
     }
   }
 
