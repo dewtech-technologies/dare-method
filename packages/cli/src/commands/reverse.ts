@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { detectProject, formatDetectionReport } from '../utils/project-detector.js';
 import { detectModules } from '../utils/module-detector.js';
+import { ensureDareSkills } from '../utils/project-generator.js';
 import {
   buildFacts,
   renderIdeiaSkeleton,
@@ -58,6 +59,11 @@ export const reverseCommand = new Command('reverse')
 
     console.log(chalk.blue.bold('\n🔁 DARE Framework - Reverse Engineering (Phase 0)\n'));
     console.log(chalk.gray(`  Scanning: ${targetDir}\n`));
+
+    // Ensure the DARE slash-commands/skills are installed so the IDE side of
+    // the workflow (`/dare-reverse`) actually exists. Idempotent. Skip in
+    // --check mode (read-only detection, writes nothing).
+    if (!opts.check) await ensureDareSkills(targetDir);
 
     const only = opts.modules
       ? opts.modules.split(',').map((s) => s.trim()).filter(Boolean)

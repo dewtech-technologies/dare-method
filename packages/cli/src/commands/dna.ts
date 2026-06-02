@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { detectDna, type DnaFacts } from '../utils/dna-detector.js';
 import { renderDnaSkeleton } from '../utils/dna-facts.js';
+import { ensureDareSkills } from '../utils/project-generator.js';
 
 interface DnaOptions {
   dir?: string;
@@ -22,6 +23,9 @@ export const dnaCommand = new Command('dna')
 
     console.log(chalk.blue.bold('\n🧬 DARE Framework - Project DNA (conventions)\n'));
     console.log(chalk.gray(`  Scanning: ${targetDir}\n`));
+
+    // --check is read-only detection; don't install skills then.
+    if (!opts.check) await ensureDareSkills(targetDir);
 
     const spinner = ora('Extracting conventions...').start();
     const generatedAt = new Date().toISOString();
