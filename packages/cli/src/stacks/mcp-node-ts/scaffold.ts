@@ -40,7 +40,7 @@ const TEMPLATES_DIR = path.resolve(
 const TEMPLATE_FILES: ReadonlyArray<{ template: string; dest: string }> = [
   { template: 'package.json.hbs', dest: 'package.json' },
   { template: 'tsconfig.json', dest: 'tsconfig.json' },
-  { template: '.gitignore', dest: '.gitignore' },
+  { template: 'gitignore', dest: '.gitignore' },
   { template: '.env.example', dest: '.env.example' },
   { template: 'README.md.hbs', dest: 'README.md' },
   { template: 'llms.txt.hbs', dest: 'llms.txt' },

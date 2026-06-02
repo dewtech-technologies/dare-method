@@ -44,7 +44,7 @@ const TEMPLATE_FILES: ReadonlyArray<{ template: string; dest: string }> = [
   { template: 'tsconfig.json', dest: 'tsconfig.json' },
   { template: 'tsconfig.build.json', dest: 'tsconfig.build.json' },
   { template: 'nest-cli.json', dest: 'nest-cli.json' },
-  { template: '.gitignore', dest: '.gitignore' },
+  { template: 'gitignore', dest: '.gitignore' },
   { template: '.env.example', dest: '.env.example' },
   { template: 'README.md.hbs', dest: 'README.md' },
   { template: 'llms.txt.hbs', dest: 'llms.txt' },

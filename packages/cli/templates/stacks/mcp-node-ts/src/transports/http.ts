@@ -40,7 +40,9 @@ export async function startHttpTransport(server: Server, port: number): Promise<
     if (!transport) {
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (id) => transports.set(id, transport!),
+        onsessioninitialized: (id: string) => {
+          transports.set(id, transport!);
+        },
       });
       await server.connect(transport);
     }

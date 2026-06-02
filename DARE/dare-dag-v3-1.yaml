@@ -412,7 +412,7 @@ tasks:
     phase: "8-release"
     complexity: "LOW"
     depends_on: ["task-063"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "README.md"
     gates: ["lint markdown — sem links quebrados"]
@@ -424,7 +424,7 @@ tasks:
     phase: "8-release"
     complexity: "LOW"
     depends_on: ["task-063"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "ROADMAP.md"
     gates: []
@@ -436,7 +436,7 @@ tasks:
     phase: "8-release"
     complexity: "MED"
     depends_on: ["task-063"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "CHANGELOG.md"
     gates: []
@@ -448,7 +448,7 @@ tasks:
     phase: "8-release"
     complexity: "LOW"
     depends_on: ["task-070", "task-071", "task-072"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "package.json"
       - "packages/cli/package.json"
@@ -461,7 +461,7 @@ tasks:
     phase: "8-release"
     complexity: "MED"
     depends_on: ["task-073"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - ".github/workflows/publish-smoke.yml"
     gates: ["actionlint passa"]
@@ -473,7 +473,7 @@ tasks:
     phase: "8-release"
     complexity: "LOW"
     depends_on: ["task-073"]
-    status: "PENDING"
+    status: "DONE"
     files: []
     gates: ["npm pack --dry-run em packages/cli — size ≤ 3 MB, contém templates/stacks/**"]
     spec: "DARE/EXECUTION/task-075-tarball-validation.md"

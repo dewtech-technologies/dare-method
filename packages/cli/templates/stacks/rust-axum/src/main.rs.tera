@@ -9,7 +9,7 @@ use tracing_subscriber::EnvFilter;
 use {{ crateName }}::{
     config::Config,
     handlers::{auth, users, ws},
-    middleware::rate_limit::governor_layer,
+    middleware::rate_limit::with_rate_limit,
     AppState,
 };
 
@@ -43,10 +43,12 @@ async fn main() -> anyhow::Result<()> {
         .route("/users", get(users::list).post(users::create))
         .route("/ws", get(ws::handler))
         .route("/openapi.json", get(serve_openapi))
-        .layer(governor_layer(&cfg))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
+
+    // Rate limit applied via helper (avoids naming GovernorLayer generics).
+    let app = with_rate_limit(app, &cfg);
 
     let addr: SocketAddr = ([0, 0, 0, 0], cfg.app_port).into();
     tracing::info!("listening on {}", addr);

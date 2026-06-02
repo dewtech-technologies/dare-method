@@ -9,6 +9,76 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.1.0] — 2026-06
+
+Release focada na **correção do bug bloqueante de distribuição** (404 no `npm install -g`) e na **completação da paridade de stacks** prometida na v3.0.0. Todos os scaffolders agora vivem **dentro** do `@dewtech/dare-cli` — um único tarball publicável, zero pacotes workspace de stack.
+
+### 🐛 Corrigido
+
+- **`npm install -g @dewtech/dare-cli` agora funciona.** O `dependencies` declarava `"@dewtech/dare-stack-ruby-rails-8": "workspace:*"`, protocolo que só o pnpm resolve dentro do monorepo; o npm batia no registry público e o pacote nunca havia sido publicado (erro 404). Resolução: o stack Rails foi **internalizado** no CLI e a entrada de `dependencies` removida.
+- **Rails scaffolder agora funciona em Node 20 ESM.** `import * as fs from 'fs-extra'` quebrava com `fs.readFile is not a function`; corrigido para default import.
+
+### ✨ Adicionado — 11 stacks com gerador completo internalizado
+
+Todas as 11 stacks têm scaffolder próprio em `packages/cli/src/stacks/<id>/` + templates em `packages/cli/templates/stacks/<id>/`, todas com Layered Design e DNA DARE:
+
+**Backend (6 novos + 1 internalizado):**
+
+- `node-nestjs` — NestJS 10 + Prisma + Swagger + Throttler + JWT
+- `python-fastapi` — FastAPI + Pydantic v2 + SQLAlchemy + Alembic + python-jose + slowapi
+- `php-laravel` — Laravel 11 + Sanctum + FormRequest + Reverb + Pail + l5-swagger
+- `rust-axum` — Axum + Tower + utoipa + jsonwebtoken + argon2 + sqlx
+- `go-gin` — Gin + sqlc + swag + golang-jwt + gorilla/websocket
+- `go-stdlib` — net/http 1.22 (sem framework) + sqlc + coder/websocket
+- `ruby-rails-8` — internalizado de `packages/stacks/`; enriquecido com `.env.example` + jobs `audit`/`lint` no CI para conformar ao DNA
+
+**MCP Server (4 variantes, transports `stdio`/`sse`/`http` via `--transport`):**
+
+- `mcp-node-ts` — `@modelcontextprotocol/sdk`
+- `mcp-python` — `mcp[cli]` (FastMCP)
+- `mcp-rust` (beta) — `rmcp`
+- `mcp-go` (beta) — `mark3labs/mcp-go`
+
+### ✨ Adicionado — DNA DARE como gate de CI
+
+`packages/cli/src/stacks/__tests__/dna.spec.ts` itera sobre todos os stacks registrados e valida 7 artefatos invariantes:
+
+1. `llms.txt` na raiz
+2. `openapi.json` (ou rota servida)
+3. flag `--json` no entrypoint CLI do app
+4. `.env.example` sem segredos (regex contra base64/hex/PEM/openai/aws)
+5. rate limit configurado (lib idiomática por stack)
+6. `.dare/skills.yml` referenciando a skill
+7. `.github/workflows/dare-ci.yml` com jobs `audit`/`lint`/`test`
+
+Stack que não emita os 7 falha no CI. Gate de completude exige exatamente **7 backend + 4 MCP = 11 stacks**.
+
+### ⚠️ Breaking changes
+
+- **`dare new` removido.** Usado para Rails (`dare new myapp --stack rails`); substituir por `dare init myapp --stack ruby-rails-8`. Sem deprecação, sem alias. Tratado como correção do bug do 404 + completação da paridade prometida, mantendo bump **minor** (v3.1.0).
+- **`@dewtech/dare-stack-ruby-rails-8` deixou de ser publicado.** Quem dependia diretamente desse pacote npm migra para o `@dewtech/dare-cli` (o scaffolder é parte do CLI agora).
+
+### 📁 Mudanças estruturais
+
+- `packages/stacks/` **removido por completo**. Único pacote workspace: `@dewtech/dare-cli`.
+- `packages/cli/src/stacks/` — registry lazy + 11 scaffolders + DNA emitter + template engine.
+- `packages/cli/templates/stacks/` — templates por stack (ERB/Jinja2/Handlebars/Tera/.tpl).
+- `pnpm-workspace.yaml` — entrada `packages/stacks/*` removida.
+- `packages/cli/package.json` — `files` inclui `templates/**`; `version` 3.1.0.
+
+### 🔐 Segurança
+
+- CI: `pnpm audit --prod --audit-level=high` (audita o que de fato é publicado). Dev-CVEs documentados em `KNOWN-CVES.md`.
+- CI: job `gitleaks` sobre `templates/stacks/**` com `.gitleaks.toml` (allowlist de placeholders).
+- DNA gate: sub-specs `env-example-no-secrets` e `github-ci-has-audit-job` para os 11 stacks.
+
+### 📊 Métricas
+
+- Tarball `@dewtech/dare-cli` publicado: **~720 KB** compactado (limite 3 MB).
+- Suite: **1159 testes** verdes no monorepo; **0 HIGH/CRITICAL** em dependências de produção.
+
+[3.1.0]: https://github.com/dewtech-technologies/dare-method/releases/tag/v3.1.0
+
 ## [3.0.0] — 2026-05
 
 Release **major** focada em **paridade total entre IDEs**, **expansão de cobertura de stacks** e a **Suíte Brownfield** (engenharia reversa, DNA e migração de projetos legados). Sem breaking change funcional.

@@ -37,7 +37,7 @@ export interface ProjectConfig {
   backend?: string;
   frontend?: string;
   mcpTransport?: 'stdio' | 'sse' | 'http-stream';
-  mcpLanguage?: 'node-ts' | 'python';
+  mcpLanguage?: 'node-ts' | 'python' | 'rust' | 'go';
   mcpFeatures?: ('tools' | 'resources' | 'prompts')[];
   ide: 'cursor' | 'antigravity' | 'hybrid' | 'claude-code' | 'claude-hybrid';
   graphrag: 'sqlite' | 'json' | 'neo4j';
@@ -185,6 +185,16 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
   // in `runStackBootstrap`). The legacy fake templates are only used when
   // bootstrap is explicitly skipped (tests / CI without toolchains) or for
   // the MCP server, which has no widely-adopted scaffold to defer to.
+  //
+  // v3.1: when bootstrap runs (the normal path), every stack — backend, MCP,
+  // and rails — is fully produced by its internalized registry scaffolder in
+  // `runStackBootstrap`. We must NOT overlay the legacy inline templates on
+  // top (that clobbered the scaffolder's package.json/server.ts in v3.0.x).
+  //
+  // The legacy generators remain only as the `skipBootstrap` fallback, used by
+  // tests/CI that intentionally skip the scaffold step. Frontend stacks still
+  // use their own bootstrap (vite/leptos) and the legacy frontend template
+  // fallback when skipped.
   if (config.skipBootstrap) {
     if (structure === 'mcp-server') {
       await generateMcpTemplate(outputDir, config);
@@ -200,11 +210,6 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
         await generateFrontendTemplate(frontendDir, frontend);
       }
     }
-  } else if (structure === 'mcp-server') {
-    // Even with bootstrap, the MCP server still needs the DARE-flavored
-    // starter (server.ts / main.py with the right transport wired up). The
-    // bootstrap step only ran `npm init` / `python -m venv`, no source code.
-    await generateMcpTemplate(outputDir, config);
   }
 }
 
@@ -879,7 +884,7 @@ function rustMonorepoDir(
 }
 
 async function runStackBootstrap(config: ProjectConfig): Promise<void> {
-  const { outputDir, name, structure, backend, frontend, mcpLanguage, toolchain, rustWorkspaceLayout, cratePrefix } = config;
+  const { outputDir, name, structure, backend, frontend, mcpLanguage, mcpTransport, toolchain, rustWorkspaceLayout, cratePrefix } = config;
   const isRustMonorepo =
     structure === 'monorepo' &&
     backend === 'rust-axum' &&
@@ -939,11 +944,16 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
   // MCP Server
   if (structure === 'mcp-server') {
     const lang = (mcpLanguage ?? 'node-ts') as McpLanguage;
+    // ProjectConfig uses 'http-stream' historically; the scaffolder transport
+    // enum is 'http'. Normalize here.
+    const transport =
+      mcpTransport === 'http-stream' ? 'http' : (mcpTransport ?? 'stdio');
     await bootstrapMcp({
       language: lang,
       dir: outputDir,
       projectName: name,
       toolchain,
+      transport: transport as 'stdio' | 'sse' | 'http',
     });
   }
 

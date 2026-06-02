@@ -121,8 +121,8 @@ describe('rust-axum scaffold', () => {
       expect(main).toContain('"/openapi.json"');
     });
 
-    it('applies governor (rate limit) + CORS layers', () => {
-      expect(main).toContain('governor_layer');
+    it('applies rate limit (with_rate_limit) + CORS layers', () => {
+      expect(main).toContain('with_rate_limit');
       expect(main).toContain('cors');
     });
 

@@ -30,7 +30,9 @@ export class UsersRepository {
     return { items, total };
   }
 
-  create(data: { email: string; password: string; role: string }): Promise<UserRow> {
-    return this.prisma.user.create({ data });
+  create(data: { email: string; password: string; role: 'USER' | 'ADMIN' }): Promise<UserRow> {
+    return this.prisma.user.create({
+      data: { email: data.email, password: data.password, role: data.role },
+    });
   }
 }

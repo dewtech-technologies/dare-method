@@ -36,7 +36,8 @@ def list_tools_json() -> None:
         {
             "name": name,
             "description": (t.description or "").strip(),
-            "inputSchema": t.inputSchema,
+            # FastMCP's Tool exposes the JSON schema as `parameters`.
+            "inputSchema": t.parameters,
         }
         for name, t in mcp._tool_manager._tools.items()  # type: ignore[attr-defined]
     ]

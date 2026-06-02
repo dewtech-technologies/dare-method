@@ -37,7 +37,7 @@ const TEMPLATES_DIR = path.resolve(
 
 const TEMPLATE_FILES: ReadonlyArray<{ template: string; dest: string }> = [
   { template: 'Cargo.toml.tera', dest: 'Cargo.toml' },
-  { template: '.gitignore', dest: '.gitignore' },
+  { template: 'gitignore', dest: '.gitignore' },
   { template: '.env.example', dest: '.env.example' },
   { template: 'README.md.tera', dest: 'README.md' },
   { template: 'llms.txt.tera', dest: 'llms.txt' },

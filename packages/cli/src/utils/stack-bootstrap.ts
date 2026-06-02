@@ -26,7 +26,7 @@ export type BackendStack =
 
 export type FrontendStack = 'react' | 'vue' | 'rust-leptos' | 'rust-leptos-csr';
 
-export type McpLanguage = 'node-ts' | 'python';
+export type McpLanguage = 'node-ts' | 'python' | 'rust' | 'go';
 
 /**
  * How to satisfy each stack's toolchain dependency:
@@ -64,27 +64,43 @@ export interface BootstrapMcpOptions {
   dir: string;
   projectName: string;
   toolchain?: ToolchainMode;
+  transport?: 'stdio' | 'sse' | 'http';
 }
+
+const MCP_LANGUAGE_TO_STACK: Record<McpLanguage, string> = {
+  'node-ts': 'mcp-node-ts',
+  python: 'mcp-python',
+  rust: 'mcp-rust',
+  go: 'mcp-go',
+};
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<void> {
   const mode = opts.toolchain ?? 'auto';
+  // v3.1: all backend stack ids match registry StackId 1:1, so route every
+  // one through the internalized scaffolder. The old official-tool bootstrap
+  // functions (bootstrapNodeNestjs/npx, bootstrapPhpLaravel/composer, …) are
+  // retained only as historical reference and no longer reached from init.
+  const BACKEND_IDS = new Set([
+    'ruby-rails-8',
+    'php-laravel',
+    'node-nestjs',
+    'python-fastapi',
+    'rust-axum',
+    'go-gin',
+    'go-stdlib',
+  ]);
+  if (BACKEND_IDS.has(opts.stack)) {
+    return bootstrapViaRegistry(
+      opts.stack,
+      opts.dir,
+      opts.projectName,
+      opts.isMonorepo ?? false,
+      mode,
+    );
+  }
   switch (opts.stack) {
-    case 'ruby-rails-8':
-      return bootstrapRubyRails8(opts.dir, opts.projectName, opts.isMonorepo ?? false);
-    case 'php-laravel':
-      return bootstrapPhpLaravel(opts.dir, opts.projectName, mode);
-    case 'node-nestjs':
-      return bootstrapNodeNestjs(opts.dir, opts.projectName, mode);
-    case 'python-fastapi':
-      return bootstrapPythonFastapi(opts.dir, mode);
-    case 'rust-axum':
-      return bootstrapRustAxum(opts.dir, opts.projectName, mode, opts.isMonorepo ?? false);
-    case 'go-gin':
-      return bootstrapGoGin(opts.dir, opts.projectName, mode);
-    case 'go-stdlib':
-      return bootstrapGoStdlib(opts.dir, opts.projectName, mode);
     default:
       throw new Error(`Unknown backend stack: ${opts.stack as string}`);
   }
@@ -114,11 +130,18 @@ export async function bootstrapFrontend(opts: BootstrapFrontendOptions): Promise
 
 export async function bootstrapMcp(opts: BootstrapMcpOptions): Promise<void> {
   const mode = opts.toolchain ?? 'auto';
+  const stackId = MCP_LANGUAGE_TO_STACK[opts.language];
+  if (stackId) {
+    return bootstrapViaRegistry(
+      stackId,
+      opts.dir,
+      opts.projectName,
+      false,
+      mode,
+      opts.transport ?? 'stdio',
+    );
+  }
   switch (opts.language) {
-    case 'node-ts':
-      return bootstrapMcpNode(opts.dir, opts.projectName, mode);
-    case 'python':
-      return bootstrapMcpPython(opts.dir, mode);
     default:
       throw new Error(`Unknown MCP language: ${opts.language as string}`);
   }
@@ -1235,25 +1258,30 @@ async function bootstrapMcpPython(dir: string, mode: ToolchainMode): Promise<voi
 }
 
 /**
- * v3.1 — Rails 8 stack via internalized registry (no shell-out; the scaffolder
- * lays down templates directly). isMonorepo is reserved for future use; Rails
- * scaffolder currently ignores it.
+ * v3.1 — Generic registry-backed bootstrap. Every stack (backend + MCP) lays
+ * down its DARE-shaped templates directly via its internalized scaffolder; no
+ * shell-out to the framework's official CLI. The user runs install/migrate
+ * steps afterwards (printed as postInstallSteps).
  */
-async function bootstrapRubyRails8(
+async function bootstrapViaRegistry(
+  stackId: string,
   dir: string,
   projectName: string,
-  _isMonorepo: boolean,
+  isMonorepo: boolean,
+  mode: ToolchainMode,
+  mcpTransport?: 'stdio' | 'sse' | 'http',
 ): Promise<void> {
-  banner(`Bootstrapping Rails 8 (DARE-shaped) in ${dir}`);
+  banner(`Scaffolding ${stackId} (DARE-shaped) in ${dir}`);
   const { resolve } = await import('../stacks/registry.js');
   const { DARE_DNA } = await import('../stacks/types.js');
-  const scaffold = await resolve('ruby-rails-8');
+  const scaffold = await resolve(stackId);
   await scaffold.generate({
     dir,
     projectName,
-    toolchain: 'auto',
+    toolchain: mode,
     features: new Set(DARE_DNA),
-    isMonorepo: false,
+    isMonorepo,
+    mcp: scaffold.category === 'mcp' ? { transport: mcpTransport ?? 'stdio' } : undefined,
   });
 }
 

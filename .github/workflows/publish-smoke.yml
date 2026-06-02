@@ -1,0 +1,62 @@
+name: Publish smoke
+
+# Runs AFTER "Publish to npm" succeeds. Installs the freshly-published tarball
+# from the npm registry in a clean container and verifies the CLI actually
+# works for an end user — the exact failure mode (404 on global install) that
+# v3.1.0 fixes.
+
+on:
+  workflow_run:
+    workflows: ["Publish to npm"]
+    types: [completed]
+
+jobs:
+  smoke:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve version from triggering tag
+        id: ver
+        run: |
+          set -euo pipefail
+          REF="${{ github.event.workflow_run.head_branch }}"
+          if [[ "$REF" == v* ]]; then
+            echo "version=${REF#v}" >> "$GITHUB_OUTPUT"
+            echo "Resolved version: ${REF#v}"
+          else
+            echo "::error::Triggering run was not from a v* tag (got '$REF')"
+            exit 1
+          fi
+
+      - name: Wait for npm registry propagation
+        run: sleep 30
+
+      - name: Smoke test in node:20-alpine
+        run: |
+          docker run --rm -e VERSION='${{ steps.ver.outputs.version }}' node:20-alpine sh -c '
+            set -e
+            echo "[smoke] npm install -g @dewtech/dare-cli@${VERSION}"
+            npm install -g "@dewtech/dare-cli@${VERSION}"
+
+            echo "[smoke] dare --version"
+            GOT="$(dare --version)"
+            if [ "$GOT" != "${VERSION}" ]; then
+              echo "::error::expected version ${VERSION}, got ${GOT}"
+              exit 1
+            fi
+
+            echo "[smoke] dare new must be gone"
+            if dare new foo 2>/dev/null; then
+              echo "::error::dare new should not exist"
+              exit 1
+            fi
+
+            echo "[smoke] dare init --stack ruby-rails-8 (non-interactive)"
+            cd /tmp
+            dare init smoke-app --stack ruby-rails-8 --non-interactive || true
+            test -f smoke-app/Gemfile   || (echo "::error::Gemfile not created" && exit 1)
+            test -f smoke-app/llms.txt  || (echo "::error::llms.txt not created" && exit 1)
+            test -f smoke-app/.env.example || (echo "::error::.env.example not created" && exit 1)
+
+            echo "[smoke] all checks passed for v${VERSION}"
+          '

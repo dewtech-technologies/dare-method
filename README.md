@@ -435,10 +435,12 @@ Você pode escolher de onde a toolchain vem:
 | `react`, `vue` | Node 18+ | `node:20-alpine` |
 | `rust-leptos` | Rust 1.83+ (rustup) + **cargo-leptos 0.2.22** | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
-| `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
-| `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+| `mcp-node-ts` | Node 18+ | `node:20-alpine` |
+| `mcp-python` | Python 3.11+ | `python:3.12-slim` |
+| `mcp-rust` (beta) | Rust 1.78+ via rustup | `rust:1.83` |
+| `mcp-go` (beta) | Go 1.22+ | `golang:1.25` |
 
-> **Nota v3.0.0:** `ruby-rails-8` é a única stack com gerador completo em `packages/stacks/`. As demais (php-laravel, node-nestjs, python-fastapi, go-gin, etc.) executam o scaffold oficial do framework + o template de skills DARE por cima. Stacks com gerador próprio em `packages/stacks/` estão no [roadmap v3.1.x](ROADMAP.md#em-desenvolvimento-ativo---v31x).
+> **Nota v3.1.0:** **todas as 11 stacks têm gerador completo internalizado no `@dewtech/dare-cli`** — 7 backends (ruby-rails-8, node-nestjs, python-fastapi, php-laravel, rust-axum, go-gin, go-stdlib) + 4 variantes MCP (mcp-node-ts, mcp-python, mcp-rust, mcp-go). Cada gerador entrega o mesmo **DNA DARE**: `llms.txt`, OpenAPI, flag `--json`, rate limit, `.env.example` sem segredos, `.dare/skills.yml` e CI com gates de auditoria/lint/test. Não há mais pacotes de stack isolados — tudo num único tarball publicável (corrige o erro 404 do `npm install -g` das versões anteriores). O comando `dare new` foi **removido**; **`dare init` é o único entrypoint de scaffolding**.
 
 > **TL;DR:** se você só tem **Docker Desktop**, o `dare init` consegue
 > scaffoldar qualquer stack. Se você tem o toolchain nativo, ele é mais
@@ -498,7 +500,7 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 **Frontend:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM)
 
-**MCP Server:** TypeScript/Node.js · Python — transports `stdio`, `SSE`, `HTTP Stream`
+**MCP Server:** TypeScript/Node.js · Python · Rust (beta) · Go (beta) — cada um com transports `stdio`, `SSE`, `HTTP Stream` selecionáveis via `--transport`
 
 ### Execução paralela com DAG Task Runner
 

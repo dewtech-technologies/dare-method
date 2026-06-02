@@ -33,7 +33,8 @@ func New() *server.MCPServer {
 		),
 	)
 	s.AddTool(echoTool, func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		text, _ := req.Params.Arguments["text"].(string)
+		// v0.54: tool arguments are accessed via GetArguments() (returns map[string]any).
+		text, _ := req.GetArguments()["text"].(string)
 		out, err := tools.Echo(text)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil

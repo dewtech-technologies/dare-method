@@ -78,3 +78,71 @@ describe('dare init — backend: ruby-rails-8', () => {
     }
   });
 });
+
+// ── v3.1 routing gate ──────────────────────────────────────────────────────
+//
+// Regression guard for the gap found during npm-install simulation: every
+// backend + MCP stack must route through the internalized registry scaffolder
+// (DARE-shaped output), NOT the legacy official-tool bootstrap. Proven by the
+// presence of the DNA artifacts the new scaffolders emit.
+describe('dare init — all backends route through registry scaffolders', () => {
+  const BACKENDS = [
+    'node-nestjs',
+    'python-fastapi',
+    'php-laravel',
+    'rust-axum',
+    'go-gin',
+    'go-stdlib',
+  ] as const;
+
+  it.each(BACKENDS)('%s emits DARE DNA (llms.txt + .dare/skills.yml + dare-ci.yml)', async (stack) => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), `init-${stack}-`));
+    const dir = path.join(root, 'app');
+    try {
+      await generateProjectStructure({
+        name: 'app',
+        structure: 'backend',
+        backend: stack,
+        outputDir: dir,
+        toolchain: 'auto',
+        ide: 'cursor',
+        graphrag: 'sqlite',
+        mcp: false,
+      });
+      expect(await fs.pathExists(path.join(dir, 'llms.txt')), `${stack} llms.txt`).toBe(true);
+      expect(await fs.pathExists(path.join(dir, '.dare/skills.yml')), `${stack} skills.yml`).toBe(true);
+      expect(
+        await fs.pathExists(path.join(dir, '.github/workflows/dare-ci.yml')),
+        `${stack} dare-ci.yml`,
+      ).toBe(true);
+    } finally {
+      await fs.remove(root);
+    }
+  });
+});
+
+describe('dare init — MCP variants route through registry scaffolders', () => {
+  const LANGS = ['node-ts', 'python', 'rust', 'go'] as const;
+
+  it.each(LANGS)('mcp %s emits server + transports + DNA', async (lang) => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), `init-mcp-${lang}-`));
+    const dir = path.join(root, 'srv');
+    try {
+      await generateProjectStructure({
+        name: 'srv',
+        structure: 'mcp-server',
+        mcpLanguage: lang,
+        mcpTransport: 'stdio',
+        outputDir: dir,
+        toolchain: 'auto',
+        ide: 'cursor',
+        graphrag: 'sqlite',
+        mcp: false,
+      });
+      expect(await fs.pathExists(path.join(dir, 'llms.txt')), `${lang} llms.txt`).toBe(true);
+      expect(await fs.pathExists(path.join(dir, '.dare/skills.yml')), `${lang} skills.yml`).toBe(true);
+    } finally {
+      await fs.remove(root);
+    }
+  });
+});
