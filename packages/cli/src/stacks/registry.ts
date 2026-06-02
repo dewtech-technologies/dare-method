@@ -25,6 +25,54 @@ const ENTRIES: ReadonlyArray<StackRegistryEntry> = [
     load: async () =>
       (await import('./ruby-rails-8/scaffold.js')).ruby_rails_8,
   },
+  {
+    id: 'node-nestjs',
+    label: '🟢 Node.js / NestJS',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./node-nestjs/scaffold.js')).node_nestjs,
+  },
+  {
+    id: 'python-fastapi',
+    label: '🐍 Python / FastAPI',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./python-fastapi/scaffold.js')).python_fastapi,
+  },
+  {
+    id: 'php-laravel',
+    label: '🐘 PHP / Laravel',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./php-laravel/scaffold.js')).php_laravel,
+  },
+  {
+    id: 'rust-axum',
+    label: '🦀 Rust / Axum',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./rust-axum/scaffold.js')).rust_axum,
+  },
+  {
+    id: 'go-gin',
+    label: '🐹 Go / Gin',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./go-gin/scaffold.js')).go_gin,
+  },
+  {
+    id: 'go-stdlib',
+    label: '🐹 Go / stdlib',
+    category: 'backend',
+    status: 'stable',
+    load: async () =>
+      (await import('./go-stdlib/scaffold.js')).go_stdlib,
+  },
 ];
 
 export const STACK_REGISTRY: ReadonlyMap<StackId, StackRegistryEntry> = new Map(

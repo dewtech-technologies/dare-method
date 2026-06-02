@@ -78,6 +78,7 @@ export const initCommand = new Command('init')
         message: 'Backend stack:',
         when: (ans) => ans.structure !== 'frontend' && ans.structure !== 'mcp-server',
         choices: [
+          { name: '💎 Ruby / Rails 8', value: 'ruby-rails-8' },
           { name: '🦀 Rust / Axum', value: 'rust-axum' },
           { name: '🟢 Node.js / NestJS', value: 'node-nestjs' },
           { name: '🐍 Python / FastAPI', value: 'python-fastapi' },

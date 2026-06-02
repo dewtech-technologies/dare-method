@@ -28,9 +28,10 @@ async function writeTemplate(name: string, content: string): Promise<string> {
 }
 
 describe('detectEngine', () => {
-  it('detects handlebars by .hbs', () => {
+  it('detects handlebars by .hbs / .handlebars / .tpl', () => {
     expect(detectEngine('foo.hbs')).toBe('handlebars');
     expect(detectEngine('foo.handlebars')).toBe('handlebars');
+    expect(detectEngine('main.go.tpl')).toBe('handlebars');
   });
 
   it('detects nunjucks for jinja-likes', () => {

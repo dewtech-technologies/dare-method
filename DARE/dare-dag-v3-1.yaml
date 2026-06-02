@@ -137,7 +137,7 @@ tasks:
     phase: "3-rails-in-init"
     complexity: "HIGH"
     depends_on: ["task-013"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/commands/init.ts"
     gates: ["tsc --noEmit", "vitest run init"]
@@ -149,7 +149,7 @@ tasks:
     phase: "3-rails-in-init"
     complexity: "MED"
     depends_on: ["task-020"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/commands/__tests__/init.integration.spec.ts"
     gates: ["vitest run init.integration"]
@@ -163,7 +163,7 @@ tasks:
     parallel_group: "backend-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/node-nestjs/scaffold.ts"
       - "packages/cli/src/stacks/node-nestjs/__tests__/scaffold.spec.ts"
@@ -178,7 +178,7 @@ tasks:
     parallel_group: "backend-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/python-fastapi/scaffold.ts"
       - "packages/cli/src/stacks/python-fastapi/__tests__/scaffold.spec.ts"
@@ -193,7 +193,7 @@ tasks:
     parallel_group: "backend-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/php-laravel/scaffold.ts"
       - "packages/cli/src/stacks/php-laravel/__tests__/scaffold.spec.ts"
@@ -208,7 +208,7 @@ tasks:
     parallel_group: "backend-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/rust-axum/scaffold.ts"
       - "packages/cli/src/stacks/rust-axum/__tests__/scaffold.spec.ts"
@@ -223,7 +223,7 @@ tasks:
     parallel_group: "backend-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/go-gin/scaffold.ts"
       - "packages/cli/src/stacks/go-gin/__tests__/scaffold.spec.ts"
@@ -238,7 +238,7 @@ tasks:
     parallel_group: "backend-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/go-stdlib/scaffold.ts"
       - "packages/cli/src/stacks/go-stdlib/__tests__/scaffold.spec.ts"

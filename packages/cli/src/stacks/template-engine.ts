@@ -68,7 +68,13 @@ const nunjucksEnv = new nunjucks.Environment(null, {
  */
 export function detectEngine(templatePath: string): TemplateEngine {
   const lower = templatePath.toLowerCase();
-  if (lower.endsWith('.hbs') || lower.endsWith('.handlebars')) return 'handlebars';
+  if (
+    lower.endsWith('.hbs') ||
+    lower.endsWith('.handlebars') ||
+    lower.endsWith('.tpl')
+  ) {
+    return 'handlebars';
+  }
   if (
     lower.endsWith('.j2') ||
     lower.endsWith('.jinja2') ||

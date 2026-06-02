@@ -16,6 +16,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 
 export type BackendStack =
+  | 'ruby-rails-8'
   | 'php-laravel'
   | 'node-nestjs'
   | 'python-fastapi'
@@ -70,6 +71,8 @@ export interface BootstrapMcpOptions {
 export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<void> {
   const mode = opts.toolchain ?? 'auto';
   switch (opts.stack) {
+    case 'ruby-rails-8':
+      return bootstrapRubyRails8(opts.dir, opts.projectName, opts.isMonorepo ?? false);
     case 'php-laravel':
       return bootstrapPhpLaravel(opts.dir, opts.projectName, mode);
     case 'node-nestjs':
@@ -1229,6 +1232,29 @@ async function bootstrapMcpPython(dir: string, mode: ToolchainMode): Promise<voi
 
   await python.runOther(venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']);
   await python.runOther(venvPython, ['-m', 'pip', 'install', 'mcp[cli]', 'pytest', 'ruff']);
+}
+
+/**
+ * v3.1 — Rails 8 stack via internalized registry (no shell-out; the scaffolder
+ * lays down templates directly). isMonorepo is reserved for future use; Rails
+ * scaffolder currently ignores it.
+ */
+async function bootstrapRubyRails8(
+  dir: string,
+  projectName: string,
+  _isMonorepo: boolean,
+): Promise<void> {
+  banner(`Bootstrapping Rails 8 (DARE-shaped) in ${dir}`);
+  const { resolve } = await import('../stacks/registry.js');
+  const { DARE_DNA } = await import('../stacks/types.js');
+  const scaffold = await resolve('ruby-rails-8');
+  await scaffold.generate({
+    dir,
+    projectName,
+    toolchain: 'auto',
+    features: new Set(DARE_DNA),
+    isMonorepo: false,
+  });
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

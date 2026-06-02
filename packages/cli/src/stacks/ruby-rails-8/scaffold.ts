@@ -15,6 +15,7 @@
 
 import fs from 'fs-extra';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ export class RailsScaffold {
     // Templates at packages/cli/templates/stacks/ruby-rails-8/ — 3 levels up + /templates/stacks/<id>.
     const thisFilePath = typeof __dirname !== 'undefined'
       ? __dirname
-      : path.dirname(new URL((import.meta as { url: string }).url).pathname.replace(/^\/([A-Z]:)/, '$1'));
+      : path.dirname(fileURLToPath((import.meta as { url: string }).url));
     this.TEMPLATES_DIR = path.resolve(
       thisFilePath,
       '..',

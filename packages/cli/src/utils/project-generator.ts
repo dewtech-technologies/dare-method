@@ -812,6 +812,7 @@ description: Node.js/TypeScript MCP server development skill
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BACKEND_STACKS = new Set<BackendStack>([
+  'ruby-rails-8',
   'php-laravel',
   'node-nestjs',
   'python-fastapi',
