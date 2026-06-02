@@ -62,6 +62,7 @@ await walk('');
 
 function normalize(buf) {
   let s = buf.toString('utf8');
+  s = s.replace(/\r\n/g, '\n');
   s = s.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, '<TIMESTAMP>');
   s = s.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, '<UUID>');
   s = s.replace(/[a-f0-9]{128}/g, '<RAILS_SECRET>');

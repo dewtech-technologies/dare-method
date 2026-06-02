@@ -6,7 +6,7 @@
   "files": [
     {
       "path": ".dare/skills.yml",
-      "hash": "168d808aed491373de4562fa45906d96e1a55b14d698e2824e5204dc01d05be6",
+      "hash": "11ede8ee947a3447cf17452b92de30e5339e225d0a1e897e5845cebe062b59e4",
       "bytes": 1078
     },
     {
@@ -16,212 +16,212 @@
     },
     {
       "path": ".github/workflows/dare-ci.yml",
-      "hash": "f56498ec8b9277aa9d4b841c7b4e544479f7b4f66731f5b606c85b8a960514e9",
+      "hash": "8a00f1ef7209a53a6754b1adabde26d2cb5be2a3d559e50c7eeaf4dadd0c3e7b",
       "bytes": 2848
     },
     {
       "path": "Gemfile",
-      "hash": "53e64469b398dc9f9b115ada4323b792b50f0b7c4651d7d931ea31cb371c24ca",
+      "hash": "01356fdfd1547d2fa3e60ec33a08c6fa8973bdc6254d734dd8ed760dcb55877c",
       "bytes": 1211
     },
     {
       "path": "app/channels/application_cable/channel.rb",
-      "hash": "c3c1d6ddc5b2d8ddcd37cb85e6fc54c6ac2ff490e4fd424400a216f2fd7b7f68",
+      "hash": "d680dcbe789189a1c0689f21c613b7f9d73f8e1e70fe2815cabfc50c4a54b9cf",
       "bytes": 358
     },
     {
       "path": "app/channels/application_cable/connection.rb",
-      "hash": "26d74bd8f409ee1dce49a7c40ff9a051e879130549d611f2ce7e52cc01152df6",
+      "hash": "c755f381ec78aaaffbed2902308b7e719f381e56eccb4d18b2513edf13ece968",
       "bytes": 1022
     },
     {
       "path": "app/channels/dare_updates_channel.rb",
-      "hash": "9fb3c56f1cb9505524a32d742d077ed09614ff1cb5fb3e92d5bce29444f677c0",
+      "hash": "d31c8348e842d030bc4c979ecec600c126d2369b0916611f78019c163c2f5678",
       "bytes": 534
     },
     {
       "path": "app/channels/user_updates_channel.rb",
-      "hash": "f6d7b687c300065b683749fb585303e4c01364695e207448c1bc102cfe0f2393",
+      "hash": "adbab02bc79f743075e7e357f1789c37b841e89627f09594589a38498766672f",
       "bytes": 607
     },
     {
       "path": "app/controllers/application_controller.rb",
-      "hash": "0b93c563ed10e4c6f8bd6588976c20c4d54b8757e1d095221f2a28107070cbc0",
+      "hash": "594488f5125c5474d3c2bc9db2f26fbc159ee36a5721c1f3022bbb08c28da718",
       "bytes": 1196
     },
     {
       "path": "app/controllers/concerns/problem_details.rb",
-      "hash": "66b297b3497f84d9281ff0e9d904bbd54178a70ce868cedb7507a575f26dedd1",
+      "hash": "8257768597cf213d5dc6aa1a26273d6173ea682111633e3e6f9549454ae58d4b",
       "bytes": 2997
     },
     {
       "path": "app/handlers/summarize_handler.rb",
-      "hash": "d36c70117567bbe2aa59f2bcd7357ae63ccb8e31f07814d9d76413ee52701730",
+      "hash": "7e2aee544ef38dcc2e102fdee4fb2dd5235788c008bedfa377accea4b7c3712e",
       "bytes": 1251
     },
     {
       "path": "app/handlers/users_handler.rb",
-      "hash": "06934b68afeed59e4a6ef452a30375d98e32ea2a757fd1a8ed08f6905b3ec7cf",
+      "hash": "15ec5fe3d8fc9bc2d863753b3e14bf3ec5b9e4a71338cbe22cf74f711db384bb",
       "bytes": 1815
     },
     {
       "path": "app/llm/cache/llm_cache.rb",
-      "hash": "7f4a7533e5ee50b025c20d295c380300150b2b73e1020fa8360c54ad1172b7d0",
+      "hash": "7a0dd1b960cda4c4e403972acbdceab9692590bc78b03d8f8656fa7a01cab201",
       "bytes": 1154
     },
     {
       "path": "app/llm/prompts/prompt_loader.rb",
-      "hash": "228673807da0a23e8a806b08c4ddc2dc64b7ead02ef3317ed5e65f3aa53d2e0c",
+      "hash": "ad362a4cf1a0c923b62450a10d9ee2c4e05572b3bc4f0a3e5a3bf94ae132e59b",
       "bytes": 2050
     },
     {
       "path": "app/llm/prompts/summarize_v1.jinja2",
-      "hash": "1b6cfa150fd6d2be597342ef4fb729125e06c80bff0809e16cdfe08ec09b1c12",
+      "hash": "6b7e9491cfed0516e3ca5d1e24b15c7d51aafa63599518ed47a3002f557a5d50",
       "bytes": 268
     },
     {
       "path": "app/llm/providers/dummy_provider.rb",
-      "hash": "2f552244f5596f13aac3e25b5252f1cc9adf5bd62aed4032a74389452d23716c",
+      "hash": "142aeda419eba711b2009a794c7f5d9dd271d1e70eb1f10a03e7967f35405781",
       "bytes": 1365
     },
     {
       "path": "app/llm/providers/llm_provider.rb",
-      "hash": "83e3a92ee4d211c5f030b3f5a587ec0faf7aa86759a285890c26e0a94c2e9fff",
+      "hash": "a3a049ae828837840a37c257b74edab4ef8a3785f18e7d12f2a6787301cc167e",
       "bytes": 2476
     },
     {
       "path": "app/llm/providers/openai_provider.rb",
-      "hash": "9953a28c78efc77d4809b7f931eded75001c5614cc04a7d9bea9ddd70b2c3423",
+      "hash": "2e7bc49d658a1476dafe19d30e9796857d414f310145cbb231ed71235eb6bf8e",
       "bytes": 2147
     },
     {
       "path": "app/llm/rate_limit/token_bucket.rb",
-      "hash": "c0202c5ba139f0030c68c6f1201fe8fe8651142b7175655823751112a2e40cb2",
+      "hash": "611b001bcca3628280d1bb1a9ce3c68a59df03e63db689c940c63d1c0497980e",
       "bytes": 2598
     },
     {
       "path": "app/llm/validators/summarize_output_schema.json",
-      "hash": "28ba94a03d8c7ffe1c4347a0945f91f46fce32e91d71940eb0dabf7acc88219b",
+      "hash": "73abafc633273fe70b08ecc85f060a890a937a9ca6c83c15d574a832f55375e7",
       "bytes": 543
     },
     {
       "path": "app/llm/validators/validator.rb",
-      "hash": "152d20c50a5d54344ffa4b0c8616c2f2371776f12556398aef6a73fa04daf280",
+      "hash": "96c3bb1594796a350987f567cd862bb179295edc0d76e51b1ea4c89dfabe893b",
       "bytes": 1528
     },
     {
       "path": "app/models/user.rb",
-      "hash": "1f4fa7902d0626137769e9560dfa3cd990e92076e6914892cc3603a9a4c6423d",
+      "hash": "cb5c55b7f4fbe9f362d38701d26bd3f40f1ded0f46f371ece6c8da9b5467544c",
       "bytes": 1705
     },
     {
       "path": "app/presenters/user_presenter.rb",
-      "hash": "3c6d2fbebc1fc390b1c407d4c7331a45adf136c39f7b075db0ab85fcf4736478",
+      "hash": "638578261fdf7647ebd15e1f4dada1ad8a95a837afd4ccafa2287d80bcd47c2c",
       "bytes": 1114
     },
     {
       "path": "app/repositories/document_repository.rb",
-      "hash": "3fa2872365ec214628be01bbe6a2cc85e9cd8d8baba3e3d500802a322bbdeab6",
+      "hash": "51eb13256b1cacb65768f1204d69a0d8bfcb52c78ac44162e364881a7428cb28",
       "bytes": 1770
     },
     {
       "path": "app/repositories/user_repository.rb",
-      "hash": "7693448535b919a4ed9686644b33dbc0bc065cc40d7c7e1957a9fe0fc5ac1de8",
+      "hash": "9885ae814f29bf226b3c03c503d8c8863095eca56b3ff1abbe25569c22b052e4",
       "bytes": 2179
     },
     {
       "path": "app/services/create_user_service.rb",
-      "hash": "07975857e4c000eabd2e4115fa52ffcc8c1eead53453183ece2facffb1e3613b",
+      "hash": "77301151db514e7c6c8c37c6c6f4404721ebeaabeecdbb878141a24d68896526",
       "bytes": 2354
     },
     {
       "path": "app/services/realtime_service.rb",
-      "hash": "5b1127b11a9a6b6aa7f33b7fc2f3a2e5bb927a4c72a83933ee71dba93c8a7288",
+      "hash": "0504820f5ef7ff77b208d3a4026e8addbcf1e3269365e2d7a2653c8f09a49241",
       "bytes": 1836
     },
     {
       "path": "app/services/summarize_document_service.rb",
-      "hash": "24fcaf62ea701356cfec4f9652d8f9fcc804cb6ccd836ee61aaddd778d922013",
+      "hash": "8f98c57369180b2854027afd0799952ad4d5226c2187b807e24962d93c834352",
       "bytes": 2747
     },
     {
       "path": "config/dare.yml",
-      "hash": "5e5173a8eba6fd3364bdd8b00c0efda023e49773b3402b9c2556f7b3481abd0a",
+      "hash": "6071dd26b0bb3ac9838dd3eeabe25beeb6b555250f9ffd2a363366fea192d842",
       "bytes": 1197
     },
     {
       "path": "config/initializers/dare.rb",
-      "hash": "6e9e92b974084ca4a50e7f0324559dea4bf3fc83be8bb5e3f9a604fcca35097a",
+      "hash": "4ec3d7267e50fddbe4d5625e9b5f9dd082c8a925c04bce0f8e40c712c6108205",
       "bytes": 1268
     },
     {
       "path": "config/initializers/rack_attack.rb",
-      "hash": "3fca0d223b3531623bdad4f3a6b096664b47f155ce07aaa26581715ec05b93a8",
+      "hash": "ef29476b8ad1ab4a7e0e986819e4aa3871058438b6ae1beb1b8cc0f25e5a8cc9",
       "bytes": 2955
     },
     {
       "path": "config/initializers/rswag_api.rb",
-      "hash": "f2c81d5af772b84f38e56a9111d8e12876f62844b295fb4881de4773796a127d",
+      "hash": "a64d19edcef6d0a5c55fb2854500a70c8e77d62a2ed40c855a1fff04677eedda",
       "bytes": 412
     },
     {
       "path": "lib/tasks/dare.rake",
-      "hash": "6350e3fa5e19288e4e1bb75199082334bec5e6cf6c8177b5407a5f0c5a53c1ed",
+      "hash": "89e19ec487144cfa47f916719578398595870c58d6d00f0e4e3bf24d0c0ceefe",
       "bytes": 6678
     },
     {
       "path": "llms.txt",
-      "hash": "5b1e90db4288182a7898fbdafbba6f46e778eaa4f7692e8b75fdffc817714ddb",
+      "hash": "8b7dc261906ca41e0854031a72d5ec82e2ed480e73080df0d0dbee56dd219580",
       "bytes": 2684
     },
     {
       "path": "spec/api/summarize_spec.rb",
-      "hash": "3d57ca797ff597e42f38c3961fd9e2075256f76be4790983f552ac43f2ffb4ff",
+      "hash": "27802ef948421a01f8ef6642d842ea0de60df4bd297c512a8b9ae7355ffbaeeb",
       "bytes": 1967
     },
     {
       "path": "spec/api/users_spec.rb",
-      "hash": "32dd51643fc97554f791f72a60ff137708f6d0702cf3909ddef6341303b14573",
+      "hash": "10986a8a39f6588f4e261e263e679a44a472ce544aec9691c88186492a52db35",
       "bytes": 2028
     },
     {
       "path": "spec/channels/dare_updates_channel_spec.rb",
-      "hash": "6eceb3da9935494d2cfb43ce3450c27b8e142229866cb306d1ca53749cab869c",
+      "hash": "ac7539c5151e01ef079fcd0017d54b9d863e49c11fadb771968c84e1392f68e8",
       "bytes": 1574
     },
     {
       "path": "spec/channels/user_updates_channel_spec.rb",
-      "hash": "5c9d7b867da77534b05eb3420080a5fa44cf3a24f7f30c85cecff04aeb58443e",
+      "hash": "98b19af81901c7269f1ef3c9dcfd88685fe003e91ee4ce954c691315f6ae70ea",
       "bytes": 1449
     },
     {
       "path": "spec/factories/users.rb",
-      "hash": "b5753dd4c397fe61f0bcc60c1d930d13947c6640eee0b474f47eb1a0cbb30330",
+      "hash": "d23f772e9af839ee755c3f120396ae238acccb09e07a8e6d36b88f3e7a33b462",
       "bytes": 579
     },
     {
       "path": "spec/handlers/users_handler_spec.rb",
-      "hash": "a0010e107e3f19d90e1a12810ff49af32c371cd7a6ddcbd14f046645d462ba0f",
+      "hash": "2dcb3bd0870c72f48ea021fa5ba8af0fcba0c3e3672d2940c530673ef804b237",
       "bytes": 2790
     },
     {
       "path": "spec/rails_helper.rb",
-      "hash": "d9d4d93641bd67126ced1487d2cc55919cf94778e0c22a39f2e5ce7082a3c781",
+      "hash": "b232b98be42a278682808c0119beea79972186210a46de088e6ac1fafe023ebb",
       "bytes": 889
     },
     {
       "path": "spec/services/create_user_service_spec.rb",
-      "hash": "2f471fa20e068beffc6035832eaba5f5868f4a16f2f8cd2c3c98259f3246245b",
+      "hash": "209f50cac8dbdf8f8e26668f236f8216f2c4e11868f913e779ad2db5921cabbc",
       "bytes": 3361
     },
     {
       "path": "spec/services/summarize_document_service_spec.rb",
-      "hash": "65e12616b71af43c60e3fdf4cce4163d2c9a1fb9d41c7d61163485ad83b410fa",
+      "hash": "07f8eb02cedb487133220a79e226576ed0bffb415a1fd598956dcbaf75224264",
       "bytes": 4894
     },
     {
       "path": "spec/swagger_helper.rb",
-      "hash": "491da1c65a1a041181e369a6352b351c33af32e6122cb6761797d4a0a28fd67b",
+      "hash": "0db99209e86ce9e59963b52f27c1689c762e37c294eca2a557bb51fe0bef292b",
       "bytes": 2517
     }
   ]

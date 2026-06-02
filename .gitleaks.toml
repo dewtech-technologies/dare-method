@@ -1,50 +1,46 @@
-# gitleaks config — scans templates/stacks/** for accidental real secrets.
-# DARE templates intentionally ship placeholder env values; the allowlist below
-# keeps those from being flagged while still catching real key material.
+# gitleaks config — guards packages/cli/templates/stacks/** (the project
+# templates shipped to users) against accidental REAL secret material.
+#
+# Scope: the CI job points gitleaks at packages/cli/templates/stacks only.
+# We do NOT extend gitleaks' default ruleset — it flags every example API key
+# in skill docs and the detector's own test fixtures. Instead we use a few
+# high-signal rules for real key formats, and allowlist the placeholder values
+# the templates intentionally ship.
 
-title = "DARE Method gitleaks config"
-
-[extend]
-useDefault = true
+title = "DARE Method gitleaks config (templates/stacks)"
 
 [allowlist]
-description = "Placeholders used in DARE templates + design docs"
+description = "Placeholder values the DARE stack templates intentionally ship"
 regexTarget = "match"
 regexes = [
   '''replace-me''',
   '''replace-me-in-prod''',
   '''your-.*-here''',
-  '''<TIMESTAMP>''',
-  '''<UUID>''',
-  '''<RAILS_SECRET>''',
-  '''<RAILS_HEX64>''',
   '''postgresql://user:pass@''',
   '''postgres://user:pass@''',
   '''Admin0Pass''',
   '''Str0ngPass''',
-]
-paths = [
-  # Design/blueprint/spec docs legitimately show example secrets in prose.
-  '''^DARE/''',
-  # Parity fixture stores sha256 hashes (64-hex) of generated files — not secrets.
-  '''parity-rails\.fixture\.json$''',
+  '''test-secret''',
 ]
 
-# Targeted high-signal rules over the template tree.
+# High-signal rules for real key material. No `path` filter — the CI job already
+# scopes the scan to templates/stacks.
 [[rules]]
 id = "openai-api-key"
 description = "OpenAI API key"
 regex = '''sk-[A-Za-z0-9]{40,}'''
-path = '''packages/cli/templates/'''
 
 [[rules]]
 id = "aws-access-key"
 description = "AWS access key id"
 regex = '''AKIA[0-9A-Z]{16}'''
-path = '''packages/cli/templates/'''
+
+[[rules]]
+id = "private-key-block"
+description = "PEM private key block"
+regex = '''-----BEGIN [A-Z ]+ PRIVATE KEY-----'''
 
 [[rules]]
 id = "generic-assigned-secret"
 description = "secret/token/password assigned a long opaque value"
 regex = '''(?i)(secret|token|password|api[_-]?key|jwt)\s*[:=]\s*['"]?([A-Za-z0-9+/]{40,}={0,2})['"]?'''
-path = '''packages/cli/templates/'''

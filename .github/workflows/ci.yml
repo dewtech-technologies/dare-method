@@ -106,8 +106,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+      # The gitleaks GitHub Action requires a paid license for organizations.
+      # The gitleaks CLI/Docker image is MIT-licensed and free — run it directly.
+      # The gitleaks GitHub Action requires a paid license for organizations.
+      # The gitleaks CLI/Docker image is MIT-licensed and free — run it directly,
+      # scoped to the project templates we ship (not skill docs / test fixtures,
+      # which legitimately contain example keys).
+      - name: Run gitleaks (Docker image, no license needed)
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo/packages/cli/templates/stacks \
+            --config /repo/.gitleaks.toml --no-git --redact --exit-code 1 --verbose
