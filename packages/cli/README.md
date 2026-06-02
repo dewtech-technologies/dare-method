@@ -9,27 +9,34 @@ A structured methodology for AI-assisted software development with mandatory hum
 
 ---
 
-## ⚠ Read this first — How `dare init` runs the official scaffold
+## ⚠ Read this first — How `dare init` scaffolds a project (v3.1)
 
-`dare init` invokes the **official scaffold** of the stack you pick. That
-means it literally runs:
+`dare init` writes a **complete, DARE-shaped project** from generators
+internalized in this package — no shell-out to the framework's official CLI
+during init. Each backend + MCP stack lays down its full source tree
+(Layered Design, OpenAPI, JWT auth, rate limit, `.env.example`,
+`.dare/skills.yml`, CI gates), then prints the install/build steps to run next.
 
-| Stack | What `dare init` runs |
-|-------|----------------------|
-| `ruby-rails-8` | `rails new . --api --skip-test --skip-bundle --database=postgresql` + DARE templates (`packages/stacks/ruby-rails-8/` generator with Layered Design, OpenAPI, LLM integration, Action Cable, RSpec) |
-| `php-laravel` | `composer create-project laravel/laravel:^11 .` |
-| `node-nestjs` | `npx @nestjs/cli new . --strict --skip-git` |
-| `python-fastapi` | `python -m venv .venv && python -m pip install -r requirements.txt` |
-| `rust-axum` | `cargo init` + write `Cargo.toml` (axum, sqlx, tokio…) |
-| `go-gin` | `go mod init` + `go get gin/godotenv` + starter files |
-| `go-stdlib` | `go mod init` + starter usando só `net/http` (zero deps externas) |
-| `react`, `vue` | `npx degit vitejs/vite/packages/create-vite/template-<x> .` + `npm install` |
-| `rust-leptos` | Cargo workspace with `crates/server` (Axum) + `crates/web` (Leptos 0.7 SSR+hydrate) + `cargo fetch` |
-| `rust-leptos-csr` | Cargo workspace with `crates/server` (Axum) + `crates/web` (Leptos 0.7 CSR) + Trunk.toml + `cargo fetch` |
-| `mcp-server-node-ts` | `npm init` + `@modelcontextprotocol/sdk` |
-| `mcp-server-python` | `python -m venv .venv` + `pip install mcp[cli]` |
+| Stack | What `dare init` writes |
+|-------|-------------------------|
+| `ruby-rails-8` | Rails 8 + Layered Design + Action Cable + LLM + RSpec |
+| `node-nestjs` | NestJS 10 + Prisma + Swagger + Throttler + JWT |
+| `python-fastapi` | FastAPI + Pydantic v2 + SQLAlchemy + Alembic + slowapi |
+| `php-laravel` | Laravel 11 + Sanctum + FormRequest + Reverb + l5-swagger |
+| `rust-axum` | Axum + Tower + utoipa + jsonwebtoken + argon2 + sqlx |
+| `go-gin` | Gin + sqlc + swag + golang-jwt + gorilla/websocket |
+| `go-stdlib` | net/http 1.22 (no framework) + sqlc + coder/websocket |
+| `mcp-node-ts` | MCP server (`@modelcontextprotocol/sdk`) — stdio/sse/http |
+| `mcp-python` | MCP server (`mcp[cli]` / FastMCP) — stdio/sse/http |
+| `mcp-rust` (beta) | MCP server (`rmcp`) — stdio/sse/http |
+| `mcp-go` (beta) | MCP server (`mark3labs/mcp-go`) — stdio/sse/http |
+| `react`, `vue` | Vite scaffold + DARE overlay |
+| `rust-leptos` / `-csr` | Cargo workspace (Axum server + Leptos web) |
 
-These need a working `ruby` / `composer` / `npm` / `cargo` / `python` / `go`
+Non-interactive: `dare init <name> --stack <id>` or `dare init <name> --mcp <lang> [--transport stdio\|sse\|http]`.
+
+Generation itself needs **no toolchain**. To build/run the generated project
+afterwards you need that stack's `ruby` / `composer` / `npm` / `cargo` / `python` / `go`
 **somewhere**. There are three ways to provide it — you pick at init time
 (prompt below), and the choice is saved in `dare.config.json` so
 `dare bootstrap` reuses it later.
@@ -129,12 +136,14 @@ shipped with `dare init` already nudge the agent toward that pattern.
 |------|-----|---------|
 | **Node.js 18+** | runs `dare`, `dare-mcp-server` and the bundled GraphRAG engine | https://nodejs.org/ |
 
-### Required to scaffold the chosen stack
+### Required to build/run the generated project
 
-`dare init` runs the **official scaffold** of the stack you pick (e.g.
-`composer create-project laravel/laravel`, `npm create vite@latest`,
-`go mod init`). It tries the native toolchain first; if it isn't on PATH,
-it falls back to running the equivalent **Docker image** automatically.
+`dare init` itself needs no stack toolchain — it writes the project from
+internalized templates. To **build and run** what it generates, you need that
+stack's toolchain (`composer`/`npm`/`cargo`/`go`/`python`/`ruby`). If you don't
+have it natively but have Docker, run the build steps inside the stack's
+official image (the `.github/workflows/dare-ci.yml` the project ships shows the
+exact commands).
 
 Pick **one** of the two paths per stack:
 
@@ -150,10 +159,12 @@ Pick **one** of the two paths per stack:
 | `react`, `vue` | Node 18+ (bundles `npm`) | `node:20-alpine` |
 | `rust-leptos` | Rust 1.83+ (rustup) + **cargo-leptos 0.2.22** — `cargo install cargo-leptos --version 0.2.22` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
 | `rust-leptos-csr` | Rust 1.83+ (rustup) + **trunk** — `cargo install trunk` | `ghcr.io/dewtech-technologies/dare-rust-leptos:1` |
-| `mcp-server-node-ts` | Node 18+ | `node:20-alpine` |
-| `mcp-server-python` | Python 3.11+ | `python:3.12-slim` |
+| `mcp-node-ts` | Node 18+ | `node:20-alpine` |
+| `mcp-python` | Python 3.11+ | `python:3.12-slim` |
+| `mcp-rust` (beta) | Rust 1.78+ (rustup) | `rust:1.83` |
+| `mcp-go` (beta) | Go 1.23+ — https://go.dev/dl/ | `golang:1.25` |
 
-> **v3.0.0:** `ruby-rails-8` is the only stack with a full generator in `packages/stacks/`. All others run the framework's official scaffold + DARE skill templates on top. Full generators for `node-nestjs`, `python-fastapi`, `go-gin`, `php-laravel` and MCP servers are on the [v3.1.x roadmap](https://github.com/dewtech-technologies/dare-method/blob/main/ROADMAP.md#em-desenvolvimento-ativo---v31x).
+> **v3.1.0:** all **11 stacks** ship a full generator internalized in `@dewtech/dare-cli` — 7 backend (ruby-rails-8, node-nestjs, python-fastapi, php-laravel, rust-axum, go-gin, go-stdlib) + 4 MCP (mcp-node-ts, mcp-python, mcp-rust, mcp-go). No isolated stack packages; everything is in one publishable tarball (fixes the `npm install -g` 404 of earlier releases). `dare new` was removed — `dare init` is the only scaffolding entrypoint.
 
 > **TL;DR:** if you have **Docker Desktop** installed, you don't strictly need
 > any other toolchain — `dare init` will pull the right image on demand.
@@ -425,16 +436,11 @@ specific stacks. As of v2.15.0:
 
 ### `dare bootstrap`
 
-Run the official scaffold for a project's stack on **an existing project**
-(created in older versions or with `--skip-bootstrap`). Reads
-`dare.config.json` and dispatches to:
-
-- `composer create-project laravel/laravel` for `php-laravel`
-- `npx @nestjs/cli new` for `node-nestjs`
-- `npm create vite` for `react` / `vue`
-- `python -m venv` + `pip install` for `python-fastapi`
-- `cargo init` + axum-ready `Cargo.toml` for `rust-axum`
-- `npm init` + `@modelcontextprotocol/sdk` for `mcp-server-node`
+Lay down a stack's DARE-shaped source on **an existing project** (created in
+older versions or with `--skip-bootstrap`). Reads `dare.config.json` and runs
+the internalized generator for the configured stack — the same one `dare init`
+uses. Frontend stacks (`react` / `vue` / `rust-leptos`) still use their Vite /
+Cargo scaffold.
 
 ```bash
 dare bootstrap          # refuses if vendor/ or node_modules/ already exist
