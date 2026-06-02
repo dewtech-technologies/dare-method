@@ -1,0 +1,494 @@
+name: "DARE v3.1 — Stack Generators Internalizados"
+version: "3.1.0"
+created_at: "2026-06-01T20:00:00Z"
+feature: "v3-1-stack-generators"
+branch: "feat/v3.1-stack-generators"
+design: "DARE/DESIGN-Feature-v3-1-stack-generators.md"
+blueprint: "DARE/BLUEPRINT-Feature-v3-1-stack-generators.md"
+
+# Convenções
+# ─────────
+# complexity: LOW | MED | HIGH (tradução S/M/L do BLUEPRINT)
+# status:     PENDING | RUNNING | DONE | BLOCKED
+# parallel_group: tasks com mesmo grupo podem rodar simultaneamente em worktrees
+# files: paths relativos à raiz do repo
+
+tasks:
+  # ─── Fase 1: Foundation ───────────────────────────────────────────────────
+  task-001:
+    id: "task-001"
+    title: "Criar types.ts (StackScaffold, ScaffoldOpts, DareDnaArtifact)"
+    phase: "1-foundation"
+    complexity: "LOW"
+    depends_on: []
+    status: "DONE"
+    files:
+      - "packages/cli/src/stacks/types.ts"
+    gates: ["tsc --noEmit"]
+    spec: "DARE/EXECUTION/task-001-types.md"
+
+  task-002:
+    id: "task-002"
+    title: "Criar registry.ts (STACK_REGISTRY vazio, resolve/list/has, error classes)"
+    phase: "1-foundation"
+    complexity: "MED"
+    depends_on: ["task-001"]
+    status: "DONE"
+    files:
+      - "packages/cli/src/stacks/registry.ts"
+      - "packages/cli/src/stacks/__tests__/registry.spec.ts"
+    gates: ["tsc --noEmit", "vitest run registry.spec"]
+    spec: "DARE/EXECUTION/task-002-registry.md"
+
+  task-003:
+    id: "task-003"
+    title: "Criar dna-emitter.ts (emit + emitDefaults dos 7 artefatos)"
+    phase: "1-foundation"
+    complexity: "MED"
+    depends_on: ["task-001"]
+    status: "DONE"
+    files:
+      - "packages/cli/src/stacks/dna-emitter.ts"
+      - "packages/cli/src/stacks/__tests__/dna-emitter.spec.ts"
+    gates: ["tsc --noEmit", "vitest run dna-emitter.spec"]
+    spec: "DARE/EXECUTION/task-003-dna-emitter.md"
+
+  task-004:
+    id: "task-004"
+    title: "Criar template-engine.ts (handlebars + nunjucks + mustache + raw)"
+    phase: "1-foundation"
+    complexity: "MED"
+    depends_on: ["task-001"]
+    status: "DONE"
+    files:
+      - "packages/cli/src/stacks/template-engine.ts"
+      - "packages/cli/src/stacks/__tests__/template-engine.spec.ts"
+    gates: ["tsc --noEmit", "vitest run template-engine.spec"]
+    spec: "DARE/EXECUTION/task-004-template-engine.md"
+
+  task-005:
+    id: "task-005"
+    title: "Criar dna.spec.ts skeleton (fail-when-empty + iteração sobre registry)"
+    phase: "1-foundation"
+    complexity: "LOW"
+    depends_on: ["task-002", "task-003"]
+    status: "DONE"
+    files:
+      - "packages/cli/src/stacks/__tests__/dna.spec.ts"
+    gates: ["vitest run dna.spec"]
+    spec: "DARE/EXECUTION/task-005-dna-gate.md"
+
+  # ─── Fase 2: Internalizar Rails 8 ─────────────────────────────────────────
+  task-010:
+    id: "task-010"
+    title: "Capturar snapshot baseline Rails (fixture parity-rails)"
+    phase: "2-rails-internalize"
+    complexity: "LOW"
+    depends_on: ["task-005"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/__tests__/parity-rails.fixture.json"
+    gates: ["dare new --stack rails em tmp + tree-hash gerado"]
+    spec: "DARE/EXECUTION/task-010-rails-baseline.md"
+
+  task-011:
+    id: "task-011"
+    title: "Mover RailsScaffold para src/stacks/ruby-rails-8/ + templates"
+    phase: "2-rails-internalize"
+    complexity: "MED"
+    depends_on: ["task-010"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/ruby-rails-8/scaffold.ts"
+      - "packages/cli/src/stacks/ruby-rails-8/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/ruby-rails-8/**"
+      - "packages/cli/src/commands/new.ts"  # ajuste de import temporário
+    gates: ["tsc --noEmit", "vitest run ruby-rails-8"]
+    spec: "DARE/EXECUTION/task-011-rails-move.md"
+
+  task-012:
+    id: "task-012"
+    title: "Registrar Rails no STACK_REGISTRY"
+    phase: "2-rails-internalize"
+    complexity: "LOW"
+    depends_on: ["task-011"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/registry.ts"
+    gates: ["tsc --noEmit", "vitest run registry.spec"]
+    spec: "DARE/EXECUTION/task-012-rails-register.md"
+
+  task-013:
+    id: "task-013"
+    title: "parity-rails.spec.ts — diff zero contra fixture"
+    phase: "2-rails-internalize"
+    complexity: "MED"
+    depends_on: ["task-012"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/__tests__/parity-rails.spec.ts"
+    gates: ["vitest run parity-rails"]
+    spec: "DARE/EXECUTION/task-013-rails-parity.md"
+
+  # ─── Fase 3: Rails no fluxo init ──────────────────────────────────────────
+  task-020:
+    id: "task-020"
+    title: "Refatorar init.ts: prompt via registry + dispatcher"
+    phase: "3-rails-in-init"
+    complexity: "HIGH"
+    depends_on: ["task-013"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/commands/init.ts"
+    gates: ["tsc --noEmit", "vitest run init"]
+    spec: "DARE/EXECUTION/task-020-init-dispatcher.md"
+
+  task-021:
+    id: "task-021"
+    title: "init.integration.spec.ts cobre cenário Rails via init"
+    phase: "3-rails-in-init"
+    complexity: "MED"
+    depends_on: ["task-020"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/commands/__tests__/init.integration.spec.ts"
+    gates: ["vitest run init.integration"]
+    spec: "DARE/EXECUTION/task-021-init-integration.md"
+
+  # ─── Fase 4: Scaffolders backend (paralelizáveis após init dispatcher) ───
+  task-030:
+    id: "task-030"
+    title: "Scaffolder node-nestjs (Prisma + JWT + Swagger + Throttler)"
+    phase: "4-backend-scaffolders"
+    parallel_group: "backend-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/node-nestjs/scaffold.ts"
+      - "packages/cli/src/stacks/node-nestjs/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/node-nestjs/**"
+    gates: ["tsc --noEmit", "vitest run node-nestjs", "dna gate"]
+    spec: "DARE/EXECUTION/task-030-stack-node-nestjs.md"
+
+  task-031:
+    id: "task-031"
+    title: "Scaffolder python-fastapi (Pydantic + SQLAlchemy + Alembic + JWT)"
+    phase: "4-backend-scaffolders"
+    parallel_group: "backend-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/python-fastapi/scaffold.ts"
+      - "packages/cli/src/stacks/python-fastapi/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/python-fastapi/**"
+    gates: ["tsc --noEmit", "vitest run python-fastapi", "dna gate"]
+    spec: "DARE/EXECUTION/task-031-stack-python-fastapi.md"
+
+  task-032:
+    id: "task-032"
+    title: "Scaffolder php-laravel (Sanctum + FormRequest + Reverb + Pail)"
+    phase: "4-backend-scaffolders"
+    parallel_group: "backend-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/php-laravel/scaffold.ts"
+      - "packages/cli/src/stacks/php-laravel/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/php-laravel/**"
+    gates: ["tsc --noEmit", "vitest run php-laravel", "dna gate"]
+    spec: "DARE/EXECUTION/task-032-stack-php-laravel.md"
+
+  task-033:
+    id: "task-033"
+    title: "Scaffolder rust-axum (tower + utoipa + jsonwebtoken + sqlx)"
+    phase: "4-backend-scaffolders"
+    parallel_group: "backend-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/rust-axum/scaffold.ts"
+      - "packages/cli/src/stacks/rust-axum/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/rust-axum/**"
+    gates: ["tsc --noEmit", "vitest run rust-axum", "dna gate"]
+    spec: "DARE/EXECUTION/task-033-stack-rust-axum.md"
+
+  task-034:
+    id: "task-034"
+    title: "Scaffolder go-gin (sqlc + swag + JWT + gorilla/websocket)"
+    phase: "4-backend-scaffolders"
+    parallel_group: "backend-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/go-gin/scaffold.ts"
+      - "packages/cli/src/stacks/go-gin/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/go-gin/**"
+    gates: ["tsc --noEmit", "vitest run go-gin", "dna gate"]
+    spec: "DARE/EXECUTION/task-034-stack-go-gin.md"
+
+  task-035:
+    id: "task-035"
+    title: "Scaffolder go-stdlib (net/http 1.22+ + sqlc + nhooyr/websocket)"
+    phase: "4-backend-scaffolders"
+    parallel_group: "backend-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/go-stdlib/scaffold.ts"
+      - "packages/cli/src/stacks/go-stdlib/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/go-stdlib/**"
+    gates: ["tsc --noEmit", "vitest run go-stdlib", "dna gate"]
+    spec: "DARE/EXECUTION/task-035-stack-go-stdlib.md"
+
+  # ─── Fase 5: Scaffolders MCP (paralelizáveis) ────────────────────────────
+  task-040:
+    id: "task-040"
+    title: "Scaffolder mcp-node-ts (@modelcontextprotocol/sdk + 3 transports)"
+    phase: "5-mcp-scaffolders"
+    parallel_group: "mcp-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/mcp-node-ts/scaffold.ts"
+      - "packages/cli/src/stacks/mcp-node-ts/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/mcp-node-ts/**"
+    gates: ["tsc --noEmit", "vitest run mcp-node-ts", "dna gate"]
+    spec: "DARE/EXECUTION/task-040-stack-mcp-node-ts.md"
+
+  task-041:
+    id: "task-041"
+    title: "Scaffolder mcp-python (mcp[cli] + 3 transports)"
+    phase: "5-mcp-scaffolders"
+    parallel_group: "mcp-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/mcp-python/scaffold.ts"
+      - "packages/cli/src/stacks/mcp-python/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/mcp-python/**"
+    gates: ["tsc --noEmit", "vitest run mcp-python", "dna gate"]
+    spec: "DARE/EXECUTION/task-041-stack-mcp-python.md"
+
+  task-042:
+    id: "task-042"
+    title: "Scaffolder mcp-rust (rmcp SDK + 3 transports)"
+    phase: "5-mcp-scaffolders"
+    parallel_group: "mcp-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/mcp-rust/scaffold.ts"
+      - "packages/cli/src/stacks/mcp-rust/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/mcp-rust/**"
+    gates: ["tsc --noEmit", "vitest run mcp-rust", "dna gate"]
+    spec: "DARE/EXECUTION/task-042-stack-mcp-rust.md"
+
+  task-043:
+    id: "task-043"
+    title: "Scaffolder mcp-go (mcp-go SDK + 3 transports)"
+    phase: "5-mcp-scaffolders"
+    parallel_group: "mcp-scaffolders"
+    complexity: "HIGH"
+    depends_on: ["task-021"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/mcp-go/scaffold.ts"
+      - "packages/cli/src/stacks/mcp-go/__tests__/scaffold.spec.ts"
+      - "packages/cli/templates/stacks/mcp-go/**"
+    gates: ["tsc --noEmit", "vitest run mcp-go", "dna gate"]
+    spec: "DARE/EXECUTION/task-043-stack-mcp-go.md"
+
+  # ─── Fase 6: Remoção definitiva ───────────────────────────────────────────
+  task-050:
+    id: "task-050"
+    title: "Deletar packages/cli/src/commands/new.ts + desregistrar do bin"
+    phase: "6-removal"
+    complexity: "LOW"
+    depends_on:
+      - "task-030"
+      - "task-031"
+      - "task-032"
+      - "task-033"
+      - "task-034"
+      - "task-035"
+      - "task-040"
+      - "task-041"
+      - "task-042"
+      - "task-043"
+    status: "PENDING"
+    files:
+      - "packages/cli/src/commands/new.ts"  # delete
+      - "packages/cli/src/bin/dare.ts"
+    gates: ["tsc --noEmit", "vitest run", "grep -r 'command(.new.)' = 0 matches"]
+    spec: "DARE/EXECUTION/task-050-remove-new-command.md"
+
+  task-051:
+    id: "task-051"
+    title: "Apagar packages/stacks/ + remover entrada de pnpm-workspace.yaml"
+    phase: "6-removal"
+    complexity: "LOW"
+    depends_on: ["task-050"]
+    status: "PENDING"
+    files:
+      - "packages/stacks/**"  # delete
+      - "pnpm-workspace.yaml"
+    gates: ["pnpm install (sem warnings)", "pnpm -r build"]
+    spec: "DARE/EXECUTION/task-051-remove-packages-stacks.md"
+
+  task-052:
+    id: "task-052"
+    title: "Remover workspace dep do packages/cli/package.json"
+    phase: "6-removal"
+    complexity: "LOW"
+    depends_on: ["task-051"]
+    status: "PENDING"
+    files:
+      - "packages/cli/package.json"
+    gates: ["pnpm install", "pnpm -r build", "pnpm -r test"]
+    spec: "DARE/EXECUTION/task-052-remove-workspace-dep.md"
+
+  # ─── Fase 7: Auditoria de segurança ───────────────────────────────────────
+  task-060:
+    id: "task-060"
+    title: "Sub-spec dna.spec.ts: env-example-no-secrets (regex)"
+    phase: "7-security"
+    complexity: "MED"
+    depends_on: ["task-052"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/__tests__/dna.spec.ts"
+    gates: ["vitest run dna.spec — sub: env-example-no-secrets"]
+    spec: "DARE/EXECUTION/task-060-env-secret-scan.md"
+
+  task-061:
+    id: "task-061"
+    title: "gitleaks (ou regex) sobre templates/stacks/** no CI"
+    phase: "7-security"
+    complexity: "MED"
+    depends_on: ["task-052"]
+    status: "PENDING"
+    files:
+      - ".github/workflows/ci.yml"  # adicionar step
+    gates: ["gitleaks detect — 0 matches"]
+    spec: "DARE/EXECUTION/task-061-gitleaks-templates.md"
+
+  task-062:
+    id: "task-062"
+    title: "Validar dare-ci.yml gerado tem job audit nos 11 stacks"
+    phase: "7-security"
+    complexity: "MED"
+    depends_on: ["task-052"]
+    status: "PENDING"
+    files:
+      - "packages/cli/src/stacks/__tests__/dna.spec.ts"  # adicionar sub
+    gates: ["vitest run dna.spec — sub: github-ci-has-audit-job"]
+    spec: "DARE/EXECUTION/task-062-ci-audit-job-gate.md"
+
+  task-063:
+    id: "task-063"
+    title: "pnpm audit gate no CI principal"
+    phase: "7-security"
+    complexity: "LOW"
+    depends_on: ["task-052"]
+    status: "PENDING"
+    files:
+      - ".github/workflows/ci.yml"
+    gates: ["pnpm audit --audit-level=high — 0 HIGH/CRITICAL"]
+    spec: "DARE/EXECUTION/task-063-pnpm-audit-gate.md"
+
+  # ─── Fase 8: Docs + bump + release ────────────────────────────────────────
+  task-070:
+    id: "task-070"
+    title: "Atualizar README.md: tabela de 11 stacks"
+    phase: "8-release"
+    complexity: "LOW"
+    depends_on: ["task-063"]
+    status: "PENDING"
+    files:
+      - "README.md"
+    gates: ["lint markdown — sem links quebrados"]
+    spec: "DARE/EXECUTION/task-070-readme-update.md"
+
+  task-071:
+    id: "task-071"
+    title: "Atualizar ROADMAP.md: stacks com gerador (1) → (11)"
+    phase: "8-release"
+    complexity: "LOW"
+    depends_on: ["task-063"]
+    status: "PENDING"
+    files:
+      - "ROADMAP.md"
+    gates: []
+    spec: "DARE/EXECUTION/task-071-roadmap-update.md"
+
+  task-072:
+    id: "task-072"
+    title: "CHANGELOG [3.1.0] — 4 seções (added/fixed/breaking/structural)"
+    phase: "8-release"
+    complexity: "MED"
+    depends_on: ["task-063"]
+    status: "PENDING"
+    files:
+      - "CHANGELOG.md"
+    gates: []
+    spec: "DARE/EXECUTION/task-072-changelog-v3-1.md"
+
+  task-073:
+    id: "task-073"
+    title: "Bump version 3.0.0 → 3.1.0 (raiz + packages/cli) + files field"
+    phase: "8-release"
+    complexity: "LOW"
+    depends_on: ["task-070", "task-071", "task-072"]
+    status: "PENDING"
+    files:
+      - "package.json"
+      - "packages/cli/package.json"
+    gates: ["pnpm install (lockfile atualizado)"]
+    spec: "DARE/EXECUTION/task-073-version-bump.md"
+
+  task-074:
+    id: "task-074"
+    title: "Criar .github/workflows/publish-smoke.yml"
+    phase: "8-release"
+    complexity: "MED"
+    depends_on: ["task-073"]
+    status: "PENDING"
+    files:
+      - ".github/workflows/publish-smoke.yml"
+    gates: ["actionlint passa"]
+    spec: "DARE/EXECUTION/task-074-publish-smoke-workflow.md"
+
+  task-075:
+    id: "task-075"
+    title: "Validar tarball ≤ 3 MB + listar templates/stacks/**"
+    phase: "8-release"
+    complexity: "LOW"
+    depends_on: ["task-073"]
+    status: "PENDING"
+    files: []
+    gates: ["npm pack --dry-run em packages/cli — size ≤ 3 MB, contém templates/stacks/**"]
+    spec: "DARE/EXECUTION/task-075-tarball-validation.md"
+
+  task-076:
+    id: "task-076"
+    title: "Tag v3.1.0 + push + GitHub Release + smoke"
+    phase: "8-release"
+    complexity: "MED"
+    depends_on: ["task-074", "task-075"]
+    status: "PENDING"
+    files: []
+    gates:
+      - "git tag v3.1.0 + push"
+      - "publish.yml verde"
+      - "publish-smoke.yml verde"
+      - "npm install -g @dewtech/dare-cli em VM limpa retorna 0"
+    spec: "DARE/EXECUTION/task-076-release-v3-1-0.md"
