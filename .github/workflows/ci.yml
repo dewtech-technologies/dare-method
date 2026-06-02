@@ -67,3 +67,53 @@ jobs:
 
       - name: Type check all packages
         run: pnpm -r build
+
+  audit:
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Gate on PRODUCTION deps — these ship in the published @dewtech/dare-cli
+      # tarball. Dev-only advisories are tracked in KNOWN-CVES.md and do not
+      # block CI because they never reach a user's machine.
+      - name: Audit production dependencies (HIGH/CRITICAL fails)
+        run: pnpm audit --prod --audit-level=high
+
+  templates-secret-scan:
+    name: Templates secret scan (gitleaks)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The gitleaks GitHub Action requires a paid license for organizations.
+      # The gitleaks CLI/Docker image is MIT-licensed and free — run it directly.
+      # The gitleaks GitHub Action requires a paid license for organizations.
+      # The gitleaks CLI/Docker image is MIT-licensed and free — run it directly,
+      # scoped to the project templates we ship (not skill docs / test fixtures,
+      # which legitimately contain example keys).
+      - name: Run gitleaks (Docker image, no license needed)
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo/packages/cli/templates/stacks \
+            --config /repo/.gitleaks.toml --no-git --redact --exit-code 1 --verbose

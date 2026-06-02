@@ -1,0 +1,228 @@
+{
+  "capturedAt": "2026-06-02",
+  "source": "ruby_rails_8.generate (v3.1 internalized, DNA-enriched)",
+  "scaffolder": "packages/cli/src/stacks/ruby-rails-8",
+  "fileCount": 44,
+  "files": [
+    {
+      "path": ".dare/skills.yml",
+      "hash": "11ede8ee947a3447cf17452b92de30e5339e225d0a1e897e5845cebe062b59e4",
+      "bytes": 1078
+    },
+    {
+      "path": ".env.example",
+      "hash": "301e5c6b7776349c9adbbfef41204e5a2a02f7c6e598fc9f8164c3d0437042f8",
+      "bytes": 455
+    },
+    {
+      "path": ".github/workflows/dare-ci.yml",
+      "hash": "8a00f1ef7209a53a6754b1adabde26d2cb5be2a3d559e50c7eeaf4dadd0c3e7b",
+      "bytes": 2848
+    },
+    {
+      "path": "Gemfile",
+      "hash": "01356fdfd1547d2fa3e60ec33a08c6fa8973bdc6254d734dd8ed760dcb55877c",
+      "bytes": 1211
+    },
+    {
+      "path": "app/channels/application_cable/channel.rb",
+      "hash": "d680dcbe789189a1c0689f21c613b7f9d73f8e1e70fe2815cabfc50c4a54b9cf",
+      "bytes": 358
+    },
+    {
+      "path": "app/channels/application_cable/connection.rb",
+      "hash": "c755f381ec78aaaffbed2902308b7e719f381e56eccb4d18b2513edf13ece968",
+      "bytes": 1022
+    },
+    {
+      "path": "app/channels/dare_updates_channel.rb",
+      "hash": "d31c8348e842d030bc4c979ecec600c126d2369b0916611f78019c163c2f5678",
+      "bytes": 534
+    },
+    {
+      "path": "app/channels/user_updates_channel.rb",
+      "hash": "adbab02bc79f743075e7e357f1789c37b841e89627f09594589a38498766672f",
+      "bytes": 607
+    },
+    {
+      "path": "app/controllers/application_controller.rb",
+      "hash": "594488f5125c5474d3c2bc9db2f26fbc159ee36a5721c1f3022bbb08c28da718",
+      "bytes": 1196
+    },
+    {
+      "path": "app/controllers/concerns/problem_details.rb",
+      "hash": "8257768597cf213d5dc6aa1a26273d6173ea682111633e3e6f9549454ae58d4b",
+      "bytes": 2997
+    },
+    {
+      "path": "app/handlers/summarize_handler.rb",
+      "hash": "7e2aee544ef38dcc2e102fdee4fb2dd5235788c008bedfa377accea4b7c3712e",
+      "bytes": 1251
+    },
+    {
+      "path": "app/handlers/users_handler.rb",
+      "hash": "15ec5fe3d8fc9bc2d863753b3e14bf3ec5b9e4a71338cbe22cf74f711db384bb",
+      "bytes": 1815
+    },
+    {
+      "path": "app/llm/cache/llm_cache.rb",
+      "hash": "7a0dd1b960cda4c4e403972acbdceab9692590bc78b03d8f8656fa7a01cab201",
+      "bytes": 1154
+    },
+    {
+      "path": "app/llm/prompts/prompt_loader.rb",
+      "hash": "ad362a4cf1a0c923b62450a10d9ee2c4e05572b3bc4f0a3e5a3bf94ae132e59b",
+      "bytes": 2050
+    },
+    {
+      "path": "app/llm/prompts/summarize_v1.jinja2",
+      "hash": "6b7e9491cfed0516e3ca5d1e24b15c7d51aafa63599518ed47a3002f557a5d50",
+      "bytes": 268
+    },
+    {
+      "path": "app/llm/providers/dummy_provider.rb",
+      "hash": "142aeda419eba711b2009a794c7f5d9dd271d1e70eb1f10a03e7967f35405781",
+      "bytes": 1365
+    },
+    {
+      "path": "app/llm/providers/llm_provider.rb",
+      "hash": "a3a049ae828837840a37c257b74edab4ef8a3785f18e7d12f2a6787301cc167e",
+      "bytes": 2476
+    },
+    {
+      "path": "app/llm/providers/openai_provider.rb",
+      "hash": "2e7bc49d658a1476dafe19d30e9796857d414f310145cbb231ed71235eb6bf8e",
+      "bytes": 2147
+    },
+    {
+      "path": "app/llm/rate_limit/token_bucket.rb",
+      "hash": "611b001bcca3628280d1bb1a9ce3c68a59df03e63db689c940c63d1c0497980e",
+      "bytes": 2598
+    },
+    {
+      "path": "app/llm/validators/summarize_output_schema.json",
+      "hash": "73abafc633273fe70b08ecc85f060a890a937a9ca6c83c15d574a832f55375e7",
+      "bytes": 543
+    },
+    {
+      "path": "app/llm/validators/validator.rb",
+      "hash": "96c3bb1594796a350987f567cd862bb179295edc0d76e51b1ea4c89dfabe893b",
+      "bytes": 1528
+    },
+    {
+      "path": "app/models/user.rb",
+      "hash": "cb5c55b7f4fbe9f362d38701d26bd3f40f1ded0f46f371ece6c8da9b5467544c",
+      "bytes": 1705
+    },
+    {
+      "path": "app/presenters/user_presenter.rb",
+      "hash": "638578261fdf7647ebd15e1f4dada1ad8a95a837afd4ccafa2287d80bcd47c2c",
+      "bytes": 1114
+    },
+    {
+      "path": "app/repositories/document_repository.rb",
+      "hash": "51eb13256b1cacb65768f1204d69a0d8bfcb52c78ac44162e364881a7428cb28",
+      "bytes": 1770
+    },
+    {
+      "path": "app/repositories/user_repository.rb",
+      "hash": "9885ae814f29bf226b3c03c503d8c8863095eca56b3ff1abbe25569c22b052e4",
+      "bytes": 2179
+    },
+    {
+      "path": "app/services/create_user_service.rb",
+      "hash": "77301151db514e7c6c8c37c6c6f4404721ebeaabeecdbb878141a24d68896526",
+      "bytes": 2354
+    },
+    {
+      "path": "app/services/realtime_service.rb",
+      "hash": "0504820f5ef7ff77b208d3a4026e8addbcf1e3269365e2d7a2653c8f09a49241",
+      "bytes": 1836
+    },
+    {
+      "path": "app/services/summarize_document_service.rb",
+      "hash": "8f98c57369180b2854027afd0799952ad4d5226c2187b807e24962d93c834352",
+      "bytes": 2747
+    },
+    {
+      "path": "config/dare.yml",
+      "hash": "6071dd26b0bb3ac9838dd3eeabe25beeb6b555250f9ffd2a363366fea192d842",
+      "bytes": 1197
+    },
+    {
+      "path": "config/initializers/dare.rb",
+      "hash": "4ec3d7267e50fddbe4d5625e9b5f9dd082c8a925c04bce0f8e40c712c6108205",
+      "bytes": 1268
+    },
+    {
+      "path": "config/initializers/rack_attack.rb",
+      "hash": "ef29476b8ad1ab4a7e0e986819e4aa3871058438b6ae1beb1b8cc0f25e5a8cc9",
+      "bytes": 2955
+    },
+    {
+      "path": "config/initializers/rswag_api.rb",
+      "hash": "a64d19edcef6d0a5c55fb2854500a70c8e77d62a2ed40c855a1fff04677eedda",
+      "bytes": 412
+    },
+    {
+      "path": "lib/tasks/dare.rake",
+      "hash": "89e19ec487144cfa47f916719578398595870c58d6d00f0e4e3bf24d0c0ceefe",
+      "bytes": 6678
+    },
+    {
+      "path": "llms.txt",
+      "hash": "8b7dc261906ca41e0854031a72d5ec82e2ed480e73080df0d0dbee56dd219580",
+      "bytes": 2684
+    },
+    {
+      "path": "spec/api/summarize_spec.rb",
+      "hash": "27802ef948421a01f8ef6642d842ea0de60df4bd297c512a8b9ae7355ffbaeeb",
+      "bytes": 1967
+    },
+    {
+      "path": "spec/api/users_spec.rb",
+      "hash": "10986a8a39f6588f4e261e263e679a44a472ce544aec9691c88186492a52db35",
+      "bytes": 2028
+    },
+    {
+      "path": "spec/channels/dare_updates_channel_spec.rb",
+      "hash": "ac7539c5151e01ef079fcd0017d54b9d863e49c11fadb771968c84e1392f68e8",
+      "bytes": 1574
+    },
+    {
+      "path": "spec/channels/user_updates_channel_spec.rb",
+      "hash": "98b19af81901c7269f1ef3c9dcfd88685fe003e91ee4ce954c691315f6ae70ea",
+      "bytes": 1449
+    },
+    {
+      "path": "spec/factories/users.rb",
+      "hash": "d23f772e9af839ee755c3f120396ae238acccb09e07a8e6d36b88f3e7a33b462",
+      "bytes": 579
+    },
+    {
+      "path": "spec/handlers/users_handler_spec.rb",
+      "hash": "2dcb3bd0870c72f48ea021fa5ba8af0fcba0c3e3672d2940c530673ef804b237",
+      "bytes": 2790
+    },
+    {
+      "path": "spec/rails_helper.rb",
+      "hash": "b232b98be42a278682808c0119beea79972186210a46de088e6ac1fafe023ebb",
+      "bytes": 889
+    },
+    {
+      "path": "spec/services/create_user_service_spec.rb",
+      "hash": "209f50cac8dbdf8f8e26668f236f8216f2c4e11868f913e779ad2db5921cabbc",
+      "bytes": 3361
+    },
+    {
+      "path": "spec/services/summarize_document_service_spec.rb",
+      "hash": "07f8eb02cedb487133220a79e226576ed0bffb415a1fd598956dcbaf75224264",
+      "bytes": 4894
+    },
+    {
+      "path": "spec/swagger_helper.rb",
+      "hash": "0db99209e86ce9e59963b52f27c1689c762e37c294eca2a557bb51fe0bef292b",
+      "bytes": 2517
+    }
+  ]
+}

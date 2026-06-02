@@ -18,7 +18,6 @@ import { bootstrapCommand } from '../commands/bootstrap.js';
 import { updateCommand } from '../commands/update.js';
 import { reviewCommand } from '../commands/review.js';
 import { refineCommand } from '../commands/refine.js';
-import { newCommand } from '../commands/new.js';
 import { skillCommand } from '../skills/index.js';
 import { welcomeCommand } from '../commands/welcome.js';
 import { printBanner } from '../utils/banner.js';
@@ -34,7 +33,6 @@ program
   .version(version)
   .option('--no-banner', 'Suppress ASCII art banner');
 
-program.addCommand(newCommand);
 program.addCommand(initCommand);
 program.addCommand(bootstrapCommand);
 program.addCommand(discoverCommand);
@@ -64,7 +62,7 @@ if (!process.argv.slice(2).length) {
   const noBanner = process.argv.includes('--no-banner');
   if (!noBanner) {
     // Show banner only for banner-eligible commands
-    const BANNER_COMMANDS = ['new', '--version', '-V'];
+    const BANNER_COMMANDS = ['init', '--version', '-V'];
     const firstArg = process.argv[2] ?? '';
     if (BANNER_COMMANDS.includes(firstArg)) {
       printBanner();

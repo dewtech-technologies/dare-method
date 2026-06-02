@@ -8,7 +8,24 @@ import { generateProjectStructure } from '../utils/project-generator.js';
 export const initCommand = new Command('init')
   .description('Initialize a new DARE project with interactive setup')
   .argument('[project-name]', 'Project name')
-  .action(async (projectName?: string) => {
+  .option('--stack <id>', 'Backend stack id (skips the interactive prompt)')
+  .option('--mcp <language>', 'MCP server language: node-ts | python | rust | go')
+  .option('--transport <mode>', 'MCP transport: stdio | sse | http', 'stdio')
+  .option('--toolchain <mode>', 'native | docker | auto', 'auto')
+  .option('--non-interactive', 'Fail instead of prompting; requires --stack or --mcp')
+  .action(async (projectName: string | undefined, options: {
+    stack?: string;
+    mcp?: string;
+    transport?: string;
+    toolchain?: string;
+    nonInteractive?: boolean;
+  }) => {
+    // ── Non-interactive path (CI / scripting / smoke tests) ──────────────────
+    if (options.nonInteractive || options.stack || options.mcp) {
+      await runNonInteractive(projectName, options);
+      return;
+    }
+
     console.log(chalk.blue.bold('\n🚀 DARE Framework - Project Initialization\n'));
 
     const answers = await inquirer.prompt([
@@ -45,6 +62,8 @@ export const initCommand = new Command('init')
         choices: [
           { name: '🟦 TypeScript / Node.js', value: 'node-ts' },
           { name: '🐍 Python', value: 'python' },
+          { name: '🦀 Rust (beta)', value: 'rust' },
+          { name: '🐹 Go (beta)', value: 'go' },
         ],
       },
       {
@@ -78,6 +97,7 @@ export const initCommand = new Command('init')
         message: 'Backend stack:',
         when: (ans) => ans.structure !== 'frontend' && ans.structure !== 'mcp-server',
         choices: [
+          { name: '💎 Ruby / Rails 8', value: 'ruby-rails-8' },
           { name: '🦀 Rust / Axum', value: 'rust-axum' },
           { name: '🟢 Node.js / NestJS', value: 'node-nestjs' },
           { name: '🐍 Python / FastAPI', value: 'python-fastapi' },
@@ -271,3 +291,87 @@ export const initCommand = new Command('init')
       process.exit(1);
     }
   });
+
+// ── Non-interactive scaffolding (CI / scripting / smoke tests) ─────────────
+//
+// Mirrors the interactive path but takes the stack from flags. Backend stacks
+// go through `--stack <id>`; MCP servers through `--mcp <language>`. Both route
+// through generateProjectStructure → registry scaffolders, exactly like the
+// interactive flow.
+const BACKEND_STACK_IDS = new Set([
+  'ruby-rails-8',
+  'node-nestjs',
+  'python-fastapi',
+  'php-laravel',
+  'rust-axum',
+  'go-gin',
+  'go-stdlib',
+]);
+const MCP_LANGUAGES = new Set(['node-ts', 'python', 'rust', 'go']);
+
+async function runNonInteractive(
+  projectName: string | undefined,
+  options: { stack?: string; mcp?: string; transport?: string; toolchain?: string; nonInteractive?: boolean },
+): Promise<void> {
+  const name = projectName ?? 'my-dare-project';
+
+  if (!options.stack && !options.mcp) {
+    console.error(chalk.red('Error: --non-interactive requires --stack <id> or --mcp <language>'));
+    process.exit(1);
+  }
+  if (options.stack && !BACKEND_STACK_IDS.has(options.stack)) {
+    console.error(
+      chalk.red(
+        `Error: unknown stack '${options.stack}'. Valid: ${[...BACKEND_STACK_IDS].sort().join(', ')}`,
+      ),
+    );
+    process.exit(1);
+  }
+  if (options.mcp && !MCP_LANGUAGES.has(options.mcp)) {
+    console.error(
+      chalk.red(
+        `Error: unknown mcp language '${options.mcp}'. Valid: ${[...MCP_LANGUAGES].sort().join(', ')}`,
+      ),
+    );
+    process.exit(1);
+  }
+
+  const toolchain = (options.toolchain ?? 'auto') as 'native' | 'docker' | 'auto';
+  const transport = (options.transport ?? 'stdio') as 'stdio' | 'sse' | 'http';
+  const spinner = ora(`Creating project ${chalk.cyan(name)}...`).start();
+
+  try {
+    if (options.mcp) {
+      await generateProjectStructure({
+        name,
+        structure: 'mcp-server',
+        mcpLanguage: options.mcp as 'node-ts' | 'python' | 'rust' | 'go',
+        // ProjectConfig uses the historical 'http-stream' label; runStackBootstrap
+        // normalizes it back to 'http' for the scaffolder.
+        mcpTransport: transport === 'http' ? 'http-stream' : transport,
+        ide: 'cursor',
+        graphrag: 'sqlite',
+        mcp: false,
+        toolchain,
+        outputDir: path.resolve(process.cwd(), name),
+      });
+    } else {
+      await generateProjectStructure({
+        name,
+        structure: 'backend',
+        backend: options.stack,
+        ide: 'cursor',
+        graphrag: 'sqlite',
+        mcp: false,
+        toolchain,
+        outputDir: path.resolve(process.cwd(), name),
+      });
+    }
+    spinner.succeed(chalk.green(`Project ${chalk.bold(name)} created.`));
+    console.log(chalk.gray(`  Stack: ${options.stack ?? `mcp-${options.mcp}`}`));
+  } catch (err) {
+    spinner.fail(chalk.red('Failed to create project'));
+    console.error(err);
+    process.exit(1);
+  }
+}

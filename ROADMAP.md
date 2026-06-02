@@ -1,10 +1,40 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.0.0 (em release)
-> **Última atualização:** 2026-05
+> **Status atual:** v3.1.0 (em release)
+> **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
+
+---
+
+## ✅ Shipped — v3.1.0
+
+### Stacks com gerador completo (11)
+
+Todas internalizadas no `@dewtech/dare-cli` (sem pacotes de stack isolados; corrige o erro 404 do `npm install -g`). Cada gerador entrega o **DNA DARE**: `llms.txt`, OpenAPI, `--json`, rate limit, `.env.example` sem segredos, `.dare/skills.yml`, CI com audit/lint/test.
+
+**Backend (7):**
+- ✅ **ruby-rails-8** — Rails 8 + Layered Design + Action Cable + LLM
+- ✅ **node-nestjs** — NestJS 10 + Prisma + Swagger + Throttler + JWT
+- ✅ **python-fastapi** — FastAPI + Pydantic v2 + SQLAlchemy + Alembic + slowapi
+- ✅ **php-laravel** — Laravel 11 + Sanctum + FormRequest + Reverb + Pail + l5-swagger
+- ✅ **rust-axum** — Axum + Tower + utoipa + jsonwebtoken + argon2 + sqlx
+- ✅ **go-gin** — Gin + sqlc + swag + golang-jwt + gorilla/websocket
+- ✅ **go-stdlib** — net/http 1.22 (sem framework) + sqlc + coder/websocket
+
+**MCP Server (4 variantes, 3 transports cada):**
+- ✅ **mcp-node-ts** — `@modelcontextprotocol/sdk`
+- ✅ **mcp-python** — `mcp[cli]` (FastMCP)
+- ✅ **mcp-rust** (beta) — `rmcp`
+- ✅ **mcp-go** (beta) — `mark3labs/mcp-go`
+
+### Outras mudanças
+
+- ✅ **`dare new` removido** — `dare init` é o único entrypoint de scaffolding
+- ✅ **DNA gate** — `dna.spec.ts` valida os 7 artefatos invariantes nos 11 stacks (single-source de paridade)
+- ✅ **CI de segurança** — `pnpm audit --prod` + gitleaks sobre `templates/stacks/**`
+- ✅ **`packages/stacks/` removido** — tudo internalizado em `packages/cli/`
 
 ---
 
@@ -33,6 +63,8 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 ### Stacks com gerador completo (1)
 
 - ✅ **Ruby on Rails 8** — `packages/stacks/ruby-rails-8/` com PostgreSQL, Solid Queue, Action Cable, ViewComponent, Kamal 2
+
+> Atualizado na v3.1.0 → **(11)**. Ver seção abaixo.
 
 ### Engine
 
