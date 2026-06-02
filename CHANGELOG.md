@@ -13,7 +13,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 Release focada na **qualidade dos artefatos de brownfield** (`dare reverse` / `dare dna`). Até a v3.1, os artefatos gerados eram quase só esqueleto: `IDEIA.md` e as specs de módulo continham placeholders `<!-- AGENT -->` em vez de dados reais coletados da aplicação. Agora a camada determinística (sem LLM) **roda por padrão** e renderiza dados reais (endpoints + entidades) nos artefatos; o agente da IDE apenas enriquece a semântica em cima de fatos concretos.
 
-### ✨ Adicionado
+### ✨ Adicionado — paridade de comandos CLI ↔ IDE (`/dare-*`)
+
+- **Todo comando do `dare` CLI agora é invocável na IDE como `/dare-<comando>`**, nas três IDEs suportadas (Claude Code, Cursor, Antigravity). Antes, vários comandos só existiam no terminal — e no **Cursor** os comandos de metodologia tinham nomes divergentes (`/generate-design`, `/execute-task`, `/review-task`…) e `reverse`/`dna`/`migrate` existiam apenas como `rules` passivas (não invocáveis). Agora os 18 comandos (`init`, `bootstrap`, `discover`, `reverse`, `dna`, `migrate`, `design`, `blueprint`, `execute`, `graph`, `dag`, `validate`, `info`, `update`, `review`, `refine`, `skill`, `welcome`) têm skill/command `dare-*` idêntico nas 3 IDEs.
+- **Cursor normalizado para a convenção `/dare-*`**: comandos renomeados (`generate-*`/`*-task`/`run-dag`/`dag-viz`/`telemetry-report` → `dare-*`) e `reverse`/`dna`/`migrate` promovidos de regra para comando invocável.
+- **Teste de consistência `ide-command-parity.test.ts`** trava o contrato: se um comando novo for adicionado ao CLI sem o skill correspondente nas 3 IDEs, o build falha.
+- Comandos operacionais gerados a partir de uma spec única (`scripts/gen-runner-commands.mjs`) para garantir consistência entre as IDEs.
+
+### ✨ Adicionado — coleta determinística
 
 - **Coleta determinística por padrão no `dare reverse`.** `extractDataModel()` agora roda em todo `reverse` (antes só com `--deep`), e o modelo extraído é injetado em `IDEIA.md` e nas specs de módulo. Os artefatos passam de esqueleto para tabelas reais de **Superfície de API** e **Modelo de Dados**.
 - **`reverse-facts.json` registra contagens** de `api.endpoints` e `api.entities` coletados.
