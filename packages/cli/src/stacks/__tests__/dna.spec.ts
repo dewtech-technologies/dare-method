@@ -23,15 +23,21 @@ import { DARE_DNA, type DareDnaArtifact, type StackId } from '../types.js';
 const EXPECTED_STACK_COUNT = 11; // 7 backend + 4 MCP
 
 describe('DNA gate — registry completeness', () => {
-  it.fails('registry has expected number of stacks (fails until Phase 5)', () => {
-    // Wrapped in it.fails() until Phase 5. When the 11th stack lands, switch
-    // this to a regular `it()` and the green test becomes the gate.
+  it('registry has all 11 stacks (7 backend + 4 MCP)', () => {
+    // Flipped from it.fails() in T-043 when mcp-go — the 11th stack — landed.
+    // This is now the hard gate: any future stack addition must bump
+    // EXPECTED_STACK_COUNT, and any accidental removal turns this red.
     expect(STACK_REGISTRY.size).toBe(EXPECTED_STACK_COUNT);
   });
 
   it('registry is non-empty', () => {
-    // Flipped from it.fails() in T-012 when ruby-rails-8 was registered.
     expect(STACK_REGISTRY.size).toBeGreaterThan(0);
+  });
+
+  it('has exactly 7 backend + 4 mcp stacks', () => {
+    const byCat = { backend: 0, mcp: 0 };
+    for (const e of STACK_REGISTRY.values()) byCat[e.category] += 1;
+    expect(byCat).toEqual({ backend: 7, mcp: 4 });
   });
 });
 

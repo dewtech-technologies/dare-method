@@ -254,7 +254,7 @@ tasks:
     parallel_group: "mcp-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/mcp-node-ts/scaffold.ts"
       - "packages/cli/src/stacks/mcp-node-ts/__tests__/scaffold.spec.ts"
@@ -269,7 +269,7 @@ tasks:
     parallel_group: "mcp-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/mcp-python/scaffold.ts"
       - "packages/cli/src/stacks/mcp-python/__tests__/scaffold.spec.ts"
@@ -284,7 +284,7 @@ tasks:
     parallel_group: "mcp-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/mcp-rust/scaffold.ts"
       - "packages/cli/src/stacks/mcp-rust/__tests__/scaffold.spec.ts"
@@ -299,7 +299,7 @@ tasks:
     parallel_group: "mcp-scaffolders"
     complexity: "HIGH"
     depends_on: ["task-021"]
-    status: "PENDING"
+    status: "DONE"
     files:
       - "packages/cli/src/stacks/mcp-go/scaffold.ts"
       - "packages/cli/src/stacks/mcp-go/__tests__/scaffold.spec.ts"

@@ -73,6 +73,38 @@ const ENTRIES: ReadonlyArray<StackRegistryEntry> = [
     load: async () =>
       (await import('./go-stdlib/scaffold.js')).go_stdlib,
   },
+  {
+    id: 'mcp-node-ts',
+    label: '🟦 MCP / Node.js (TypeScript)',
+    category: 'mcp',
+    status: 'stable',
+    load: async () =>
+      (await import('./mcp-node-ts/scaffold.js')).mcp_node_ts,
+  },
+  {
+    id: 'mcp-python',
+    label: '🐍 MCP / Python',
+    category: 'mcp',
+    status: 'stable',
+    load: async () =>
+      (await import('./mcp-python/scaffold.js')).mcp_python,
+  },
+  {
+    id: 'mcp-rust',
+    label: '🦀 MCP / Rust',
+    category: 'mcp',
+    status: 'beta',
+    load: async () =>
+      (await import('./mcp-rust/scaffold.js')).mcp_rust,
+  },
+  {
+    id: 'mcp-go',
+    label: '🐹 MCP / Go',
+    category: 'mcp',
+    status: 'beta',
+    load: async () =>
+      (await import('./mcp-go/scaffold.js')).mcp_go,
+  },
 ];
 
 export const STACK_REGISTRY: ReadonlyMap<StackId, StackRegistryEntry> = new Map(
