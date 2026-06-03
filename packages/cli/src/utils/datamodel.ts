@@ -49,8 +49,39 @@ const SCAN_EXT = new Set([
   '.sql', '.prisma', '.ts', '.tsx', '.js', '.mjs', '.cjs', '.py', '.php', '.rb', '.go', '.rs',
 ]);
 
-/** Directories whose classes/types are treated as domain entities (framework-agnostic). */
-const DATA_DIR_RE = /(^|\/)(models?|entities|entity|domain|dto|dtos|schemas?)\//i;
+/**
+ * Directories whose classes/types are treated as domain entities
+ * (framework-agnostic). NOTE: `dto`/`dtos` are deliberately excluded — DTOs are
+ * API request/response shapes, not persistence entities. Filenames ending in
+ * `.entity.*` / `.model.*` are always treated as entities (see extractDataModel).
+ */
+const DATA_DIR_RE = /(^|\/)(models?|entities|entity|domain|schemas?)\//i;
+
+/** A `*.entity.*` / `*.model.*` file is a persistence entity regardless of dir. */
+const ENTITY_FILE_RE = /\.(entity|model)\.(ts|tsx|js|py|php|rb|go|rs)$/i;
+
+/**
+ * Names that look like transport/value shapes, not persistence entities.
+ * Used to drop false positives that leak in via `domain/` type scans.
+ */
+const NON_ENTITY_NAME_RE =
+  /(Dto|Request|Response|Input|Output|Payload|Params?|Query|Filter|Options?|Props|Config|Args?|Result|Mapper|Factory|Builder|Handler|Service|Controller|Module|Guard|Interceptor|Pipe|Middleware|Resolver|Strategy|Adapter|Port|UseCase|Command|Event|Query)$/;
+
+/** SQL keywords that leak in as "table refs" from DDL clauses. */
+const SQL_KEYWORDS = new Set([
+  'CASCADE', 'SET', 'NULL', 'DEFAULT', 'RESTRICT', 'ACTION', 'NO', 'KEY',
+  'PRIMARY', 'FOREIGN', 'REFERENCES', 'UNIQUE', 'INDEX', 'CONSTRAINT', 'TABLE',
+  'EXISTS', 'IF', 'AND', 'OR', 'NOT', 'TRUE', 'FALSE',
+]);
+
+function looksLikeEntity(name: string): boolean {
+  if (name.length < 3) return false; // single/double-char generics like "a"
+  if (!/^[A-Z]/.test(name)) return false; // entities are PascalCase
+  if (/^[A-Z][A-Z0-9_]*$/.test(name)) return false; // ALL-CAPS → SQL keyword/constant, not a class
+  if (SQL_KEYWORDS.has(name.toUpperCase())) return false;
+  if (NON_ENTITY_NAME_RE.test(name)) return false;
+  return true;
+}
 
 interface ScanFile {
   rel: string;
@@ -90,15 +121,25 @@ export async function extractDataModel(root: string): Promise<DataModel> {
     const base = path.basename(f.rel);
     const lower = f.rel.toLowerCase();
 
+    // A `*.dto.*` file is never a persistence entity — skip its type scan.
+    const isDtoFile = /\.dto\.(ts|tsx|js|py|php|rb)$/i.test(f.rel) || /(^|\/)dtos?\//i.test(lower);
+
+    // High-confidence sources — kept regardless of name casing (SQL tables are
+    // often lowercase like `produtos` / `users`).
     if (base === 'schema.prisma') entities.push(...parsePrisma(f));
-    // Inline SQL DDL anywhere — migrations, .sql, or SQL inside code strings (PDO/mysqli/etc).
-    entities.push(...parseSql(f));
-    // Table names referenced in queries — covers legacy whose schema lives only in the DB.
-    entities.push(...parseSqlTableRefs(f));
-    // ORM relations (framework enrichment).
-    if (/\.(ts|js|php|rb|py)$/.test(f.rel)) entities.push(...parseOrm(f));
-    // Plain types/classes/structs in data dirs — framework-agnostic baseline (no ORM needed).
-    if (DATA_DIR_RE.test(lower)) entities.push(...parseTypes(f));
+    entities.push(...parseSql(f)); // CREATE TABLE DDL
+    // Table names referenced in queries — drop SQL keywords (CASCADE, SET, …)
+    // that leak from DDL clauses, but keep real (lowercase) table names.
+    entities.push(...parseSqlTableRefs(f).filter((e) => !SQL_KEYWORDS.has(e.name.toUpperCase())));
+    if (/\.(ts|js|php|rb|py)$/.test(f.rel)) entities.push(...parseOrm(f)); // @Entity/Eloquent/…
+
+    // Broad type/class scan: data dirs or *.entity.*/*.model.* files, never a
+    // DTO. `*.entity.*` files are trusted; loose `domain/` types are name-filtered
+    // to drop transport/value shapes (DTOs, generics, all-caps constants).
+    if (!isDtoFile && (DATA_DIR_RE.test(lower) || ENTITY_FILE_RE.test(f.rel))) {
+      const typed = parseTypes(f);
+      entities.push(...(ENTITY_FILE_RE.test(f.rel) ? typed : typed.filter((e) => looksLikeEntity(e.name))));
+    }
 
     endpoints.push(...parseEndpoints(f));
   }
@@ -196,20 +237,32 @@ function parseOrm(f: ScanFile): Entity[] {
     if (!name) continue;
 
     const entity: Entity = { name, fields: [], relations: [], source: `${f.rel}:${i + 1}` };
-    // Scan the next ~40 lines for relations.
-    for (let j = i + 1; j < Math.min(i + 40, lines.length); j++) {
+    // Scan the next ~60 lines for relations AND column/property fields, until
+    // the class body closes.
+    let depth = 0;
+    for (let j = i; j < Math.min(i + 60, lines.length); j++) {
+      const lj = lines[j];
+      depth += (lj.match(/\{/g) || []).length - (lj.match(/\}/g) || []).length;
+
       const rel =
-        /\b(belongsTo|hasMany|hasOne|belongsToMany)\s*\(\s*([A-Za-z_]\w*)/.exec(lines[j]) ||
-        /\b(belongs_to|has_many|has_one)\s+:(\w+)/.exec(lines[j]) ||
-        /@(ManyToOne|OneToMany|OneToOne|ManyToMany)\s*\(\s*\(\)\s*=>\s*(\w+)/.exec(lines[j]) ||
-        /relationship\(\s*["'](\w+)["']/.exec(lines[j]);
+        /\b(belongsTo|hasMany|hasOne|belongsToMany)\s*\(\s*([A-Za-z_]\w*)/.exec(lj) ||
+        /\b(belongs_to|has_many|has_one)\s+:(\w+)/.exec(lj) ||
+        /@(ManyToOne|OneToMany|OneToOne|ManyToMany)\s*\(\s*\(\)\s*=>\s*(\w+)/.exec(lj) ||
+        /relationship\(\s*["'](\w+)["']/.exec(lj);
       if (rel) {
         const to = rel[2] ?? rel[1];
         const kind = (rel[1] || 'relation').toString();
         entity.relations.push({ to: capitalize(to.replace(/Model$|::class/g, '')), kind: normalizeKind(kind) });
+      } else if (j > i) {
+        // Property/column field: `name: type` (TS), optionally @Column-decorated.
+        const fm = /^\s*(?:@\w+\([^)]*\)\s*)?(\w+)\??\s*:\s*([\w[\]<>., |]+)/.exec(lj);
+        if (fm && !/^(constructor|function|async|public|private|protected|static|get|set)$/.test(fm[1])) {
+          entity.fields.push({ name: fm[1], type: fm[2].trim().replace(/[;,].*$/, '') });
+        }
       }
+      if (j > i && depth <= 0) break; // class body closed
     }
-    if (entity.relations.length > 0) out.push(entity);
+    out.push(entity); // confirmed entity by @Entity / extends Model / etc.
   }
   return out;
 }
@@ -236,6 +289,23 @@ function parseEndpoints(f: ScanFile): Endpoint[] {
   const lines = f.content.split(/\r?\n/);
   const isRuby = f.rel.endsWith('.rb');
 
+  // Class-level route prefix for frameworks that split it from the method
+  // decorator: NestJS @Controller('x'), Spring @RequestMapping("/x"). A file
+  // usually hosts one controller; we apply its prefix to method-decorator
+  // routes (NestJS @Get/@Post …). Full-path frameworks (Express/Laravel/…) are
+  // unaffected.
+  const ctrlMatch =
+    /@Controller\(\s*['"`]([^'"`]*)['"`]/.exec(f.content) ||
+    /@RequestMapping\(\s*(?:value\s*=\s*)?['"]([^'"]*)['"]/.exec(f.content);
+  const classPrefix = ctrlMatch ? ctrlMatch[1] : '';
+
+  const joinRoute = (prefix: string, route: string): string => {
+    const a = prefix.replace(/^\/+|\/+$/g, '');
+    const b = route.replace(/^\/+|\/+$/g, '');
+    const joined = [a, b].filter(Boolean).join('/');
+    return '/' + joined;
+  };
+
   // 1. Per-method, single-line patterns.
   for (let i = 0; i < lines.length; i++) {
     for (const re of ENDPOINT_PATTERNS) {
@@ -245,9 +315,22 @@ function parseEndpoints(f: ScanFile): Endpoint[] {
         // Axum captures (path, method); the others capture (method, path).
         const axum = re.source.startsWith('\\.route');
         const method = (axum ? m[2] : m[1]).toUpperCase();
-        const route = axum ? m[1] : m[2];
+        const rawRoute = axum ? m[1] : m[2];
+        // Only NestJS method decorators (first pattern, starts with @Get/@Post)
+        // need the controller prefix composed in.
+        const isNestDecorator = re.source.startsWith('@(Get');
+        const route = isNestDecorator ? joinRoute(classPrefix, rawRoute) : rawRoute;
         out.push({ method, route, source: `${f.rel}:${i + 1}` });
       }
+    }
+    // Bare NestJS decorators `@Get()` / `@Post()` (no path arg) → controller-root route.
+    const bareNest = /@(Get|Post|Put|Patch|Delete|Options|Head)\(\s*\)/.exec(lines[i]);
+    if (bareNest) {
+      out.push({
+        method: bareNest[1].toUpperCase(),
+        route: joinRoute(classPrefix, ''),
+        source: `${f.rel}:${i + 1}`,
+      });
     }
     // Ruby Sinatra / Rails routes.rb: `get '/x'`.
     if (isRuby) {
