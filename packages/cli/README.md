@@ -9,7 +9,7 @@ A structured methodology for AI-assisted software development with mandatory hum
 
 ---
 
-## ⚠ Read this first — How `dare init` scaffolds a project (v3.1)
+## ⚠ Read this first — How `dare init` scaffolds a project (v3.2)
 
 `dare init` writes a **complete, DARE-shaped project** from generators
 internalized in this package — no shell-out to the framework's official CLI
@@ -163,6 +163,8 @@ Pick **one** of the two paths per stack:
 | `mcp-python` | Python 3.11+ | `python:3.12-slim` |
 | `mcp-rust` (beta) | Rust 1.78+ (rustup) | `rust:1.83` |
 | `mcp-go` (beta) | Go 1.23+ — https://go.dev/dl/ | `golang:1.25` |
+
+> **v3.2.0:** full **CLI ↔ IDE parity** — every one of the 18 CLI commands is invocable as `/dare-<cmd>` across all three IDEs (Cursor, Claude Code, Antigravity); a parity test fails the build if a command is missing a skill. Brownfield commands now **collect real data by default**: `dare reverse`/`dna` extract endpoints + entities and render them into `IDEIA.md` and the module specs (no more skeleton-only artifacts).
 
 > **v3.1.0:** all **11 stacks** ship a full generator internalized in `@dewtech/dare-cli` — 7 backend (ruby-rails-8, node-nestjs, python-fastapi, php-laravel, rust-axum, go-gin, go-stdlib) + 4 MCP (mcp-node-ts, mcp-python, mcp-rust, mcp-go). No isolated stack packages; everything is in one publishable tarball (fixes the `npm install -g` 404 of earlier releases). `dare new` was removed — `dare init` is the only scaffolding entrypoint.
 

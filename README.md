@@ -14,7 +14,7 @@
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
-> 🚀 **v3.0.0** — **32 skills em paridade total nas 3 IDEs** (Antigravity, Claude Code, Cursor): 5 stacks (NestJS, FastAPI, Go/Gin, MCP, Rails) + a **Suíte Brownfield** (`dare reverse` · `dare dna` · `dare migrate`) para entender, documentar e migrar projetos legados. Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.2.0** — **paridade total CLI ↔ IDE**: todo comando do `dare` CLI é invocável como `/dare-*` nas 3 IDEs (Cursor · Claude Code · Antigravity). **Coleta determinística no brownfield**: `dare reverse`/`dare dna` agora extraem **dados reais** (endpoints, entidades) em vez de esqueletos. 11 stacks com gerador completo internalizado + a **Suíte Brownfield** (`dare reverse` · `dare dna` · `dare migrate`). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
@@ -222,15 +222,17 @@ Cada implementação tem README próprio com setup detalhado.
 
 ---
 
-## 🔌 Skills disponíveis (v3.0.0)
+## 🔌 Skills & comandos (v3.2.0)
 
-**32 skills em paridade total** nas 3 IDEs. Cada skill existe em formato nativo de cada uma:
+**Paridade total CLI ↔ IDE:** os **18 comandos** do `dare` CLI (`init`, `bootstrap`, `discover`, `reverse`, `dna`, `migrate`, `design`, `blueprint`, `execute`, `graph`, `dag`, `validate`, `info`, `update`, `review`, `refine`, `skill`, `welcome`) são invocáveis como `/dare-<comando>` nas 3 IDEs, mais as skills transversais e de stack. Cada uma existe em formato nativo de cada IDE:
 
 | IDE | Diretório | Formato |
 |---|---|---|
 | Antigravity | `implementations/antigravity/.agents/skills/<name>/SKILL.md` | YAML+markdown |
 | Claude | `implementations/claude/.claude/commands/<name>.md` | slash-command markdown |
-| Cursor | `implementations/cursor/.cursor/rules/skill-<name>.mdc` | rule frontmatter |
+| Cursor | `implementations/cursor/.cursor/commands/dare-<name>.md` | slash-command markdown (+ `.cursor/rules/skill-*.mdc` complementares) |
+
+> Um teste de consistência (`ide-command-parity.test.ts`) garante o 1:1: adicionar um comando ao CLI sem o `/dare-*` correspondente nas 3 IDEs quebra o build.
 
 Veja o **[índice completo de skills](docs/skills/INDEX.md)** com tabela cruzada IDE × skill.
 
