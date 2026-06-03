@@ -235,6 +235,21 @@ export async function installDareToExistingProject(
   await writeDareTemplates(outputDir);
   await writeGraphragConfig(outputDir, { ...config, outputDir });
 
+  await installIdeFiles(outputDir, config);
+}
+
+/**
+ * Installs the IDE-specific rules + the full set of DARE slash-commands/skills
+ * for the configured IDE. Idempotent — safe to call repeatedly. Extracted so
+ * brownfield commands (reverse/dna/migrate) can ensure the agent-side skills
+ * exist without re-running a full init.
+ */
+export async function installIdeFiles(
+  outputDir: string,
+  config: Omit<ProjectConfig, 'outputDir'>,
+): Promise<void> {
+  const { structure, backend, frontend, ide, graphrag, mcp } = config;
+
   if (ide === 'cursor' || ide === 'hybrid') {
     const cursorRulesContent = structure === 'mcp-server'
       ? generateMcpCursorRules({ mcpTransport: config.mcpTransport, mcpLanguage: config.mcpLanguage, mcpFeatures: config.mcpFeatures, graphrag, mcp })
@@ -256,6 +271,74 @@ export async function installDareToExistingProject(
   if (ide === 'claude-code' || ide === 'claude-hybrid') {
     await generateClaudeFiles(outputDir, { ...config, outputDir });
   }
+}
+
+/**
+ * Ensures the DARE slash-commands/skills are installed for the project at
+ * `targetDir`, so the two-layer workflow (CLI command + IDE skill) works.
+ *
+ * - If `dare.config.json` exists → refreshes the IDE files for the configured
+ *   IDE (idempotent). No prompt.
+ * - If it does NOT exist (brownfield project never touched by DARE) → installs
+ *   for ALL supported IDEs (cursor + antigravity + claude) and writes a minimal
+ *   `dare.config.json`, so the workflow works regardless of which IDE is used.
+ *
+ * Brownfield commands (`dare reverse` / `dna` / `migrate`) call this before
+ * their analysis. `dare init` / `discover` already install skills themselves.
+ */
+export async function ensureDareSkills(targetDir: string): Promise<void> {
+  const cfgPath = path.join(targetDir, 'dare.config.json');
+
+  if (await fs.pathExists(cfgPath)) {
+    const cfg = (await fs.readJSON(cfgPath)) as Partial<ProjectConfig>;
+    const ide = (cfg.ide ?? 'hybrid') as ProjectConfig['ide'];
+    await fs.ensureDir(path.join(targetDir, 'DARE', 'EXECUTION'));
+    await installIdeFiles(targetDir, {
+      name: cfg.name ?? path.basename(targetDir),
+      structure: cfg.structure ?? 'backend',
+      backend: cfg.backend,
+      frontend: cfg.frontend,
+      ide,
+      graphrag: cfg.graphrag ?? 'sqlite',
+      mcp: cfg.mcp ?? false,
+      mcpTransport: cfg.mcpTransport,
+      mcpLanguage: cfg.mcpLanguage,
+      mcpFeatures: cfg.mcpFeatures,
+    });
+    return;
+  }
+
+  // No DARE config yet — install for every IDE so the agent-side skills exist
+  // no matter which editor the user runs. Writes a minimal config marker.
+  const name = path.basename(targetDir);
+  await fs.ensureDir(path.join(targetDir, 'DARE', 'EXECUTION'));
+  await fs.writeFile(path.join(targetDir, 'DARE', 'README.md'), generateSharedConfig(name));
+  await writeDareTemplates(targetDir);
+
+  for (const ide of ['hybrid', 'claude-code'] as const) {
+    await installIdeFiles(targetDir, {
+      name,
+      structure: 'backend',
+      ide,
+      graphrag: 'sqlite',
+      mcp: false,
+    });
+  }
+
+  await fs.writeJSON(
+    cfgPath,
+    {
+      name,
+      structure: 'backend',
+      ide: 'hybrid',
+      graphrag: 'sqlite',
+      mcp: false,
+      version: getFrameworkVersion(),
+      installedAt: new Date().toISOString(),
+      installedBy: 'ensureDareSkills (brownfield command)',
+    },
+    { spaces: 2 },
+  );
 }
 
 async function generateMcpTemplate(dir: string, config: ProjectConfig): Promise<void> {

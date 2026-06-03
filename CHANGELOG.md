@@ -9,6 +9,14 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.1.1] — 2026-06
+
+### 🐛 Corrigido
+
+- **Comandos brownfield (`dare reverse`, `dare dna`, `dare migrate`) agora instalam os slash-commands/skills da IDE.** Antes só a camada CLI rodava; o agente da IDE não tinha o `/dare-reverse`, `/dare-dna` etc. instalado, então a 2ª camada do workflow (inferência semântica) não existia — o passo "Run /dare-reverse in your IDE" apontava para um comando inexistente. Novo helper `ensureDareSkills(targetDir)`: se `dare.config.json` existe, refresca os arquivos da IDE configurada (idempotente); se não, instala para todas as IDEs (Cursor + Antigravity + Claude) e grava um `dare.config.json` mínimo. Pulado em modo `--check` (read-only). `dare init`/`discover` já instalavam.
+
+[3.1.1]: https://github.com/dewtech-technologies/dare-method/releases/tag/v3.1.1
+
 ## [3.1.0] — 2026-06
 
 Release focada na **correção do bug bloqueante de distribuição** (404 no `npm install -g`) e na **completação da paridade de stacks** prometida na v3.0.0. Todos os scaffolders agora vivem **dentro** do `@dewtech/dare-cli` — um único tarball publicável, zero pacotes workspace de stack.

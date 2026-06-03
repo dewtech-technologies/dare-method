@@ -14,6 +14,7 @@ import {
   KNOWN_TARGETS,
   type MigrationFacts,
 } from '../utils/migration.js';
+import { ensureDareSkills } from '../utils/project-generator.js';
 
 interface MigrateOptions {
   dir?: string;
@@ -33,6 +34,9 @@ export const migrateCommand = new Command('migrate')
 
     console.log(chalk.blue.bold('\n🚚 DARE Framework - Migration (Phase 2)\n'));
     console.log(chalk.gray(`  Project: ${targetDir}\n`));
+
+    // --check is read-only; don't install skills then.
+    if (!opts.check) await ensureDareSkills(targetDir);
 
     // ── Require reverse first ─────────────────────────────────────────────
     const artifacts = await loadReverseArtifacts(targetDir);
