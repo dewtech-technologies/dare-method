@@ -16,6 +16,15 @@ import type {
   SearchResult,
   GraphStatistics,
 } from './knowledge-graph.js';
+import { emptyEdgesByType, emptyNodesByType } from './types.js';
+import type {
+  CodeSymbolNode,
+  TraverseOptions,
+  TraverseResult,
+  LocateOptions,
+  LocateResult,
+} from './types.js';
+import { traverse as traverseFn, locate as locateFn } from './traverse.js';
 
 interface Persisted {
   nodes: GraphNode[];
@@ -25,6 +34,8 @@ interface Persisted {
 export class JsonGraph implements KnowledgeGraph {
   private nodes = new Map<string, GraphNode>();
   private edges = new Map<string, GraphEdge>();
+  /** qualifiedName → node id (code_symbol only) */
+  private qnIndex = new Map<string, string>();
 
   constructor(private readonly filePath: string) {}
 
@@ -35,6 +46,7 @@ export class JsonGraph implements KnowledgeGraph {
         const data = (await fs.readJson(this.filePath)) as Persisted;
         for (const n of data.nodes ?? []) this.nodes.set(n.id, n);
         for (const e of data.edges ?? []) this.edges.set(e.id, e);
+        this.rebuildQnIndex();
       } catch {
         // corrupt file — start fresh, but keep a backup
         await fs.copy(this.filePath, `${this.filePath}.corrupt-${Date.now()}`);
@@ -63,6 +75,7 @@ export class JsonGraph implements KnowledgeGraph {
           updatedAt: now,
         };
     this.nodes.set(node.id, merged);
+    this.indexCodeSymbol(merged);
     this.flushSync();
   }
 
@@ -95,6 +108,11 @@ export class JsonGraph implements KnowledgeGraph {
   }
 
   deleteNode(id: string): void {
+    const removed = this.nodes.get(id);
+    if (removed?.type === 'code_symbol') {
+      const qn = String(removed.metadata?.qualifiedName ?? '');
+      if (qn) this.qnIndex.delete(qn);
+    }
     this.nodes.delete(id);
     for (const [edgeId, e] of this.edges) {
       if (e.sourceId === id || e.targetId === id) this.edges.delete(edgeId);
@@ -143,13 +161,13 @@ export class JsonGraph implements KnowledgeGraph {
   // ─── Utilities ────────────────────────────────────────────────────────────
 
   getStatistics(): GraphStatistics {
-    const nodesByType = {} as Record<NodeType, number>;
-    const edgesByType = {} as Record<EdgeType, number>;
+    const nodesByType = emptyNodesByType();
+    const edgesByType = emptyEdgesByType();
     for (const n of this.nodes.values()) {
-      nodesByType[n.type] = (nodesByType[n.type] ?? 0) + 1;
+      nodesByType[n.type] += 1;
     }
     for (const e of this.edges.values()) {
-      edgesByType[e.type] = (edgesByType[e.type] ?? 0) + 1;
+      edgesByType[e.type] += 1;
     }
     return {
       totalNodes: this.nodes.size,
@@ -166,10 +184,45 @@ export class JsonGraph implements KnowledgeGraph {
   importFromJson(data: { nodes: GraphNode[]; edges: GraphEdge[] }): void {
     for (const n of data.nodes) this.addNode(n);
     for (const e of data.edges) this.addEdge(e);
+    this.rebuildQnIndex();
+  }
+
+  traverse(opts: TraverseOptions): TraverseResult {
+    return traverseFn(this, opts);
+  }
+
+  locate(seedQuery: string, opts?: LocateOptions): LocateResult {
+    return locateFn(this, seedQuery, opts);
+  }
+
+  findByQualifiedName(qn: string): CodeSymbolNode | null {
+    const normalized = qn.startsWith('code_symbol:') ? qn.slice('code_symbol:'.length) : qn;
+    const id = this.qnIndex.get(normalized);
+    if (id) {
+      const node = this.nodes.get(id);
+      if (node?.type === 'code_symbol') return node as CodeSymbolNode;
+    }
+    const directId = `code_symbol:${normalized}`;
+    const direct = this.nodes.get(directId);
+    if (direct?.type === 'code_symbol') return direct as CodeSymbolNode;
+    return null;
   }
 
   close(): void {
     // Synchronous flush is performed on every mutation; no shutdown work.
+  }
+
+  private indexCodeSymbol(node: GraphNode): void {
+    if (node.type !== 'code_symbol') return;
+    const qn = String(node.metadata?.qualifiedName ?? '');
+    if (qn) this.qnIndex.set(qn, node.id);
+  }
+
+  private rebuildQnIndex(): void {
+    this.qnIndex.clear();
+    for (const n of this.nodes.values()) {
+      this.indexCodeSymbol(n);
+    }
   }
 
   private flushSync(): void {

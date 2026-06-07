@@ -14,6 +14,11 @@ import type {
   EdgeType,
   SearchResult,
   GraphStatistics,
+  TraverseOptions,
+  TraverseResult,
+  LocateOptions,
+  LocateResult,
+  CodeSymbolNode,
 } from './types.js';
 
 export interface KnowledgeGraph {
@@ -31,10 +36,29 @@ export interface KnowledgeGraph {
 
   getStatistics(): GraphStatistics;
 
+  traverse(opts: TraverseOptions): TraverseResult;
+  locate(seedQuery: string, opts?: LocateOptions): LocateResult;
+  findByQualifiedName(qn: string): CodeSymbolNode | null;
+
   exportToJson(): { nodes: GraphNode[]; edges: GraphEdge[] };
   importFromJson(data: { nodes: GraphNode[]; edges: GraphEdge[] }): void;
 
-  close(): void;
+  /** Optional — Neo4j batches writes and flushes on demand. */
+  flush?(): Promise<void>;
+
+  close(): void | Promise<void>;
 }
 
-export type { NodeType, EdgeType, GraphNode, GraphEdge, SearchResult, GraphStatistics };
+export type {
+  NodeType,
+  EdgeType,
+  GraphNode,
+  GraphEdge,
+  SearchResult,
+  GraphStatistics,
+  TraverseOptions,
+  TraverseResult,
+  LocateOptions,
+  LocateResult,
+  CodeSymbolNode,
+};

@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    { "id": "requirement:RF-03", "type": "requirement", "label": "Extração determinística", "metadata": { "reqId": "RF-03" } },
+    { "id": "task:task-201", "type": "task", "label": "types + code-index" },
+    { "id": "file:src/math.ts", "type": "file", "label": "src/math.ts", "metadata": { "path": "src/math.ts" } },
+    {
+      "id": "code_symbol:src/math.ts::add",
+      "type": "code_symbol",
+      "label": "add",
+      "metadata": {
+        "path": "src/math.ts",
+        "symbol": "add",
+        "kind": "function",
+        "qualifiedName": "src/math.ts::add"
+      }
+    },
+    { "id": "task:task-999", "type": "task", "label": "noise task" },
+    { "id": "file:src/noise.ts", "type": "file", "label": "src/noise.ts", "metadata": { "path": "src/noise.ts" } }
+  ],
+  "edges": [
+    { "id": "affects:sym->req", "sourceId": "code_symbol:src/math.ts::add", "targetId": "requirement:RF-03", "type": "affects" },
+    { "id": "implements:t201", "sourceId": "task:task-201", "targetId": "code_symbol:src/math.ts::add", "type": "implements" },
+    { "id": "contains:file->sym", "sourceId": "file:src/math.ts", "targetId": "code_symbol:src/math.ts::add", "type": "contains" },
+    { "id": "depends:t201", "sourceId": "task:task-201", "targetId": "requirement:RF-03", "type": "depends_on" },
+    { "id": "noise:edge", "sourceId": "task:task-999", "targetId": "file:src/noise.ts", "type": "implements" }
+  ],
+  "expect": {
+    "impact": { "path": "src/math.ts", "tasks": ["task-201"], "requirements": ["RF-03"] },
+    "trace": { "req": "RF-03", "maxHops": 3, "symbols": ["src/math.ts::add"] }
+  }
+}

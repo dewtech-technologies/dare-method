@@ -30,6 +30,7 @@ import {
 } from '../dag-runner/ralph-loop.js';
 import { runReview } from '../utils/ReviewRunner.js';
 import { readProjectConfig } from '../utils/UpdateDetector.js';
+import { buildLocateContext, loadGraphLocateConfig } from '../dag-runner/graph-locate.js';
 import {
   gateToAspect,
   loadVerificationConfig,
@@ -135,13 +136,13 @@ export const executeCommand = new Command('execute')
       } else if (options.watch) {
         await handleWatch(dagPath, stateFile, canvasPath, options);
       } else if (options.next) {
-        await handleNext(dag, options, stateFile, canvasPath);
+        await handleNext(dag, options, stateFile, canvasPath, graph, cwd);
       } else {
         // Default: --status
         await handleStatus(dag, canvasPath);
       }
     } finally {
-      graph?.close();
+      await Promise.resolve(graph?.close());
     }
   });
 
@@ -152,6 +153,8 @@ async function handleNext(
   options: ExecuteOptions,
   stateFile: string,
   canvasPath: string,
+  graph?: KnowledgeGraph,
+  cwd?: string,
 ): Promise<void> {
   const newlySkipped = applyCascadingSkip(dag);
   if (newlySkipped.length > 0) {
@@ -178,7 +181,7 @@ async function handleNext(
 
   for (const task of ready) {
     if (options.parallelHint) markRunning(dag, task.id);
-    printTaskBriefing(dag, task);
+    printTaskBriefing(dag, task, graph, cwd);
   }
 
   await persist(dag, stateFile, canvasPath);
@@ -593,12 +596,21 @@ async function tryOpenGraph(cwd: string): Promise<KnowledgeGraph | undefined> {
   }
 }
 
-function printTaskBriefing(dag: Dag, task: DagTask): void {
+function printTaskBriefing(
+  dag: Dag,
+  task: DagTask,
+  graph?: KnowledgeGraph,
+  cwd?: string,
+): void {
   console.log(chalk.bold(`▸ ${task.id} — ${task.title}`));
   console.log(chalk.gray(`  complexity: ${task.complexity}`));
   if (task.spec_file) console.log(chalk.gray(`  spec_file:  ${task.spec_file}`));
   console.log(chalk.gray('  prompt:'));
-  const prompt = buildTaskPrompt(dag, task);
+  let graphLocate: string | undefined;
+  if (graph && cwd) {
+    graphLocate = buildLocateContext(graph, task, loadGraphLocateConfig(cwd));
+  }
+  const prompt = buildTaskPrompt(dag, task, { graphLocate });
   for (const line of prompt.split('\n')) console.log(`    ${line}`);
   console.log();
 }

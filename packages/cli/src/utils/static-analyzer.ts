@@ -85,7 +85,7 @@ export function isTestFile(filePath: string): boolean {
 }
 
 /** File extensions we analyze. Anything else is silently skipped. */
-const SUPPORTED_EXTENSIONS = new Set([
+export const SUPPORTED_EXTENSIONS: ReadonlySet<string> = new Set([
   '.ts',
   '.tsx',
   '.js',
@@ -114,7 +114,7 @@ function isSupported(filePath: string): boolean {
  * inside a string. Imperfect across multi-line strings but good enough to
  * suppress comments-in-strings noise without an AST.
  */
-function inString(line: string, col: number): boolean {
+export function inString(line: string, col: number): boolean {
   let inSingle = false;
   let inDouble = false;
   let inBacktick = false;

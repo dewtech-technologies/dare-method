@@ -78,9 +78,21 @@ describe('loadGraphConfig', () => {
 });
 
 describe('createGraph', () => {
+  it('throws when neo4j is used without experimental flag', async () => {
+    await expect(
+      createGraph({
+        backend: 'neo4j',
+        neo4j: { url: 'http://localhost:7474' },
+      }),
+    ).rejects.toThrow(/experimental: true/);
+  });
+
   it('throws when neo4j config is missing url', async () => {
     await expect(
-      createGraph({ backend: 'neo4j', neo4j: { url: '' } }),
+      createGraph({
+        backend: 'neo4j',
+        neo4j: { url: '', experimental: true },
+      }),
     ).rejects.toThrow(/url.*required/);
   });
 });

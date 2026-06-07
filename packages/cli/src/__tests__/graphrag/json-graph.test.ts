@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { JsonGraph } from '../../graphrag/json-graph.js';
+import { ALL_EDGE_TYPES, ALL_NODE_TYPES } from '../../graphrag/types.js';
 
 describe('JsonGraph', () => {
   let filePath: string;
@@ -62,5 +63,64 @@ describe('JsonGraph', () => {
     expect(stats.nodesByType.task).toBe(2);
     expect(stats.nodesByType.file).toBe(1);
     expect(stats.edgesByType.implements).toBe(1);
+    for (const t of ALL_NODE_TYPES) {
+      expect(Number.isNaN(stats.nodesByType[t])).toBe(false);
+      if (t !== 'task' && t !== 'file') expect(stats.nodesByType[t]).toBe(0);
+    }
+    for (const t of ALL_EDGE_TYPES) {
+      expect(Number.isNaN(stats.edgesByType[t])).toBe(false);
+      if (t !== 'implements') expect(stats.edgesByType[t]).toBe(0);
+    }
+  });
+
+  it('traverse/locate match standalone traverse.ts', () => {
+    graph.addNode({ id: 'task:t1', type: 'task', label: 't1' });
+    graph.addNode({
+      id: 'code_symbol:src/a.ts::fn',
+      type: 'code_symbol',
+      label: 'fn',
+      metadata: { qualifiedName: 'src/a.ts::fn', path: 'src/a.ts', symbol: 'fn', kind: 'function' },
+    });
+    graph.addEdge({
+      id: 'e1',
+      sourceId: 'task:t1',
+      targetId: 'code_symbol:src/a.ts::fn',
+      type: 'implements',
+    });
+
+    const walked = graph.traverse({ seedNodeIds: ['task:t1'], maxHops: 1 });
+    expect(walked.nodes.some((n) => n.id === 'code_symbol:src/a.ts::fn')).toBe(true);
+
+    const located = graph.locate('src/a.ts::fn');
+    expect(located.candidates[0]?.node.id).toBe('code_symbol:src/a.ts::fn');
+    expect(graph.findByQualifiedName('src/a.ts::fn')?.symbol).toBeUndefined();
+    expect(graph.findByQualifiedName('src/a.ts::fn')?.metadata?.symbol).toBe('fn');
+    expect(graph.findByQualifiedName('missing::x')).toBeNull();
+  });
+
+  it('rebuilds qualifiedName index after importFromJson', () => {
+    graph.importFromJson({
+      nodes: [
+        {
+          id: 'code_symbol:src/b.ts::run',
+          type: 'code_symbol',
+          label: 'run',
+          metadata: { qualifiedName: 'src/b.ts::run' },
+        },
+      ],
+      edges: [],
+    });
+    expect(graph.findByQualifiedName('src/b.ts::run')?.id).toBe('code_symbol:src/b.ts::run');
+  });
+
+  it('empty graph stats have all types at zero (RNF-05)', () => {
+    const stats = graph.getStatistics();
+    expect(stats.totalNodes).toBe(0);
+    for (const t of ALL_NODE_TYPES) {
+      expect(stats.nodesByType[t]).toBe(0);
+    }
+    for (const t of ALL_EDGE_TYPES) {
+      expect(stats.edgesByType[t]).toBe(0);
+    }
   });
 });

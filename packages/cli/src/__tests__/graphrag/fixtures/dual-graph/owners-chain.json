@@ -1,0 +1,46 @@
+{
+  "nodes": [
+    { "id": "requirement:RF-10", "type": "requirement", "label": "Telemetry wire", "metadata": { "reqId": "RF-10" } },
+    { "id": "requirement:O-02", "type": "requirement", "label": "Owner recall", "metadata": { "reqId": "O-02" } },
+    { "id": "task:task-075", "type": "task", "label": "telemetry execute" },
+    { "id": "task:task-206", "type": "task", "label": "graph ingest wire" },
+    { "id": "file:src/commands/execute.ts", "type": "file", "label": "execute.ts", "metadata": { "path": "src/commands/execute.ts" } },
+    {
+      "id": "code_symbol:src/commands/execute.ts::handleComplete",
+      "type": "code_symbol",
+      "label": "handleComplete",
+      "metadata": {
+        "path": "src/commands/execute.ts",
+        "symbol": "handleComplete",
+        "kind": "function",
+        "qualifiedName": "src/commands/execute.ts::handleComplete"
+      }
+    },
+    {
+      "id": "code_symbol:src/commands/execute.ts::recordTelemetry",
+      "type": "code_symbol",
+      "label": "recordTelemetry",
+      "metadata": {
+        "path": "src/commands/execute.ts",
+        "symbol": "recordTelemetry",
+        "kind": "function",
+        "qualifiedName": "src/commands/execute.ts::recordTelemetry"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "implements:t075->h", "sourceId": "task:task-075", "targetId": "code_symbol:src/commands/execute.ts::handleComplete", "type": "implements" },
+    { "id": "implements:t206->r", "sourceId": "task:task-206", "targetId": "code_symbol:src/commands/execute.ts::recordTelemetry", "type": "implements" },
+    { "id": "contains:f->h", "sourceId": "file:src/commands/execute.ts", "targetId": "code_symbol:src/commands/execute.ts::handleComplete", "type": "contains" },
+    { "id": "contains:f->r", "sourceId": "file:src/commands/execute.ts", "targetId": "code_symbol:src/commands/execute.ts::recordTelemetry", "type": "contains" },
+    { "id": "depends:t075->rf10", "sourceId": "task:task-075", "targetId": "requirement:RF-10", "type": "depends_on" },
+    { "id": "depends:t206->o02", "sourceId": "task:task-206", "targetId": "requirement:O-02", "type": "depends_on" },
+    { "id": "affects:h->rf10", "sourceId": "code_symbol:src/commands/execute.ts::handleComplete", "targetId": "requirement:RF-10", "type": "affects" }
+  ],
+  "expect": {
+    "owners": {
+      "path": "src/commands/execute.ts",
+      "ids": ["task:task-075", "task:task-206", "requirement:RF-10", "requirement:O-02"]
+    }
+  }
+}

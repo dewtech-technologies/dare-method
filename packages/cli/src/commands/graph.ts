@@ -4,9 +4,21 @@ import fs from 'fs-extra';
 import path from 'path';
 import { convertYamlToDag } from '../utils/dag-converter.js';
 import { ingestDag } from '../dag-runner/graph-ingest.js';
+import { ingestRequirements } from '../graphrag/requirement-ingest.js';
 import { loadAndApplyState } from '../dag-runner/state-store.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
+import type { EdgeType, NodeType } from '../graphrag/types.js';
+import {
+  collectImpact,
+  collectOwners,
+  formatLocateJson,
+  GRAPH_PATH_ERROR,
+  GraphPathError,
+  traceRequirement,
+  TraceFormatError,
+  TraceNotFoundError,
+} from './graph-queries.js';
 
 /**
  * `dare graph` — query and visualize the project's knowledge graph.
@@ -53,6 +65,9 @@ const KNOWN_NODE_TYPES = [
   'component',
   'entity',
   'concept',
+  'gate',
+  'code_symbol',
+  'requirement',
 ] as const;
 type KnownNodeType = (typeof KNOWN_NODE_TYPES)[number];
 
@@ -123,11 +138,173 @@ graphCommand
   });
 
 graphCommand
+  .command('owners <path>')
+  .description('List tasks/requirements that own symbols under <path>')
+  .option('--json', 'Emit JSON')
+  .option('--limit <n>', 'Maximum owners', '20')
+  .action(async (targetPath: string, options: { json?: boolean; limit: string }) => {
+    const limit = parseInt(options.limit, 10) || 20;
+    await withGraph(async (graph) => {
+      try {
+        const result = collectOwners(graph, targetPath, limit);
+        if (options.json) {
+          console.log(JSON.stringify(result));
+          return;
+        }
+        if (result.owners.length === 0) {
+          console.log(chalk.yellow(`No owners for "${result.path}".`));
+          return;
+        }
+        console.log(chalk.blue.bold(`\n👤 Owners of ${result.path} (${result.durationMs}ms)\n`));
+        for (const o of result.owners) {
+          console.log(`${chalk.cyan(o.id)}  ${chalk.gray(`[${o.type}]`)} ${o.label}`);
+        }
+        console.log();
+      } catch (err) {
+        if (err instanceof GraphPathError) {
+          console.error(GRAPH_PATH_ERROR);
+          process.exit(1);
+        }
+        throw err;
+      }
+    });
+  });
+
+graphCommand
+  .command('impact <path>')
+  .description('Show tasks/requirements impacted by changes under <path>')
+  .option('--json', 'Emit JSON')
+  .option('--hops <n>', 'Traversal depth (max 5)', '3')
+  .action(async (targetPath: string, options: { json?: boolean; hops: string }) => {
+    const hops = parseInt(options.hops, 10) || 3;
+    await withGraph(async (graph) => {
+      try {
+        const result = collectImpact(graph, targetPath, hops);
+        if (options.json) {
+          console.log(JSON.stringify(result));
+          return;
+        }
+        console.log(chalk.blue.bold(`\n💥 Impact for ${result.path} (${result.durationMs}ms)\n`));
+        console.log(`  Tasks: ${result.impacted.tasks.join(', ') || '(none)'}`);
+        console.log(`  Requirements: ${result.impacted.requirements.join(', ') || '(none)'}`);
+        console.log();
+      } catch (err) {
+        if (err instanceof GraphPathError) {
+          console.error(GRAPH_PATH_ERROR);
+          process.exit(1);
+        }
+        throw err;
+      }
+    });
+  });
+
+graphCommand
+  .command('trace <req>')
+  .description('Trace requirement/task to code symbols')
+  .option('--json', 'Emit JSON')
+  .action(async (req: string, options: { json?: boolean }) => {
+    await withGraph(async (graph) => {
+      try {
+        const result = traceRequirement(graph, req);
+        if (options.json) {
+          console.log(JSON.stringify(result));
+          return;
+        }
+        console.log(chalk.blue.bold(`\n🔗 Trace ${result.req}\n`));
+        for (const n of result.path) {
+          console.log(`  ${chalk.cyan(n.id)} ${chalk.gray(`[${n.type}]`)}`);
+        }
+        if (result.symbols.length > 0) {
+          console.log(chalk.bold('\n  Symbols:'));
+          for (const s of result.symbols) console.log(`    ${s}`);
+        }
+        console.log();
+      } catch (err) {
+        if (err instanceof TraceFormatError) {
+          console.error(chalk.red('Invalid requirement/task format. Use RF-N, O-N, or task-N.'));
+          process.exit(1);
+        }
+        if (err instanceof TraceNotFoundError) {
+          console.error(err.message);
+          process.exit(1);
+        }
+        throw err;
+      }
+    });
+  });
+
+graphCommand
+  .command('locate <seed>')
+  .description('Locate code symbols/files/tasks from a seed query')
+  .option('--json', 'Emit JSON')
+  .option('--hops <n>', 'Traversal hops', '3')
+  .option('--limit <n>', 'Max candidates', '10')
+  .option('--type <t>', 'Filter node types (repeatable)', collectRepeated, [] as string[])
+  .option('--edge-type <e>', 'Filter edge types (repeatable)', collectRepeated, [] as string[])
+  .action(
+    async (
+      seed: string,
+      options: {
+        json?: boolean;
+        hops: string;
+        limit: string;
+        type: string[];
+        edgeType: string[];
+      },
+    ) => {
+      const hops = parseInt(options.hops, 10) || 3;
+      const limit = parseInt(options.limit, 10) || 10;
+      const nodeTypes = options.type.length > 0 ? (options.type as NodeType[]) : undefined;
+      const edgeTypes = options.edgeType.length > 0 ? (options.edgeType as EdgeType[]) : undefined;
+
+      await withGraph(async (graph) => {
+        try {
+          const result = graph.locate(seed, { hops, limit, nodeTypes, edgeTypes });
+          if (options.json) {
+            console.log(JSON.stringify(formatLocateJson(seed, result)));
+            return;
+          }
+          console.log(chalk.blue.bold(`\n📍 Locate "${seed}"\n`));
+          for (const c of result.candidates) {
+            console.log(
+              `${chalk.cyan(c.node.id)}  score=${c.score.toFixed(2)}  ${chalk.gray(`[${c.node.type}]`)}`,
+            );
+          }
+          console.log();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('..') || msg.includes('relative')) {
+            console.error(GRAPH_PATH_ERROR);
+            process.exit(1);
+          }
+          throw err;
+        }
+      });
+    },
+  );
+
+graphCommand
   .command('ingest')
   .description('Re-sync the graph from the current dare-dag.yaml + state')
   .option('--dag <file>', 'Path to dare-dag.yaml', 'DARE/dare-dag.yaml')
-  .action(async (options: { dag: string }) => {
+  .option('--requirements-only', 'Re-parse DESIGN/BLUEPRINT/TASKS only, skip the DAG', false)
+  .action(async (options: { dag: string; requirementsOnly?: boolean }) => {
     const cwd = process.cwd();
+
+    if (options.requirementsOnly) {
+      await withGraph(async (graph) => {
+        const { nodes, edges } = ingestRequirements(graph, cwd);
+        const stats = graph.getStatistics();
+        console.log(
+          chalk.green(
+            `✅ Re-ingested requirements (${nodes} nodes / ${edges} edges). ` +
+              `Graph now has ${stats.totalNodes} nodes / ${stats.totalEdges} edges.`,
+          ),
+        );
+      });
+      return;
+    }
+
     const dagPath = path.resolve(cwd, options.dag);
     if (!(await fs.pathExists(dagPath))) {
       console.error(chalk.red(`❌ ${options.dag} not found.`));
@@ -139,10 +316,12 @@ graphCommand
 
     await withGraph(async (graph) => {
       ingestDag(graph, dag);
+      const req = ingestRequirements(graph, cwd);
       const stats = graph.getStatistics();
       console.log(
         chalk.green(
-          `✅ Re-ingested ${dag.tasks.length} tasks. Graph now has ${stats.totalNodes} nodes / ${stats.totalEdges} edges.`,
+          `✅ Re-ingested ${dag.tasks.length} tasks + ${req.nodes} requirement nodes. ` +
+            `Graph now has ${stats.totalNodes} nodes / ${stats.totalEdges} edges.`,
         ),
       );
     });
@@ -161,7 +340,7 @@ async function withGraph(fn: (g: KnowledgeGraph) => Promise<void>): Promise<void
     console.error(chalk.red(`❌ ${err instanceof Error ? err.message : String(err)}`));
     process.exit(1);
   } finally {
-    graph?.close();
+    await Promise.resolve(graph?.close());
   }
 }
 
@@ -176,13 +355,40 @@ interface EdgeLite {
   type: string;
 }
 
-function renderMermaid(nodes: NodeLite[], edges: EdgeLite[]): string {
+const REQ_LAYER = new Set(['requirement', 'task']);
+const CODE_LAYER = new Set(['code_symbol', 'file']);
+
+export function renderMermaid(nodes: NodeLite[], edges: EdgeLite[]): string {
   const lines: string[] = ['graph LR'];
-  for (const n of nodes) {
+  const reqNodes = nodes.filter((n) => REQ_LAYER.has(n.type));
+  const codeNodes = nodes.filter((n) => CODE_LAYER.has(n.type));
+  const otherNodes = nodes.filter((n) => !REQ_LAYER.has(n.type) && !CODE_LAYER.has(n.type));
+
+  const emitNode = (n: NodeLite) => {
     const safeId = sanitizeMermaidId(n.id);
     const label = `${n.label}\\n[${n.type}]`.replace(/"/g, '&quot;');
-    lines.push(`  ${safeId}["${label}"]`);
+    lines.push(`    ${safeId}["${label}"]`);
+    if (REQ_LAYER.has(n.type)) lines.push(`    class ${safeId} requirement`);
+    if (CODE_LAYER.has(n.type)) lines.push(`    class ${safeId} code`);
+  };
+
+  if (reqNodes.length > 0) {
+    lines.push('  subgraph requirements [Requirements]');
+    for (const n of reqNodes) emitNode(n);
+    lines.push('  end');
   }
+  if (codeNodes.length > 0) {
+    lines.push('  subgraph code [Code]');
+    for (const n of codeNodes) emitNode(n);
+    lines.push('  end');
+  }
+  for (const n of otherNodes) emitNode(n);
+
+  if (reqNodes.length > 0 || codeNodes.length > 0) {
+    lines.push('  classDef requirement fill:#cde,stroke:#36c;');
+    lines.push('  classDef code fill:#cec,stroke:#3a3;');
+  }
+
   for (const e of edges) {
     const src = sanitizeMermaidId(e.sourceId);
     const tgt = sanitizeMermaidId(e.targetId);
@@ -191,13 +397,37 @@ function renderMermaid(nodes: NodeLite[], edges: EdgeLite[]): string {
   return lines.join('\n');
 }
 
-function renderDot(nodes: NodeLite[], edges: EdgeLite[]): string {
+export function renderDot(nodes: NodeLite[], edges: EdgeLite[]): string {
   const lines: string[] = ['digraph DARE {', '  rankdir=LR;', '  node [shape=box];'];
-  for (const n of nodes) {
+  const reqNodes = nodes.filter((n) => REQ_LAYER.has(n.type));
+  const codeNodes = nodes.filter((n) => CODE_LAYER.has(n.type));
+  const otherNodes = nodes.filter((n) => !REQ_LAYER.has(n.type) && !CODE_LAYER.has(n.type));
+
+  const emitDotNode = (n: NodeLite, indent: string) => {
     const id = JSON.stringify(n.id);
     const label = JSON.stringify(`${n.label}\n[${n.type}]`);
-    lines.push(`  ${id} [label=${label}];`);
+    const color = REQ_LAYER.has(n.type)
+      ? 'fillcolor="#ccddff",style=filled'
+      : CODE_LAYER.has(n.type)
+        ? 'fillcolor="#ccffcc",style=filled'
+        : '';
+    lines.push(`  ${indent}${id} [label=${label}${color ? `,${color}` : ''}];`);
+  };
+
+  if (reqNodes.length > 0) {
+    lines.push('  subgraph cluster_requirements {');
+    lines.push('    label="Requirements";');
+    for (const n of reqNodes) emitDotNode(n, '    ');
+    lines.push('  }');
   }
+  if (codeNodes.length > 0) {
+    lines.push('  subgraph cluster_code {');
+    lines.push('    label="Code";');
+    for (const n of codeNodes) emitDotNode(n, '    ');
+    lines.push('  }');
+  }
+  for (const n of otherNodes) emitDotNode(n, '  ');
+
   for (const e of edges) {
     const src = JSON.stringify(e.sourceId);
     const tgt = JSON.stringify(e.targetId);
@@ -210,4 +440,8 @@ function renderDot(nodes: NodeLite[], edges: EdgeLite[]): string {
 
 function sanitizeMermaidId(id: string): string {
   return id.replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
+function collectRepeated(value: string, previous: string[] = []): string[] {
+  return [...previous, value];
 }

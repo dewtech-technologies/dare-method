@@ -6,7 +6,10 @@ export type NodeType =
   | 'component'
   | 'entity'
   | 'concept'
-  | 'gate';
+  | 'gate'
+  | 'code_symbol'
+  | 'requirement';
+
 export type EdgeType =
   | 'depends_on'
   | 'implements'
@@ -15,7 +18,47 @@ export type EdgeType =
   | 'related_to'
   | 'contains'
   | 'extends'
-  | 'verified_by';
+  | 'verified_by'
+  | 'affects' // symbol → requirement/task (impacto inverso)
+  | 'derives_from'; // requirement-filho → requirement-pai
+
+/** All members of {@link NodeType} — use for zero-initialized statistics (RNF-05). */
+export const ALL_NODE_TYPES = [
+  'task',
+  'file',
+  'schema',
+  'endpoint',
+  'component',
+  'entity',
+  'concept',
+  'gate',
+  'code_symbol',
+  'requirement',
+] as const satisfies readonly NodeType[];
+
+/** All members of {@link EdgeType} — use for zero-initialized statistics (RNF-05). */
+export const ALL_EDGE_TYPES = [
+  'depends_on',
+  'implements',
+  'uses',
+  'references',
+  'related_to',
+  'contains',
+  'extends',
+  'verified_by',
+  'affects',
+  'derives_from',
+] as const satisfies readonly EdgeType[];
+
+/** Zero-filled `nodesByType` — absent types stay `0`, never `NaN` (RNF-05). */
+export function emptyNodesByType(): Record<NodeType, number> {
+  return Object.fromEntries(ALL_NODE_TYPES.map((t) => [t, 0])) as Record<NodeType, number>;
+}
+
+/** Zero-filled `edgesByType` — absent types stay `0`, never `NaN` (RNF-05). */
+export function emptyEdgesByType(): Record<EdgeType, number> {
+  return Object.fromEntries(ALL_EDGE_TYPES.map((t) => [t, 0])) as Record<EdgeType, number>;
+}
 
 export interface GraphNode {
   id: string;
@@ -67,6 +110,64 @@ export interface ComponentNode extends GraphNode {
   type: 'component';
   framework?: string;
   props?: string[];
+}
+
+export type CodeSymbolKind = 'function' | 'class' | 'method';
+
+/**
+ * Canonical id: `code_symbol:{qualifiedName}` — e.g. `code_symbol:src/math.ts::add`
+ */
+export interface CodeSymbolNode extends GraphNode {
+  type: 'code_symbol';
+  path: string; // posix, relativo ao project root
+  symbol: string; // nome curto, ex. 'add'
+  kind: CodeSymbolKind;
+  qualifiedName: string; // 'src/math.ts::add'
+  line?: number; // 1-based
+}
+
+/**
+ * Canonical id: `requirement:{reqId}` — e.g. `requirement:RF-01`
+ * (`task:{taskId}` e `file:{posixPath}` permanecem inalterados.)
+ */
+export interface RequirementNode extends GraphNode {
+  type: 'requirement';
+  reqId: string; // 'RF-01', 'O-03', 'task-101'
+  source: 'design' | 'blueprint' | 'tasks' | 'dag';
+  title: string;
+  priority?: 'MUST' | 'SHOULD' | 'COULD';
+}
+
+export interface TraverseOptions {
+  readonly seedNodeIds: readonly string[];
+  readonly maxHops?: number; // default 3
+  readonly maxFanout?: number; // default 50
+  readonly nodeTypes?: readonly NodeType[];
+  readonly edgeTypes?: readonly EdgeType[];
+  readonly direction?: 'out' | 'in' | 'both'; // default 'both'
+}
+
+export interface TraverseResult {
+  readonly nodes: readonly GraphNode[];
+  readonly edges: readonly GraphEdge[];
+  readonly hops: number;
+}
+
+export interface LocateOptions {
+  readonly hops?: number; // default 3
+  readonly nodeTypes?: readonly NodeType[];
+  readonly edgeTypes?: readonly EdgeType[];
+  readonly limit?: number; // default 10
+}
+
+export interface LocateCandidate {
+  readonly node: GraphNode;
+  readonly score: number;
+  readonly path: readonly string[];
+}
+
+export interface LocateResult {
+  readonly candidates: ReadonlyArray<LocateCandidate>;
 }
 
 export interface SearchResult {

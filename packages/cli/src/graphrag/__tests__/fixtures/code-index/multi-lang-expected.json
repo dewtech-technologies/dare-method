@@ -1,0 +1,17 @@
+{
+  "expectedSymbols": [
+    "sample.ts::add",
+    "sample.ts::Calc",
+    "sample.ts::multiply",
+    "sample.py::top_level",
+    "sample.py::Widget",
+    "sample.py::render",
+    "sample.py::_hidden",
+    "sample.go::TopLevel",
+    "sample.go::Handle",
+    "sample.rs::compute",
+    "sample.rs::fetch_data",
+    "sample.php::global_fn",
+    "sample.php::run"
+  ]
+}

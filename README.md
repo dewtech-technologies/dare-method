@@ -203,6 +203,32 @@ dare bench --suite fixtures/bench --json --baseline bench-baseline.json --fail-o
 
 ---
 
+## 🕸️ Dual Graph (v3.5)
+
+Grafo de conhecimento **requisito ↔ código** — ingestão e travessia 100% determinísticas (sem LLM).
+
+| Comando | O que faz |
+|---|---|
+| `dare graph owners <path>` | Tasks/requisitos que “possuem” símbolos sob o path |
+| `dare graph impact <path>` | Tasks/requisitos impactados por mudanças no path |
+| `dare graph trace <req>` | Rastreia `RF-NN` / `O-NN` / `task-NN` até `code_symbol` |
+| `dare graph locate <seed>` | Localiza símbolos/arquivos a partir de um seed (path, QN ou texto) |
+
+```bash
+dare graph ingest                          # DAG + requisitos (DESIGN/BLUEPRINT/TASKS)
+dare graph ingest --requirements-only      # só re-parse de requisitos
+dare graph owners src/math.ts --json
+dare graph impact src/math.ts --hops 3
+dare graph trace RF-03 --json
+dare graph locate math --limit 5
+```
+
+> **Neo4j:** requer `neo4j.experimental: true` em `dare-graph.yml` até validação C1 em CI. Use `sqlite` ou `json` (recomendado).
+
+Localização opcional antes do patch do agente: `dare.config.json` → `"graph": { "locateBeforePatch": true }`.
+
+---
+
 ## 🔁 Fluxo completo
 
 ```

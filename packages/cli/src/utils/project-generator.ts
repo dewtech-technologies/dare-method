@@ -671,6 +671,8 @@ nodes:
   - component
   - entity
   - concept
+  - code_symbol
+  - requirement
 
 # Relationship types
 edges:
@@ -681,6 +683,8 @@ edges:
   - related_to
   - contains
   - extends
+  - affects
+  - derives_from
 `;
   } else if (graphrag === 'neo4j') {
     content = `# DARE Knowledge Graph — Neo4j
@@ -702,6 +706,8 @@ nodes:
   - component
   - entity
   - concept
+  - code_symbol
+  - requirement
 
 # Relationship types
 edges:
@@ -712,6 +718,8 @@ edges:
   - related_to
   - contains
   - extends
+  - affects
+  - derives_from
 `;
   } else {
     // json
@@ -730,6 +738,8 @@ nodes:
   - component
   - entity
   - concept
+  - code_symbol
+  - requirement
 
 # Relationship types
 edges:
@@ -740,6 +750,8 @@ edges:
   - related_to
   - contains
   - extends
+  - affects
+  - derives_from
 `;
   }
 

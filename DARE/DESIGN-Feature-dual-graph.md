@@ -6,7 +6,7 @@
 > **Base de evidências:** cada decisão é fundamentada por papers catalogados em
 > `pesquisas-estrategicas/papers-dare/` (cards + `knowledge-graph.json`). Os IDs de ideia
 > (`idea-4`, `idea-5`) casam com a base de conhecimento; o achado **C1** vem do audit do GraphRAG.
-> Target release: **v3.3.0** (repo hoje em v3.2.0).
+> Target release: **v3.5.0** (repo em v3.4.0; v3.3.0 verification-core + v3.4.0 security-hardening já entregues).
 
 ## Contexto no Projeto Existente
 

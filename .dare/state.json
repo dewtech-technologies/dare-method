@@ -1,76 +1,106 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-07T21:24:37.779Z",
+  "updatedAt": "2026-06-07T23:49:21.118Z",
   "tasks": {
-    "task-101": {
+    "task-201": {
       "status": "DONE",
-      "output": "path-safety: PathEscapeError, assertWithinRoot, resolveSafePath + 9 testes",
-      "duration": 54985
+      "output": "types.ts dual-graph unions + CodeSymbol/Requirement/Traverse/Locate; emptyNodesByType/emptyEdgesByType; graph-rag/json/neo4j getStatistics RNF-05.",
+      "duration": 64715
     },
-    "task-102": {
+    "task-202": {
       "status": "DONE",
-      "output": "init-validation.ts: validateProjectName, resolveProjectOutputDir, assertWithinCwd + 11 testes",
-      "duration": 56753
+      "output": "SUPPORTED_EXTENSIONS + inString exported; static-analyzer-exports.test.ts (3 tests).",
+      "duration": 66338
     },
-    "task-103": {
+    "task-203": {
       "status": "DONE",
-      "output": "init.ts + project-generator: validateProjectName wire, assertWithinCwd guard, init.spec 4 testes",
-      "duration": 57589
+      "output": "code-index.ts: extractSymbolsFromFile/Paths, toQualifiedName; multi-lang fixtures; 9 tests O-01 >=90%.",
+      "duration": 71279
     },
-    "task-110": {
+    "task-204": {
       "status": "DONE",
-      "output": "auth.ts: createAuthMiddleware, redactToken, isLoopbackIp. Tests: auth.test.ts (7 cases). tsc + vitest auth green.",
-      "duration": 60931
+      "output": "requirement-ingest.ts: parseRequirementsFromMarkdown + ingestRequirements; derives_from hierarchy; 6 tests.",
+      "duration": 66740
     },
-    "task-111": {
+    "task-205": {
       "status": "DONE",
-      "output": "cors.ts + error-handler.ts: allowlist CORS, sanitized 5xx with correlationId. Tests: error-sanitize.test.ts (5 cases). tsc + vitest green.",
-      "duration": 55434
+      "output": "graph-ingest: code_symbol nodes via extractSymbolsFromPaths, contains+implements edges, qualifiedName mentions. 6 tests.",
+      "duration": 65993
     },
-    "task-112": {
+    "task-206": {
       "status": "DONE",
-      "output": "server.ts: auth+cors+helmet+json limit, resolveSafePath I/O, deprecated projectPath ignored. path-confinement.test.ts 40 cases. helmet dep added.",
-      "duration": 54843
+      "output": "Wire dare graph ingest: ingestRequirements + --requirements-only + KNOWN_NODE_TYPES dual types",
+      "duration": 64967
     },
-    "task-113": {
+    "task-207": {
       "status": "DONE",
-      "output": "bin/server.ts: listen with explicit host, masked token boot, LAN warning. boot-config.ts + tests.",
-      "duration": 57007
+      "output": "traverse.ts BFS + locate scoring. Tests pass.",
+      "duration": 68417
     },
-    "task-120": {
+    "task-208": {
       "status": "DONE",
-      "output": "ci.yml: faux-lint replaced with pnpm --filter @dewtech/dare-cli lint job. verify-actions-pinned step added.",
-      "duration": 51216
+      "output": "KnowledgeGraph traverse/locate/findByQualifiedName on JsonGraph + GraphRAG",
+      "duration": 69953
     },
-    "task-121": {
+    "task-209": {
       "status": "DONE",
-      "output": "vitest.config.ts coverage v8 thresholds 60/63/58/60. KNOWN-COV-BASELINE.md. ci.yml coverage step on Node 20.x.",
-      "duration": 59562
+      "output": "RNF-05 satisfies + empty graph stats tests",
+      "duration": 70214
     },
-    "task-122": {
+    "task-210": {
       "status": "DONE",
-      "output": "publish.yml OIDC permissions and npm provenance configured.",
-      "duration": 59242
+      "output": "dare graph owners + impact subcommands with BFS and tests",
+      "duration": 73577
     },
-    "task-123": {
+    "task-211": {
       "status": "DONE",
-      "output": "All workflows pinned by SHA. scripts/verify-actions-pinned.mjs. CI lint job runs verifier.",
-      "duration": 61442
+      "output": "dare graph trace + locate subcommands",
+      "duration": 76607
     },
-    "task-124": {
+    "task-212": {
       "status": "DONE",
-      "output": "SECURITY.md: MCP HTTP surface, npm package, supply-chain provenance and SHA pinning. SLA preserved.",
-      "duration": 57792
+      "output": "Dual-graph fixtures + buildGraphFromFixture helper + shape tests",
+      "duration": 68606
     },
-    "task-130": {
+    "task-213": {
       "status": "DONE",
-      "output": "security-hardening.test.ts: O-01..O-08 audit suite (11 tests). path-confinement/auth/error-sanitize/init-validation integrated.",
-      "duration": 56575
+      "output": "Neo4jQueryError, runRead, init hydration, parseNode/EdgeFromRecord. neo4j-graph.test.ts.",
+      "duration": 74578
     },
-    "task-131": {
+    "task-214": {
       "status": "DONE",
-      "output": "CHANGELOG 3.4.0 breaking MCP/init notes. README DARE_MCP_* table. package.json bumped to 3.4.0.",
-      "duration": 68349
+      "output": "Neo4j write-behind queue, flush(), async close(), zero void runMany",
+      "duration": 67539
+    },
+    "task-215": {
+      "status": "DONE",
+      "output": "Neo4j experimental gate + traverse/locate contract suite",
+      "duration": 75223
+    },
+    "task-216": {
+      "status": "DONE",
+      "output": "buildLocateContext pre-patch wire in execute --next",
+      "duration": 78495
+    },
+    "task-217": {
+      "status": "DONE",
+      "output": "MCP graph_locate, graph_map_requirement, graph_traverse routes + tests",
+      "duration": 84207
+    },
+    "task-218": {
+      "status": "DONE",
+      "output": "Mermaid/DOT layer subgraphs. graph-viz-layers tests.",
+      "duration": 69022
+    },
+    "task-219": {
+      "status": "DONE",
+      "output": "dual-graph.test.ts O-01..O-07 + section 11 guards",
+      "duration": 84661
+    },
+    "task-220": {
+      "status": "DONE",
+      "output": "v3.5.0 CHANGELOG README dare-graph.yml template bump",
+      "duration": 93049
     }
   }
 }
