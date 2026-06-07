@@ -75,6 +75,18 @@ class RejectingGraph implements KnowledgeGraph {
     this.inner.importFromJson(data);
   }
 
+  traverse(opts: Parameters<JsonGraph['traverse']>[0]) {
+    return this.inner.traverse(opts);
+  }
+
+  locate(seed: string, opts?: Parameters<JsonGraph['locate']>[1]) {
+    return this.inner.locate(seed, opts);
+  }
+
+  findByQualifiedName(qn: string) {
+    return this.inner.findByQualifiedName(qn);
+  }
+
   close(): void {
     this.inner.close();
   }

@@ -9,6 +9,30 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.5.0] — 2026-06
+
+Release **Dual Graph** — grafo dual requisito↔código determinístico (sem LLM no CLI).
+
+### ✨ Adicionado
+
+- Grafo dual: nós `code_symbol` + `requirement`; arestas `affects` + `derives_from`.
+- Extração determinística de símbolos (`graphrag/code-index.ts`) e parser de requisitos
+  (`graphrag/requirement-ingest.ts`).
+- Travessia tipada BFS com limites (`graphrag/traverse.ts`): `traverse` + `locate`.
+- Comandos `dare graph owners|impact|trace|locate`.
+- Localização opcional pré-patch no Ralph Loop (`graph.locateBeforePatch`).
+- MCP tools `graph_locate` / `graph_map_requirement` / `graph_traverse`.
+- `dare graph viz` com subgraphs por camada (Requirements / Code).
+
+### 🐛 Corrigido
+
+- Neo4j (C1): leituras Cypher reais + writes com flush; erro de query propaga.
+
+### 📝 Notas
+
+- Backend Neo4j permanece atrás de gate `neo4j.experimental: true` até C1 ser verificado em CI.
+- Nenhum LLM no caminho de ingestão/travessia.
+
 ## [3.4.0] — 2026-06
 
 Release **Security Hardening** — superfície MCP endurecida, validação de `dare init` e supply-chain no CI.

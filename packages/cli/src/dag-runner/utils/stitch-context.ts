@@ -44,10 +44,15 @@ export function stitchParentContext({
  * Compose the final prompt sent to a runner: the task's `subtask_prompt`
  * concatenated with the upstream context block (when present).
  */
-export function composePrompt(input: StitchContextInput): string {
+export function composePrompt(input: StitchContextInput & { graphLocate?: string }): string {
   const ctx = stitchParentContext(input);
-  if (ctx.length === 0) return input.task.subtask_prompt;
-  return `${input.task.subtask_prompt.trim()}\n\n${ctx}`.trimEnd() + '\n';
+  const locate = input.graphLocate?.trim();
+  if (!locate && ctx.length === 0) return input.task.subtask_prompt;
+
+  const parts: string[] = [input.task.subtask_prompt.trim()];
+  if (locate) parts.push(locate);
+  if (ctx.length > 0) parts.push(ctx);
+  return parts.join('\n\n').trimEnd() + '\n';
 }
 
 function takeTail(text: string, maxChars: number): string {

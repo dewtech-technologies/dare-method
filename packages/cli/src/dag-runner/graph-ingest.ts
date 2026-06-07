@@ -16,6 +16,7 @@
 import path from 'path';
 import type { Dag, DagTask } from './run_dag.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
+import { extractSymbolsFromPaths } from '../graphrag/code-index.js';
 
 export interface IngestOptions {
   /** Project root used to resolve relative file paths. Defaults to cwd. */
@@ -61,7 +62,10 @@ export function ingestTask(
   // 3) file nodes + implements edges (only for DONE tasks)
   if (task.status !== 'DONE' || !task.output) return;
 
+  const projectRoot = _opts.cwd ?? process.cwd();
   const files = extractFilePaths(task.output);
+  const symbolIdsCreated = new Set<string>();
+
   for (const filePath of files) {
     const normalized = filePath.replace(/\\/g, '/');
     graph.addNode({
@@ -75,6 +79,50 @@ export function ingestTask(
       id: edgeId('implements', task.id, normalized),
       sourceId: nodeId('task', task.id),
       targetId: nodeId('file', normalized),
+      type: 'implements',
+    });
+
+    const symbols = extractSymbolsFromPaths([normalized], projectRoot);
+    for (const sym of symbols) {
+      const symId = nodeId('code_symbol', sym.qualifiedName);
+      symbolIdsCreated.add(symId);
+      graph.addNode({
+        id: symId,
+        type: 'code_symbol',
+        label: sym.symbol,
+        description: sym.qualifiedName,
+        metadata: {
+          path: sym.path,
+          symbol: sym.symbol,
+          kind: sym.kind,
+          qualifiedName: sym.qualifiedName,
+          line: sym.line,
+        },
+      });
+      graph.addEdge({
+        id: edgeId('contains', normalized, sym.qualifiedName),
+        sourceId: nodeId('file', normalized),
+        targetId: symId,
+        type: 'contains',
+      });
+      graph.addEdge({
+        id: edgeId('implements', `${task.id}->sym:${sym.qualifiedName}`, sym.qualifiedName),
+        sourceId: nodeId('task', task.id),
+        targetId: symId,
+        type: 'implements',
+      });
+    }
+  }
+
+  const QN_MENTION_RE = /[\w./-]+::\w+/g;
+  for (const match of task.output.matchAll(QN_MENTION_RE)) {
+    const qn = match[0];
+    const symId = nodeId('code_symbol', qn);
+    if (!symbolIdsCreated.has(symId) && !graph.getNode(symId)) continue;
+    graph.addEdge({
+      id: edgeId('implements', `${task.id}->mention:${qn}`, qn),
+      sourceId: nodeId('task', task.id),
+      targetId: symId,
       type: 'implements',
     });
   }
@@ -305,7 +353,15 @@ function detectLanguage(filePath: string): string | undefined {
 }
 
 function nodeId(
-  type: 'task' | 'file' | 'endpoint' | 'schema' | 'component' | 'entity' | 'concept',
+  type:
+    | 'task'
+    | 'file'
+    | 'endpoint'
+    | 'schema'
+    | 'component'
+    | 'entity'
+    | 'concept'
+    | 'code_symbol',
   id: string,
 ): string {
   return `${type}:${id}`;

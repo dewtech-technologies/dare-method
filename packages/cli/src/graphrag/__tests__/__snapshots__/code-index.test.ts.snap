@@ -1,0 +1,97 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`code-index > should_be_deterministic_snapshot 1`] = `
+[
+  {
+    "kind": "function",
+    "line": 3,
+    "path": "sample.go",
+    "qualifiedName": "sample.go::TopLevel",
+    "symbol": "TopLevel",
+  },
+  {
+    "kind": "method",
+    "line": 7,
+    "path": "sample.go",
+    "qualifiedName": "sample.go::Handle",
+    "symbol": "Handle",
+  },
+  {
+    "kind": "function",
+    "line": 3,
+    "path": "sample.php",
+    "qualifiedName": "sample.php::global_fn",
+    "symbol": "global_fn",
+  },
+  {
+    "kind": "method",
+    "line": 7,
+    "path": "sample.php",
+    "qualifiedName": "sample.php::run",
+    "symbol": "run",
+  },
+  {
+    "kind": "function",
+    "line": 1,
+    "path": "sample.py",
+    "qualifiedName": "sample.py::top_level",
+    "symbol": "top_level",
+  },
+  {
+    "kind": "class",
+    "line": 4,
+    "path": "sample.py",
+    "qualifiedName": "sample.py::Widget",
+    "symbol": "Widget",
+  },
+  {
+    "kind": "method",
+    "line": 5,
+    "path": "sample.py",
+    "qualifiedName": "sample.py::render",
+    "symbol": "render",
+  },
+  {
+    "kind": "method",
+    "line": 8,
+    "path": "sample.py",
+    "qualifiedName": "sample.py::_hidden",
+    "symbol": "_hidden",
+  },
+  {
+    "kind": "function",
+    "line": 1,
+    "path": "sample.rs",
+    "qualifiedName": "sample.rs::compute",
+    "symbol": "compute",
+  },
+  {
+    "kind": "function",
+    "line": 5,
+    "path": "sample.rs",
+    "qualifiedName": "sample.rs::fetch_data",
+    "symbol": "fetch_data",
+  },
+  {
+    "kind": "function",
+    "line": 1,
+    "path": "sample.ts",
+    "qualifiedName": "sample.ts::add",
+    "symbol": "add",
+  },
+  {
+    "kind": "class",
+    "line": 5,
+    "path": "sample.ts",
+    "qualifiedName": "sample.ts::Calc",
+    "symbol": "Calc",
+  },
+  {
+    "kind": "method",
+    "line": 6,
+    "path": "sample.ts",
+    "qualifiedName": "sample.ts::multiply",
+    "symbol": "multiply",
+  },
+]
+`;

@@ -165,7 +165,11 @@ export function applyCascadingSkip(dag: Dag): DagTask[] {
  * Compose the prompt for a given task: the task's `subtask_prompt` plus an
  * "Upstream context" block with capped snippets of each parent's output.
  */
-export function buildTaskPrompt(dag: Dag, task: DagTask): string {
+export function buildTaskPrompt(
+  dag: Dag,
+  task: DagTask,
+  opts?: { graphLocate?: string },
+): string {
   const limits = dag.limits ?? DEFAULT_DAG_LIMITS;
   const parents = task.depends_on
     .map((id) => dag.tasks.find((t) => t.id === id))
@@ -175,6 +179,7 @@ export function buildTaskPrompt(dag: Dag, task: DagTask): string {
     task,
     parents,
     parentContextChars: limits.parent_context_chars,
+    graphLocate: opts?.graphLocate,
   });
 }
 

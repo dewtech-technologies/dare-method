@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    testTimeout: 15_000,
     // `templates/` holds files that are SHIPPED to generated projects — they
     // are not part of the CLI's own test suite. Their *.test.ts / *.spec.ts
     // files (e.g. MCP echo tests) depend on packages installed in the

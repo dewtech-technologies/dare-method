@@ -50,6 +50,40 @@ describe('GraphRAG', () => {
     expect(edges[0].targetId).toBe('node-2');
   });
 
+  it('traverse, locate and findByQualifiedName delegate to traverse.ts', async () => {
+    graph.addNode({
+      id: 'code_symbol:src/x.ts::main',
+      type: 'code_symbol',
+      label: 'main',
+      metadata: { qualifiedName: 'src/x.ts::main', path: 'src/x.ts', symbol: 'main', kind: 'function' },
+    });
+    graph.addNode({ id: 'task:t9', type: 'task', label: 't9' });
+    graph.addEdge({
+      id: 'e9',
+      sourceId: 'task:t9',
+      targetId: 'code_symbol:src/x.ts::main',
+      type: 'implements',
+    });
+
+    const walked = graph.traverse({ seedNodeIds: ['task:t9'], maxHops: 1 });
+    expect(walked.nodes.some((n) => n.id === 'code_symbol:src/x.ts::main')).toBe(true);
+    expect(graph.findByQualifiedName('src/x.ts::main')?.id).toBe('code_symbol:src/x.ts::main');
+    expect(graph.locate('main').candidates.length).toBeGreaterThan(0);
+  });
+
+  it('empty graph stats have all types at zero (RNF-05)', () => {
+    const stats = graph.getStatistics();
+    expect(stats.totalNodes).toBe(0);
+    for (const count of Object.values(stats.nodesByType)) {
+      expect(count).toBe(0);
+      expect(Number.isNaN(count)).toBe(false);
+    }
+    for (const count of Object.values(stats.edgesByType)) {
+      expect(count).toBe(0);
+      expect(Number.isNaN(count)).toBe(false);
+    }
+  });
+
   it('should search nodes', async () => {
     await graph.addNode({ id: 'search-1', type: 'task', label: 'Find this label' });
     await graph.addNode({ id: 'search-2', type: 'file', label: 'Ignore this one' });

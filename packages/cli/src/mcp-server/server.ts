@@ -4,7 +4,10 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import fs from 'fs-extra';
 import helmet from 'helmet';
 import pino from 'pino';
-import { PathEscapeError, resolveSafePath } from '../utils/path-safety.js';
+import { assertRelativeSafe, PathEscapeError, resolveSafePath } from '../utils/path-safety.js';
+import { createGraph, loadGraphConfig } from '../graphrag/index.js';
+import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
+import type { EdgeType, NodeType } from '../graphrag/types.js';
 import { createAuthMiddleware } from './middleware/auth.js';
 import { createCorsMiddleware } from './middleware/cors.js';
 import { createErrorHandler } from './middleware/error-handler.js';
@@ -54,6 +57,8 @@ const TASK_STATUSES = new Set<TaskStatus['status']>([
 ]);
 
 const TASK_ID_RE = /^(task-[0-9]{3}|task-[0-9a-z-]+)$/;
+const GRAPH_REQ_ID_RE = /^(RF-\d+|O-\d+|task-[0-9a-z-]+)$/;
+const PATH_LIKE_SEED_RE = /^[\w./-]+$/;
 
 export interface McpServerOptions {
   authToken?: string;
@@ -74,6 +79,36 @@ function isValidTaskId(taskId: string): boolean {
 
 function sendPathEscape(res: Response): void {
   res.status(403).json({ error: 'Forbidden' });
+}
+
+async function withProjectGraph<T>(
+  projectRoot: string,
+  fn: (graph: KnowledgeGraph) => Promise<T>,
+): Promise<T> {
+  const config = await loadGraphConfig({ cwd: projectRoot });
+  const graph = await createGraph(config, { cwd: projectRoot });
+  try {
+    return await fn(graph);
+  } finally {
+    await Promise.resolve(graph.close());
+  }
+}
+
+function validateGraphSeedPath(seed: string): void {
+  if (!PATH_LIKE_SEED_RE.test(seed)) return;
+  if (!seed.includes('/') && !seed.includes('::')) return;
+  const pathPart = seed.includes('::') ? seed.split('::')[0]! : seed;
+  try {
+    assertRelativeSafe(pathPart);
+  } catch {
+    throw new PathEscapeError();
+  }
+}
+
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
 function runSafe<T>(res: Response, next: NextFunction, fn: () => Promise<T>): void {
@@ -131,6 +166,9 @@ export function createMcpServer(
         { name: 'get_task_status', description: 'Get status of a specific task' },
         { name: 'update_task_status', description: 'Update task status in TASKS.md' },
         { name: 'get_project_context', description: 'Get dare.config.json' },
+        { name: 'graph_locate', description: 'Locate code symbols from a seed query' },
+        { name: 'graph_map_requirement', description: 'Map a requirement/task to symbols and tasks' },
+        { name: 'graph_traverse', description: 'Traverse the knowledge graph from seed nodes' },
       ],
     });
   });
@@ -332,6 +370,96 @@ export function createMcpServer(
 
       await fs.writeFile(tasksPath, lines.join('\n'));
       res.json({ success: true, id: taskId, status });
+    });
+  });
+
+  app.post('/graph/locate', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const { seed, hops, limit } = req.body as {
+        seed?: string;
+        hops?: number;
+        limit?: number;
+      };
+
+      if (!seed || typeof seed !== 'string' || seed.trim() === '') {
+        res.status(400).json({ error: 'seed is required' });
+        return;
+      }
+      if (seed.length > 200) {
+        res.status(400).json({ error: 'seed too long' });
+        return;
+      }
+
+      validateGraphSeedPath(seed);
+      const h = clampInt(hops, 1, 5, 3);
+      const l = clampInt(limit, 1, 50, 10);
+
+      await withProjectGraph(projectRoot, async (graph) => {
+        const result = graph.locate(seed, { hops: h, limit: l });
+        res.json({ success: true, candidates: result.candidates });
+      });
+    });
+  });
+
+  app.post('/graph/map-requirement', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const { reqId } = req.body as { reqId?: string };
+      if (!reqId || typeof reqId !== 'string' || !GRAPH_REQ_ID_RE.test(reqId)) {
+        res.status(400).json({ error: 'invalid reqId' });
+        return;
+      }
+
+      const seedId = reqId.startsWith('task-') ? `task:${reqId}` : `requirement:${reqId}`;
+
+      await withProjectGraph(projectRoot, async (graph) => {
+        if (!graph.getNode(seedId)) {
+          res.status(404).json({ error: `requirement or task '${reqId}' not found` });
+          return;
+        }
+        const walked = graph.traverse({
+          seedNodeIds: [seedId],
+          maxHops: 3,
+          edgeTypes: ['derives_from', 'depends_on', 'implements'],
+        });
+        const symbols = walked.nodes
+          .filter((n) => n.type === 'code_symbol')
+          .map((n) => String(n.metadata?.qualifiedName ?? ''))
+          .filter(Boolean)
+          .sort();
+        const tasks = walked.nodes
+          .filter((n) => n.type === 'task')
+          .map((n) => (n.id.startsWith('task:') ? n.id.slice(5) : n.id))
+          .sort();
+        res.json({ success: true, symbols, tasks });
+      });
+    });
+  });
+
+  app.post('/graph/traverse', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const { seedNodeIds, maxHops, nodeTypes, edgeTypes } = req.body as {
+        seedNodeIds?: string[];
+        maxHops?: number;
+        nodeTypes?: NodeType[];
+        edgeTypes?: EdgeType[];
+      };
+
+      if (!Array.isArray(seedNodeIds) || seedNodeIds.length === 0) {
+        res.status(400).json({ error: 'seedNodeIds is required' });
+        return;
+      }
+
+      const hops = clampInt(maxHops, 1, 5, 3);
+
+      await withProjectGraph(projectRoot, async (graph) => {
+        const { nodes, edges } = graph.traverse({
+          seedNodeIds,
+          maxHops: hops,
+          nodeTypes,
+          edgeTypes,
+        });
+        res.json({ success: true, nodes, edges });
+      });
     });
   });
 

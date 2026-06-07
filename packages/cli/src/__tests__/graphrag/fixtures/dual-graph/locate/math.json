@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    { "id": "file:src/math.ts", "type": "file", "label": "src/math.ts", "metadata": { "path": "src/math.ts" } },
+    {
+      "id": "code_symbol:src/math.ts::add",
+      "type": "code_symbol",
+      "label": "add",
+      "metadata": {
+        "path": "src/math.ts",
+        "symbol": "add",
+        "kind": "function",
+        "qualifiedName": "src/math.ts::add"
+      }
+    },
+    {
+      "id": "code_symbol:src/math.ts::subtract",
+      "type": "code_symbol",
+      "label": "subtract",
+      "metadata": {
+        "path": "src/math.ts",
+        "symbol": "subtract",
+        "kind": "function",
+        "qualifiedName": "src/math.ts::subtract"
+      }
+    },
+    { "id": "task:task-201", "type": "task", "label": "dual-graph types" }
+  ],
+  "edges": [
+    { "id": "contains:add", "sourceId": "file:src/math.ts", "targetId": "code_symbol:src/math.ts::add", "type": "contains" },
+    { "id": "contains:sub", "sourceId": "file:src/math.ts", "targetId": "code_symbol:src/math.ts::subtract", "type": "contains" },
+    { "id": "implements:t201", "sourceId": "task:task-201", "targetId": "code_symbol:src/math.ts::add", "type": "implements" }
+  ],
+  "expect": {
+    "locate": { "seed": "math", "expectedInTop5": ["code_symbol:src/math.ts::add"] }
+  }
+}

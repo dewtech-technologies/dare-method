@@ -64,6 +64,7 @@ export async function loadGraphConfig(opts: {
       username: typeof subBlock.username === 'string' ? subBlock.username : undefined,
       password: typeof subBlock.password === 'string' ? subBlock.password : undefined,
       auth: typeof subBlock.auth === 'string' ? subBlock.auth : undefined,
+      experimental: subBlock.experimental === true,
     };
     return { backend, neo4j };
   }
@@ -85,6 +86,12 @@ export async function createGraph(
   const cwd = opts.cwd ?? process.cwd();
 
   if (config.backend === 'neo4j') {
+    if (config.neo4j?.experimental !== true) {
+      throw new Error(
+        'Neo4j backend requires `neo4j.experimental: true` in dare-graph.yml until C1 is verified. ' +
+          'Use sqlite or json (recommended).',
+      );
+    }
     if (!config.neo4j?.url) {
       throw new Error(
         'dare-graph.yml `neo4j.url` is required for the neo4j backend (e.g. http://localhost:7474).',

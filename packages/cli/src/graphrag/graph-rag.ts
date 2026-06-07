@@ -1,10 +1,15 @@
 import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
 import path from 'path';
 import fs from 'fs-extra';
+import type { KnowledgeGraph } from './knowledge-graph.js';
 import type {
   GraphNode, GraphEdge, NodeType, EdgeType,
-  SearchResult, GraphStatistics
+  SearchResult, GraphStatistics,
+  CodeSymbolNode, TraverseOptions, TraverseResult,
+  LocateOptions, LocateResult,
 } from './types.js';
+import { emptyEdgesByType, emptyNodesByType } from './types.js';
+import { traverse as traverseFn, locate as locateFn } from './traverse.js';
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS nodes (
@@ -32,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id);
 CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type);
 `;
 
-export class GraphRAG {
+export class GraphRAG implements KnowledgeGraph {
   private db!: Database;
   private dbPath: string;
   private SQL!: SqlJsStatic;
@@ -188,6 +193,36 @@ export class GraphRAG {
 
   // ─── Utilities ─────────────────────────────────────────────────────────────
 
+  traverse(opts: TraverseOptions): TraverseResult {
+    return traverseFn(this, opts);
+  }
+
+  locate(seedQuery: string, opts?: LocateOptions): LocateResult {
+    return locateFn(this, seedQuery, opts);
+  }
+
+  findByQualifiedName(qn: string): CodeSymbolNode | null {
+    const normalized = qn.startsWith('code_symbol:') ? qn.slice('code_symbol:'.length) : qn;
+    const directId = `code_symbol:${normalized}`;
+    const direct = this.getNode(directId);
+    if (direct?.type === 'code_symbol') return direct as CodeSymbolNode;
+
+    try {
+      const row = this.queryOne<Record<string, unknown>>(
+        `SELECT * FROM nodes WHERE type = 'code_symbol' AND json_extract(metadata, '$.qualifiedName') = ? LIMIT 1`,
+        [normalized],
+      );
+      if (row) return this.rowToNode(row) as CodeSymbolNode;
+    } catch {
+      // json_extract unavailable — fall through to scan
+    }
+
+    for (const node of this.queryNodes('code_symbol', 10_000)) {
+      if (node.metadata?.qualifiedName === normalized) return node as CodeSymbolNode;
+    }
+    return null;
+  }
+
   getStatistics(): GraphStatistics {
     const totalNodesRow = this.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM nodes');
     const totalEdgesRow = this.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM edges');
@@ -197,8 +232,16 @@ export class GraphRAG {
     const nodeRows = this.query<{ type: string; count: number }>('SELECT type, COUNT(*) as count FROM nodes GROUP BY type');
     const edgeRows = this.query<{ type: string; count: number }>('SELECT type, COUNT(*) as count FROM edges GROUP BY type');
 
-    const nodesByType = Object.fromEntries(nodeRows.map((r) => [r.type, r.count])) as Record<NodeType, number>;
-    const edgesByType = Object.fromEntries(edgeRows.map((r) => [r.type, r.count])) as Record<EdgeType, number>;
+    const nodesByType = emptyNodesByType();
+    const edgesByType = emptyEdgesByType();
+    for (const r of nodeRows) {
+      const t = r.type as NodeType;
+      if (t in nodesByType) nodesByType[t] = r.count;
+    }
+    for (const r of edgeRows) {
+      const t = r.type as EdgeType;
+      if (t in edgesByType) edgesByType[t] = r.count;
+    }
 
     return { totalNodes, totalEdges, nodesByType, edgesByType };
   }
