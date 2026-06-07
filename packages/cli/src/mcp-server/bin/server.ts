@@ -1,18 +1,38 @@
 #!/usr/bin/env node
 
-import { createMcpServer } from '../server.js';
 import chalk from 'chalk';
+import pino from 'pino';
+import { createMcpServer } from '../server.js';
+import { redactToken } from '../middleware/auth.js';
+import {
+  resolveMcpBindHost,
+  resolveMcpPort,
+  resolveMcpProjectPath,
+  resolveMcpToken,
+  shouldWarnLanExposure,
+} from '../boot-config.js';
 
-const PORT = parseInt(process.env.DARE_MCP_PORT || '3000', 10);
-const PROJECT_PATH = process.env.DARE_PROJECT_PATH || process.cwd();
+const logger = pino({ transport: { target: 'pino-pretty' } });
 
-const app = createMcpServer(PROJECT_PATH);
+const PORT = resolveMcpPort();
+const HOST = resolveMcpBindHost();
+const PROJECT_PATH = resolveMcpProjectPath();
+const TOKEN = resolveMcpToken();
 
-const server = app.listen(PORT, () => {
+if (shouldWarnLanExposure(HOST)) {
+  logger.warn('DARE_MCP_BIND=0.0.0.0 exposes MCP to LAN — use only in trusted networks');
+}
+
+const app = createMcpServer(PROJECT_PATH, { authToken: TOKEN });
+
+const server = app.listen(PORT, HOST, () => {
+  const maskedToken = redactToken(TOKEN);
   console.log(chalk.blue.bold('\n🔌 DARE MCP Server\n'));
   console.log(`  ${chalk.gray('Status:')}  ${chalk.green('Running')}`);
-  console.log(`  ${chalk.gray('Port:')}    ${chalk.cyan(PORT)}`);
+  console.log(`  ${chalk.gray('Host:')}    ${chalk.cyan(HOST)}`);
+  console.log(`  ${chalk.gray('Port:')}    ${chalk.cyan(String(PORT))}`);
   console.log(`  ${chalk.gray('Project:')} ${chalk.cyan(PROJECT_PATH)}`);
+  console.log(`  ${chalk.gray('Token:')}   ${chalk.yellow(maskedToken)}`);
   console.log(`\n  ${chalk.gray('Endpoints:')}`);
   console.log(`  ${chalk.cyan('GET')}  /health`);
   console.log(`  ${chalk.cyan('GET')}  /tools`);

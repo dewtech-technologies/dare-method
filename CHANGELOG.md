@@ -9,6 +9,29 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.4.0] — 2026-06
+
+Release **Security Hardening** — superfície MCP endurecida, validação de `dare init` e supply-chain no CI.
+
+### Security (breaking)
+
+- **MCP:** autenticação Bearer obrigatória fora de loopback; bind default `127.0.0.1` (`DARE_MCP_BIND`); token gerado no boot (`DARE_MCP_TOKEN`).
+- **`dare init`:** validação estrita do nome do projeto — rejeita traversal, paths absolutos e maiúsculas.
+- **Erros MCP:** corpos 5xx sanitizados (sem paths absolutos nem stack no JSON de resposta).
+
+### CI / Supply-chain
+
+- ESLint bloqueante no CI (`pnpm --filter @dewtech/dare-cli lint`).
+- Gate de cobertura Vitest com baseline em `KNOWN-COV-BASELINE.md`.
+- `npm publish --provenance` via OIDC no workflow de release.
+- GitHub Actions pinadas por commit SHA + `scripts/verify-actions-pinned.mjs`.
+
+### Added
+
+- Middleware MCP: `auth.ts`, `cors.ts`, `error-handler.ts`; `helmet` no `server.ts`.
+- `path-safety.ts`: `resolveSafePath` / `PathEscapeError` para confinamento de I/O.
+- Variáveis `DARE_MCP_*` documentadas no README e `SECURITY.md`.
+
 ## [3.3.0] — 2026-06
 
 Release **Reliable Verification Core** — núcleo determinístico de verificação pós-Ralph Loop (opt-in via `dare.config.json#verification`).

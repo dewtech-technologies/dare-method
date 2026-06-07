@@ -12,7 +12,11 @@ describe('project-generator — verification block', () => {
   let tmpRoot: string;
 
   beforeEach(async () => {
-    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'pg-verif-'));
+    tmpRoot = path.join(
+      process.cwd(),
+      `.pg-verif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    await fs.ensureDir(tmpRoot);
   });
 
   afterEach(async () => {

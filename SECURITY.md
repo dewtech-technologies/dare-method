@@ -49,6 +49,28 @@ Contribuidores que reportarem vulnerabilidades de boa-fé serão **mencionados p
 
 Não há programa de bug bounty pago — o projeto é open source mantido pela Dewtech sem orçamento dedicado pra isso ainda.
 
+## 🌐 MCP HTTP Server (`dare mcp`)
+
+O servidor MCP embutido no CLI expõe ferramentas DARE via HTTP. Superfície relevante:
+
+| Controle | Comportamento |
+|---|---|
+| **Bind** | Default `127.0.0.1` — não aceita conexões da LAN. Para expor na rede local, defina `DARE_MCP_BIND=0.0.0.0` (use só em ambientes confiáveis). |
+| **Porta** | `DARE_MCP_PORT` (default `3100`). |
+| **Autenticação** | Bearer token gerado no boot; envie `Authorization: Bearer <token>`. Em loopback, `?token=` também é aceito para DX local. |
+| **Erros** | Respostas JSON genéricas — **sem paths absolutos** nem stack traces em produção. |
+
+Reporte bypass de auth, bind indevido em `0.0.0.0` sem opt-in, ou vazamento de paths/secrets em respostas de erro como **Alta**.
+
+## 📦 Pacote npm `@dewtech/dare-cli`
+
+O CLI publicado em [npmjs.com/package/@dewtech/dare-cli](https://www.npmjs.com/package/@dewtech/dare-cli) é software executável (Node ≥ 18). Vulnerabilidades em dependências, command injection, path traversal ou execução indevida de subprocessos devem ser reportadas pelos canais acima — **não** via issue público.
+
+## 🔗 Supply-chain
+
+- **Provenance npm**: releases via tag `v*` usam `npm publish --provenance` com OIDC (`id-token: write`). Configure trusted publishing no npm antes do primeiro release com provenance.
+- **GitHub Actions**: todos os workflows em `.github/workflows/` pinam actions por **commit SHA** (não tags móveis `@vN`). Regressão é bloqueada por `scripts/verify-actions-pinned.mjs` no CI.
+
 ## 🧱 Práticas adotadas no projeto
 
 Pra reduzir superfície de problemas:
@@ -58,5 +80,7 @@ Pra reduzir superfície de problemas:
 - **Scripts Python** com type hints e validação de input
 - **Prompts** revisados pra evitar exposição inadvertida de instruções do sistema
 - **Examples** com dados sintéticos apenas
+- **Path safety** em comandos que escrevem no filesystem (`dare init`, etc.)
+- **CI** com ESLint real, audit de dependências e gate de cobertura
 
 Se você notar **qualquer violação** dessas práticas no código atual, reporte como vulnerabilidade.

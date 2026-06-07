@@ -1,0 +1,286 @@
+title: "Dual Graph — Development Tasks"
+version: "3.5.0"
+generated: "2026-06-07T19:00:00Z"
+
+# Feature: dual-graph
+# Branch:  feat/dual-graph
+# Design:  DARE/DESIGN-Feature-dual-graph.md
+# Blueprint: DARE/BLUEPRINT-Feature-dual-graph.md
+#
+# Regra de ouro: grafo dual 100% determinístico (regex, markdown, BFS). LLM fora do CLI.
+# Pré-requisitos: gate/verified_by (verification-core); path-safety (security-hardening).
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: Tipos + extração ─────────────────────────────────────────────
+  - id: task-201
+    title: "types.ts — code_symbol, requirement, affects, derives_from"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-201-dual-graph-types.md
+    subtask_prompt: |
+      Estender packages/cli/src/graphrag/types.ts (BLUEPRINT §3.1):
+      - NodeType += 'code_symbol' | 'requirement' (manter gate existente)
+      - EdgeType += 'affects' | 'derives_from' (manter verified_by)
+      - Adicionar CodeSymbolKind, CodeSymbolNode, RequirementNode, TraverseOptions,
+        TraverseResult, LocateOptions, LocateResult (copiar do blueprint).
+      IDs canônicos: code_symbol:{qualifiedName}, requirement:{reqId}.
+      Atualizar todos Record<NodeType,number> e Record<EdgeType,number> consumers para
+      inicializar com 0 (RNF-05, sem NaN). Gates: tsc --noEmit.
+      Leia: DARE/EXECUTION/task-201-dual-graph-types.md.
+
+  - id: task-202
+    title: "static-analyzer — export SUPPORTED_EXTENSIONS + inString"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-202-static-analyzer-exports.md
+    subtask_prompt: |
+      Modificar packages/cli/src/utils/static-analyzer.ts (BLUEPRINT §3.2):
+      - export const SUPPORTED_EXTENSIONS (hoje privado)
+      - export function inString(line: string, col: number): boolean (extrair se privado)
+      - Manter isTestFile exportado; sem mudança de comportamento dos detectores review.
+      Teste: static-analyzer-exports.test.ts — SUPPORTED_EXTENSIONS contém .ts/.py;
+      inString ignora match em string literal. Gates: tsc --noEmit; vitest run static-analyzer.
+      Leia: DARE/EXECUTION/task-202-static-analyzer-exports.md.
+
+  - id: task-203
+    title: "code-index.ts — extração determinística de símbolos"
+    depends_on: [task-201, task-202]
+    complexity: MED
+    spec_file: EXECUTION/task-203-code-index.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/code-index.ts (BLUEPRINT §3.2):
+      extractSymbolsFromFile(absPath, projectRoot), extractSymbolsFromPaths(paths, projectRoot),
+      toQualifiedName(path, symbol) → 'path::symbol' posix.
+      Regex top-level: TS/JS function|class|method, Python def|class, Go func, Rust fn, PHP function.
+      Pular isTestFile e inString; reusar SUPPORTED_EXTENSIONS.
+      Testes code-index.test.ts + snapshot fixtures multi-linguagem; meta O-01 ≥90% top-level.
+      Gates: tsc --noEmit; vitest run code-index. Leia: DARE/EXECUTION/task-203-code-index.md.
+
+  # ─── Fase 2: Ingestão dual ───────────────────────────────────────────────
+  - id: task-204
+    title: "requirement-ingest.ts — parser markdown RF/O/task"
+    depends_on: [task-201]
+    complexity: MED
+    spec_file: EXECUTION/task-204-requirement-ingest.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/requirement-ingest.ts (BLUEPRINT §3.3):
+      parseRequirementsFromMarkdown(content, source), ingestRequirements(graph, projectRoot).
+      Parser determinístico: | RF-N |, | O-N |, task-N em TASKS; derives_from para hierarquia Phase.
+      Lê DARE/DESIGN*.md, BLUEPRINT*.md, TASKS*.md se existirem. Sem LLM.
+      Testes requirement-ingest.test.ts: RF-01, O-01, task-101, derives_from pai→filho.
+      Gates: vitest run requirement-ingest. Leia: DARE/EXECUTION/task-204-requirement-ingest.md.
+
+  - id: task-205
+    title: "graph-ingest — code_symbol + contains + implements"
+    depends_on: [task-203]
+    complexity: MED
+    spec_file: EXECUTION/task-205-graph-ingest-symbols.md
+    subtask_prompt: |
+      Modificar packages/cli/src/dag-runner/graph-ingest.ts (BLUEPRINT §3.6):
+      Após file nodes para task DONE, chamar extractSymbolsFromPaths([normalized], projectRoot).
+      Para cada sym: addNode code_symbol:{qualifiedName}; edge contains file→symbol;
+      edge implements task→symbol. Se output menciona '::symbol', aresta direta.
+      Testes graph-ingest-symbols.test.ts com output fixture contendo src/math.ts.
+      Gates: vitest run graph-ingest. Leia: DARE/EXECUTION/task-205-graph-ingest-symbols.md.
+
+  - id: task-206
+    title: "dare graph ingest — wire requirements + --requirements-only"
+    depends_on: [task-204, task-205]
+    complexity: LOW
+    spec_file: EXECUTION/task-206-graph-ingest-wire.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/graph.ts ingest subcommand (BLUEPRINT §4.5):
+      Após ingestDag, chamar ingestRequirements(graph, projectRoot).
+      Flag --requirements-only: só requirement-ingest, sem DAG.
+      Atualizar KNOWN_NODE_TYPES: code_symbol, requirement, gate.
+      Gates: vitest run graph (se existir). Leia: DARE/EXECUTION/task-206-graph-ingest-wire.md.
+
+  # ─── Fase 3: Travessia ─────────────────────────────────────────────────────
+  - id: task-207
+    title: "traverse.ts — BFS tipado + locate()"
+    depends_on: [task-201]
+    complexity: HIGH
+    spec_file: EXECUTION/task-207-traverse.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/traverse.ts (BLUEPRINT §3.4):
+      traverse(graph, TraverseOptions) → TraverseResult; locate(graph, seed, LocateOptions).
+      BFS com maxHops default 3 max 5, maxFanout default 50 max 200.
+      locate: validar seed com assertRelativeSafe se path-like; seeds por qualifiedName,
+      path prefix, ou searchNodes; score 1.0 exato -0.15/hop +0.1 code_symbol.
+      Testes traverse.test.ts + locate.test.ts. Gates: vitest run traverse.
+      Leia: DARE/EXECUTION/task-207-traverse.md.
+
+  - id: task-208
+    title: "KnowledgeGraph — traverse/locate em json + sqlite"
+    depends_on: [task-207]
+    complexity: MED
+    spec_file: EXECUTION/task-208-kg-traverse.md
+    subtask_prompt: |
+      Estender packages/cli/src/graphrag/knowledge-graph.ts (BLUEPRINT §3.5):
+      interface += traverse(opts), locate(seed, opts?), findByQualifiedName(qn).
+      Implementar em json-graph.ts e graph-rag.ts delegando a traverse.ts com getEdges/getNode.
+      findByQualifiedName: scan ou índice por metadata.qualifiedName.
+      Gates: tsc --noEmit; vitest run json-graph graph-rag traverse.
+      Leia: DARE/EXECUTION/task-208-kg-traverse.md.
+
+  - id: task-209
+    title: "getStatistics tolerante — todos tipos com 0 default"
+    depends_on: [task-208]
+    complexity: LOW
+    spec_file: EXECUTION/task-209-graph-stats.md
+    subtask_prompt: |
+      Corrigir getStatistics em graph-rag.ts, json-graph.ts, neo4j-graph.ts (RNF-05):
+      Inicializar nodesByType e edgesByType com 0 para CADA membro de NodeType/EdgeType
+      (inclui code_symbol, requirement, affects, derives_from, gate, verified_by).
+      Teste: grafo vazio retorna todos zeros, sem NaN/undefined.
+      Gates: vitest run graph-rag json-graph. Leia: DARE/EXECUTION/task-209-graph-stats.md.
+
+  # ─── Fase 4: Comandos CLI ──────────────────────────────────────────────────
+  - id: task-210
+    title: "dare graph owners + impact"
+    depends_on: [task-208]
+    complexity: MED
+    spec_file: EXECUTION/task-210-graph-owners-impact.md
+    subtask_prompt: |
+      Adicionar subcommands em packages/cli/src/commands/graph.ts (BLUEPRINT §4.1, §4.2):
+      owners <path> --json --limit; impact <path> --json --hops.
+      Validar path com assertRelativeSafe (utils/path-safety.ts); exit 1 mensagem exata blueprint.
+      owners: BFS in por implements/derives_from → tasks+requirements; durationMs no JSON.
+      impact: BFS affects/implements/depends_on; meta O-02 <200ms O-03 recall 100% em fixture.
+      Testes owners.test.ts impact.test.ts. Gates: vitest run owners impact.
+      Leia: DARE/EXECUTION/task-210-graph-owners-impact.md.
+
+  - id: task-211
+    title: "dare graph trace + locate"
+    depends_on: [task-208]
+    complexity: MED
+    spec_file: EXECUTION/task-211-graph-trace-locate.md
+    subtask_prompt: |
+      Adicionar subcommands trace <req> e locate <seed> em commands/graph.ts (§4.3, §4.4):
+      trace: req RF-\d+|O-\d+|task-\d+; exit 1 se não encontrado (mensagem exata blueprint).
+      locate: flags --json --hops --limit --type --edge-type; delega locate().
+      Testes trace.test.ts locate.test.ts; O-07 ≤3 hops; O-04 top-5 ≥85% com fixtures.
+      Gates: vitest run trace locate. Leia: DARE/EXECUTION/task-211-graph-trace-locate.md.
+
+  - id: task-212
+    title: "fixtures dual-graph — impact, locate, owners chains"
+    depends_on: [task-207]
+    complexity: MED
+    spec_file: EXECUTION/task-212-dual-graph-fixtures.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/graphrag/fixtures/dual-graph/:
+      impact-chain.json, locate/*.json, owners-chain.json com nós/arestas esperados.
+      Helper buildGraphFromFixture() para testes O-02/O-03/O-04/O-07.
+      Documentar estrutura no README do diretório fixtures.
+      Gates: vitest run dual-graph fixtures carregam sem erro.
+      Leia: DARE/EXECUTION/task-212-dual-graph-fixtures.md.
+
+  # ─── Fase 5: Neo4j C1 ──────────────────────────────────────────────────────
+  - id: task-213
+    title: "neo4j-graph — leituras Cypher reais (C1 parte 1)"
+    depends_on: [task-201]
+    complexity: HIGH
+    spec_file: EXECUTION/task-213-neo4j-reads.md
+    subtask_prompt: |
+      Modificar packages/cli/src/graphrag/neo4j-graph.ts leituras (BLUEPRINT §3.7):
+      getNode, queryNodes, searchNodes, getEdges, getNodeDependencies via Cypher parametrizado
+      (RS-01 — zero concat de input). Validar shape antes de cache (RS-05).
+      Erros HTTP/Cypher → Neo4jQueryError (O-06). Manter interface sync.
+      Testes neo4j-graph.test.ts com mock fetch. Gates: vitest run neo4j-graph.
+      Leia: DARE/EXECUTION/task-213-neo4j-reads.md.
+
+  - id: task-214
+    title: "neo4j-graph — write queue + flush + hydrate init"
+    depends_on: [task-213]
+    complexity: HIGH
+    spec_file: EXECUTION/task-214-neo4j-writes.md
+    subtask_prompt: |
+      Completar conserto C1 em neo4j-graph.ts (BLUEPRINT §3.7):
+      Remover TODOS void this.runMany; write-behind queue; flush() em close() e após batch.
+      init() hidrata cache MATCH (n) RETURN n LIMIT 10000.
+      Teste neo4j-persistence.test.ts O-05: write→close→reopen→read igual (mock ou skip CI).
+      grep: zero 'void this.runMany'. Gates: vitest run neo4j-persistence neo4j-graph.
+      Leia: DARE/EXECUTION/task-214-neo4j-writes.md.
+
+  - id: task-215
+    title: "factory experimental gate + contract tests 3 backends"
+    depends_on: [task-208, task-214]
+    complexity: MED
+    spec_file: EXECUTION/task-215-graph-contract.md
+    subtask_prompt: |
+      Modificar graphrag/factory.ts (BLUEPRINT §3.8 RF-09): neo4j sem experimental:true → throw
+      com mensagem orientando sqlite/json.
+      Criar __tests__/graphrag/contract/traverse.contract.ts: mesma semântica traverse/locate
+      em json+sqlite+neo4j (neo4j skip se indisponível). Gates: vitest run contract.
+      Leia: DARE/EXECUTION/task-215-graph-contract.md.
+
+  # ─── Fase 6: Integração + release ──────────────────────────────────────────
+  - id: task-216
+    title: "ralph buildLocateContext pré-patch opcional"
+    depends_on: [task-207, task-208]
+    complexity: MED
+    spec_file: EXECUTION/task-216-ralph-locate.md
+    subtask_prompt: |
+      Implementar buildLocateContext em dag-runner (BLUEPRINT §5):
+      GraphLocateConfig de dare.config.json#graph.locateBeforePatch (default false).
+      Extrair seeds do subtask_prompt; locate(); formatar markdown '## Graph locate'; retornar
+      undefined se disabled ou grafo vazio. Wire em execute.ts antes do patch (não bloqueia).
+      Testes buildLocateContext.test.ts. Gates: vitest run ralph-locate ou buildLocateContext.
+      Leia: DARE/EXECUTION/task-216-ralph-locate.md.
+
+  - id: task-217
+    title: "MCP graph_locate, graph_map_requirement, graph_traverse"
+    depends_on: [task-210, task-211]
+    complexity: MED
+    spec_file: EXECUTION/task-217-mcp-graph-tools.md
+    subtask_prompt: |
+      Registrar em mcp-server/server.ts (BLUEPRINT §6 RF-10):
+      POST handlers ou MCP tools graph_locate {seed,hops,limit}, graph_map_requirement {reqId},
+      graph_traverse {seedNodeIds,maxHops,nodeTypes,edgeTypes}. Validar input; assertRelativeSafe;
+      respostas JSON determinísticas §6. Testes mcp-graph.test.ts.
+      Gates: vitest run mcp-graph. Leia: DARE/EXECUTION/task-217-mcp-graph-tools.md.
+
+  - id: task-218
+    title: "dare graph viz — subgraphs por camada (RF-11)"
+    depends_on: [task-201]
+    complexity: LOW
+    spec_file: EXECUTION/task-218-graph-viz-layers.md
+    subtask_prompt: |
+      Modificar renderMermaid/renderDot em commands/graph.ts (BLUEPRINT RF-11):
+      subgraph requirement [Requirements] para type requirement+task;
+      subgraph code [Code] para code_symbol+file; cores/classDef distintas.
+      Não quebrar viz existente sem os tipos novos. Teste snapshot mermaid output.
+      Gates: vitest run graph viz se existir. Leia: DARE/EXECUTION/task-218-graph-viz-layers.md.
+
+  - id: task-219
+    title: "dual-graph audit N-1 (O-01…O-07)"
+    depends_on: [task-206, task-211, task-212, task-215]
+    complexity: HIGH
+    spec_file: EXECUTION/task-219-dual-graph-audit.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/dual-graph.test.ts integrando O-01…O-07:
+      reusa code-index, owners, impact, trace, locate, neo4j-persistence, contract tests.
+      Garantir nenhum padrão proibido §11 (void runMany, locate hardcoded vazio, etc).
+      Gates: vitest run dual-graph; dare review sem HIGH nas tasks grafo.
+      Leia: DARE/EXECUTION/task-219-dual-graph-audit.md.
+
+  - id: task-220
+    title: "CHANGELOG v3.5.0 + dare-graph.yml template"
+    depends_on: [task-219]
+    complexity: LOW
+    spec_file: EXECUTION/task-220-dual-graph-release.md
+    subtask_prompt: |
+      Release v3.5.0: CHANGELOG [3.5.0] grafo dual, owners/impact/trace/locate, Neo4j fix/gate.
+      Atualizar project-generator writeGraphragConfig com nodes code_symbol/requirement e edges
+      affects/derives_from. README seção dare graph. Bump package.json 3.5.0.
+      Gates: pnpm test. Leia: DARE/EXECUTION/task-220-dual-graph-release.md.

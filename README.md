@@ -562,6 +562,22 @@ dare-mcp-server
 | Query MCP (5 resultados) | ~400 tokens |
 | **Economia** | **~95%** |
 
+### Segurança do MCP Server (v3.4.0+)
+
+O servidor embutido (`dare-mcp-server`) aplica hardening por padrão:
+
+| Variável | Default | Descrição |
+|----------|---------|-----------|
+| `DARE_MCP_BIND` | `127.0.0.1` | Host do `listen` — use `0.0.0.0` **somente** em redes confiáveis |
+| `DARE_MCP_PORT` | `3000` | Porta HTTP |
+| `DARE_MCP_TOKEN` | UUID gerado no boot | Bearer token — impresso **mascarado** uma vez no console |
+| `DARE_PROJECT_PATH` | `process.cwd()` | Raiz de I/O (paths no body são ignorados) |
+| `DARE_MCP_BODY_LIMIT` | `1mb` | Limite do `express.json` |
+
+- Requisições **fora de loopback** exigem `Authorization: Bearer <token>`.
+- Erros 5xx retornam JSON genérico com `correlationId` — sem paths absolutos nem stack.
+- Detalhes de disclosure: [`SECURITY.md`](SECURITY.md).
+
 ---
 
 ## 📋 Comandos disponíveis (Cursor)

@@ -1,0 +1,92 @@
+%% DARE DAG — Dual Graph — Development Tasks
+%% Generated: 2026-06-07T18:52:58.155Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_201["task-201\ntypes.ts — code_symbol, requirement, affects, derives_from\n⏳ PENDING"]
+    task_202["task-202\nstatic-analyzer — export SUPPORTED_EXTENSIONS + inString\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_203["task-203\ncode-index.ts — extração determinística de símbolos\n⏳ PENDING"]
+    task_204["task-204\nrequirement-ingest.ts — parser markdown RF/O/task\n⏳ PENDING"]
+    task_207["task-207\ntraverse.ts — BFS tipado + locate()\n⏳ PENDING"]
+    task_213["task-213\nneo4j-graph — leituras Cypher reais (C1 parte 1)\n⏳ PENDING"]
+    task_218["task-218\ndare graph viz — subgraphs por camada (RF-11)\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_205["task-205\ngraph-ingest — code_symbol + contains + implements\n⏳ PENDING"]
+    task_208["task-208\nKnowledgeGraph — traverse/locate em json + sqlite\n⏳ PENDING"]
+    task_212["task-212\nfixtures dual-graph — impact, locate, owners chains\n⏳ PENDING"]
+    task_214["task-214\nneo4j-graph — write queue + flush + hydrate init\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_206["task-206\ndare graph ingest — wire requirements + --requirements-only\n⏳ PENDING"]
+    task_209["task-209\ngetStatistics tolerante — todos tipos com 0 default\n⏳ PENDING"]
+    task_210["task-210\ndare graph owners + impact\n⏳ PENDING"]
+    task_211["task-211\ndare graph trace + locate\n⏳ PENDING"]
+    task_215["task-215\nfactory experimental gate + contract tests 3 backends\n⏳ PENDING"]
+    task_216["task-216\nralph buildLocateContext pré-patch opcional\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_217["task-217\nMCP graph_locate, graph_map_requirement, graph_traverse\n⏳ PENDING"]
+    task_219["task-219\ndual-graph audit N-1 (O-01…O-07)\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    task_220["task-220\nCHANGELOG v3.5.0 + dare-graph.yml template\n⏳ PENDING"]
+  end
+  task_201 --> task_203
+  task_202 --> task_203
+  task_201 --> task_204
+  task_203 --> task_205
+  task_204 --> task_206
+  task_205 --> task_206
+  task_201 --> task_207
+  task_207 --> task_208
+  task_208 --> task_209
+  task_208 --> task_210
+  task_208 --> task_211
+  task_207 --> task_212
+  task_201 --> task_213
+  task_213 --> task_214
+  task_208 --> task_215
+  task_214 --> task_215
+  task_207 --> task_216
+  task_208 --> task_216
+  task_210 --> task_217
+  task_211 --> task_217
+  task_201 --> task_218
+  task_206 --> task_219
+  task_211 --> task_219
+  task_212 --> task_219
+  task_215 --> task_219
+  task_219 --> task_220
+  class task_201 st_pending;
+  class task_202 st_pending;
+  class task_203 st_pending;
+  class task_204 st_pending;
+  class task_205 st_pending;
+  class task_206 st_pending;
+  class task_207 st_pending;
+  class task_208 st_pending;
+  class task_209 st_pending;
+  class task_210 st_pending;
+  class task_211 st_pending;
+  class task_212 st_pending;
+  class task_213 st_pending;
+  class task_214 st_pending;
+  class task_215 st_pending;
+  class task_216 st_pending;
+  class task_217 st_pending;
+  class task_218 st_pending;
+  class task_219 st_pending;
+  class task_220 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;
