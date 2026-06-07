@@ -16,13 +16,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c2ffbcb # v4.2.2
+        uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@a7487d7b8a70265ad49df2ee88f205cdd1 # v3.0.1
+        uses: pnpm/action-setup@v3
 
       - name: Setup Node.js for publish
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d682002 # v4.4.0
+        uses: actions/setup-node@v4
         with:
           node-version: 20.x
           cache: pnpm
@@ -74,7 +74,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@e0503c5bfd82269880999ea3b20cf0186bdcc7df # v2.0.0
+        uses: softprops/action-gh-release@v2
         with:
           body: ${{ steps.notes.outputs.body }}
           token: ${{ secrets.GITHUB_TOKEN }}
