@@ -1,10 +1,36 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.1.0 (em release)
+> **Status atual:** v3.3.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
+
+---
+
+## ✅ Shipped — v3.3.0
+
+**Reliable Verification Core** — núcleo determinístico pós-Ralph Loop (opt-in).
+
+- ✅ **Mutation testing** — Stryker (JS/TS), mutmut (Python), cargo-mutants (Rust), Infection (PHP)
+- ✅ **Fail-to-pass + anti-tamper** — RF-02/RF-03; baseline em `.dare/verification/<task-id>.json`
+- ✅ **Decay policy** — `decideNextAction` canônico (CONTINUE/FRESH_START/REPLAN/ESCALATE)
+- ✅ **Best-of-N** — worktrees git + seletor Pareto + prerank exec-free (RS-07)
+- ✅ **`dare bench`** — 6+ fixtures, solve-rate, baseline/regressão CI (RF-07/08)
+- ✅ **RS-06** — `safe-spawn` argv, zero `shell:true` no núcleo
+
+## ✅ Shipped — v3.2.0
+
+Foco em **qualidade dos artefatos brownfield** + **paridade total CLI ↔ IDE**.
+
+- ✅ **Paridade `/dare-*` nas 3 IDEs** — todos os 18 comandos do CLI são invocáveis como `/dare-<comando>` em Claude Code, Cursor e Antigravity. Cursor normalizado (`generate-*`/`*-task`/`run-dag`/`telemetry-report` → `dare-*`); `reverse`/`dna`/`migrate` promovidos de regra passiva para comando invocável.
+- ✅ **Teste `ide-command-parity.test.ts`** trava o contrato: comando novo no CLI sem skill nas 3 IDEs quebra o build.
+- ✅ **Coleta determinística por padrão no `dare reverse`** — `extractDataModel()` roda em todo `reverse` (antes só com `--deep`); `IDEIA.md` e specs de módulo passam de esqueleto a tabelas reais de **Superfície de API** + **Modelo de Dados**. `reverse-facts.json` registra contagens de endpoints/entidades.
+- ✅ **Correções de extração determinística** (`utils/datamodel.ts`) — rota `@Controller` composta, entidades `@Entity` só-colunas, filtro de DTOs/value-shapes e de palavras-chave SQL.
+
+## ✅ Shipped — v3.1.1
+
+- ✅ **Brownfield instala skills da IDE** — `dare reverse`/`dna`/`migrate` agora instalam os slash-commands/skills (`ensureDareSkills`); antes a 2ª camada (inferência semântica na IDE) não existia, e o passo "Run /dare-reverse in your IDE" apontava para um comando inexistente.
 
 ---
 
@@ -77,7 +103,7 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 
 ---
 
-## 🔮 Planejado — v3.1.x+
+## 🔮 Planejado — v3.3.x+
 
 ### Novas implementations (IDEs/agentes)
 
@@ -102,6 +128,15 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 ## 📚 Histórico de releases
 
 Resumo cronológico de todas as releases. Detalhes completos em [`CHANGELOG.md`](CHANGELOG.md).
+
+### v3.2.0 (2026-06) — Paridade total CLI ↔ IDE + coleta determinística
+Todo comando do CLI vira `/dare-*` nas 3 IDEs (teste `ide-command-parity` trava o contrato). `dare reverse`/`dna` coletam dados reais (endpoints/entidades) por padrão — os artefatos brownfield deixam de ser esqueleto. Correções de extração determinística em `utils/datamodel.ts`.
+
+### v3.1.1 (2026-06) — Brownfield instala skills da IDE
+`dare reverse`/`dna`/`migrate` passam a instalar os slash-commands/skills da IDE (`ensureDareSkills`), habilitando a 2ª camada (inferência semântica) do workflow.
+
+### v3.1.0 (2026-06) — 11 stacks internalizadas + fix de distribuição
+Corrige o 404 do `npm install -g` (tudo num único tarball, sem pacotes de stack isolados) e completa a paridade de stacks prometida na v3.0.0: 11 geradores completos com o DNA DARE. `dare new` removido; DNA gate; `packages/stacks/` removido.
 
 ### v3.0.0 (2026-05) — Skill parity & stacks novas
 

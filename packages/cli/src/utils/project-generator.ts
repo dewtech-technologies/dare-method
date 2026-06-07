@@ -30,6 +30,7 @@ import {
   type McpLanguage,
   type ToolchainMode,
 } from './stack-bootstrap.js';
+import { defaultVerificationConfigForProject } from '../verification/config.js';
 
 export interface ProjectConfig {
   name: string;
@@ -101,6 +102,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
       // `complexity-analyzer.ts` for defaults; override per project here.
       thresholds: { low: 5, med: 12, high: 20 },
     },
+    verification: defaultVerificationConfigForProject(),
   };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;

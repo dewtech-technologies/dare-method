@@ -1,0 +1,6 @@
+--- a/repo/app.py
++++ b/repo/app.py
+@@ -1,2 +1,2 @@
+ def divide(a: int, b: int) -> float:
+-    return a / (b + 1)
++    return a / b

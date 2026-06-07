@@ -1,0 +1,1 @@
+{"id":"fix-001-nest-correct","stack":"node-nestjs","description":"Golden patch fixes failing add() without pass-to-pass regression"}

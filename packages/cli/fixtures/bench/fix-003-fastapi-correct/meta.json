@@ -1,0 +1,1 @@
+{"id":"fix-003-fastapi-correct","stack":"python-fastapi","description":"Golden patch fixes divide() without pass-to-pass regression"}

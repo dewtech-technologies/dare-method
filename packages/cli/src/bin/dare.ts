@@ -18,6 +18,7 @@ import { bootstrapCommand } from '../commands/bootstrap.js';
 import { updateCommand } from '../commands/update.js';
 import { reviewCommand } from '../commands/review.js';
 import { refineCommand } from '../commands/refine.js';
+import { benchCommand } from '../commands/bench.js';
 import { skillCommand } from '../skills/index.js';
 import { welcomeCommand } from '../commands/welcome.js';
 import { printBanner } from '../utils/banner.js';
@@ -49,6 +50,7 @@ program.addCommand(infoCommand);
 program.addCommand(updateCommand);
 program.addCommand(reviewCommand);
 program.addCommand(refineCommand);
+program.addCommand(benchCommand);
 program.addCommand(skillCommand);
 program.addCommand(welcomeCommand);
 

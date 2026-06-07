@@ -43,6 +43,26 @@
           "optional": false
         }
       ]
+    },
+    "3.3.0": {
+      "releasedAt": "2026-06-07",
+      "summary": "Reliable Verification Core — mutation, fail-to-pass, decay, best-of-N",
+      "changelog": "Adiciona bloco `verification` em dare.config.json (opt-in, enabled:false por padrão) com defaults para mutation, fail-to-pass, anti-tamper, type-check, loop decay, best-of-N e prerank. Projetos existentes recebem o bloco via migration `add-verification-defaults`.",
+      "changes": [
+        {
+          "type": "added",
+          "path": "dare.config.json#verification",
+          "description": "Adiciona objeto `verification` (enabled:false + defaults) — gate opt-in pós-Ralph Loop",
+          "appliesTo": ["*"]
+        }
+      ],
+      "migrations": [
+        {
+          "id": "add-verification-defaults",
+          "description": "Adiciona `verification` com defaults (enabled:false) em projetos pré-3.3 — opt-in, não ativa verificação automaticamente",
+          "optional": false
+        }
+      ]
     }
   }
 }

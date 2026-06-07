@@ -4,25 +4,18 @@
  * for "small" or "doc-only" tasks. Every `dare execute --complete <id>`
  * dispatches build → test → lint and only marks the task DONE if all three
  * pass.
- *
- * The set of gate commands is hardcoded **per stack** (the project's stack
- * is read from `dare.config.json`). The mapping is the same for every task
- * in that project — what changes is the *codebase state* the gates are
- * evaluated against.
- *
- * If any gate fails, the task transitions to FAILED with the failing gate's
- * stderr captured in `task.error`. The agent must fix the failure and call
- * `dare execute --complete <id>` again.
  */
-import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'fs-extra';
+import { safeSpawn } from '../exec/safe-spawn.js';
+import { npmInvoke } from '../exec/npm-invoke.js';
 
 export type GateName = 'build' | 'test' | 'lint';
 
 export interface RalphLoopGate {
   name: GateName;
   command: string;
+  args: string[];
 }
 
 export interface RalphLoopResult {
@@ -34,81 +27,114 @@ export interface RalphLoopResult {
   durationMs: number;
 }
 
+function gate(name: GateName, command: string, args: string[]): RalphLoopGate {
+  return { name, command, args };
+}
+
+function npmGate(name: GateName, args: string[]): RalphLoopGate {
+  const npm = npmInvoke(args);
+  return gate(name, npm.command, npm.args);
+}
+
+function pythonGate(
+  cwd: string,
+  name: GateName,
+  tool: string,
+  args: string[],
+): RalphLoopGate {
+  return gate(name, resolvePythonBin(cwd, tool), args);
+}
+
+const LEPTOS_CLIPPY: RalphLoopGate = gate('lint', 'cargo', [
+  'clippy',
+  '--all-targets',
+  '--all-features',
+  '--',
+  '-D',
+  'warnings',
+]);
+
+const LEPTOS_FMT: RalphLoopGate = gate('lint', 'cargo', ['fmt', '--check']);
+
 /**
- * Resolve gates for the project's stack. The stack is read from
- * `dare.config.json` — there is no override mechanism on purpose.
+ * Resolve a Python tool path: prefers project venv when present.
  */
-export function gatesFor(stack: string): RalphLoopGate[] {
+export function resolvePythonBin(cwd: string, tool: string): string {
+  const winPath = path.join(cwd, '.venv', 'Scripts', `${tool}.exe`);
+  const nixPath = path.join(cwd, '.venv', 'bin', tool);
+  if (fs.existsSync(winPath)) return winPath;
+  if (fs.existsSync(nixPath)) return nixPath;
+  return tool;
+}
+
+/**
+ * Resolve gates for the project's stack (argv, no shell).
+ */
+export function gatesFor(stack: string, cwd: string = process.cwd()): RalphLoopGate[] {
   switch (stack) {
     case 'php-laravel':
       return [
-        { name: 'build', command: 'composer dump-autoload --no-interaction' },
-        { name: 'test', command: 'php artisan test' },
-        { name: 'lint', command: './vendor/bin/pint --test' },
+        gate('build', 'composer', ['dump-autoload', '--no-interaction']),
+        gate('test', 'php', ['artisan', 'test']),
+        gate('lint', path.join('vendor', 'bin', 'pint'), ['--test']),
       ];
     case 'node-nestjs':
       return [
-        { name: 'build', command: 'npm run build' },
-        { name: 'test', command: 'npm test -- --passWithNoTests' },
-        { name: 'lint', command: 'npm run lint' },
+        npmGate('build', ['run', 'build']),
+        npmGate('test', ['test', '--', '--passWithNoTests']),
+        npmGate('lint', ['run', 'lint']),
       ];
     case 'python-fastapi':
       return [
-        {
-          name: 'build',
-          command: pythonShellPath('python', '-m', 'compileall', '-q', '.'),
-        },
-        { name: 'test', command: pythonShellPath('pytest', '-q', '--tb=short') },
-        { name: 'lint', command: pythonShellPath('ruff', 'check', '.') },
+        pythonGate(cwd, 'build', 'python', ['-m', 'compileall', '-q', '.']),
+        pythonGate(cwd, 'test', 'pytest', ['-q', '--tb=short']),
+        pythonGate(cwd, 'lint', 'ruff', ['check', '.']),
       ];
     case 'rust-axum':
       return [
-        { name: 'build', command: 'cargo build --quiet' },
-        { name: 'test', command: 'cargo test --quiet' },
-        { name: 'lint', command: 'cargo clippy --quiet -- -D warnings' },
+        gate('build', 'cargo', ['build', '--quiet']),
+        gate('test', 'cargo', ['test', '--quiet']),
+        gate('lint', 'cargo', ['clippy', '--quiet', '--', '-D', 'warnings']),
       ];
     case 'go-gin':
     case 'go-stdlib':
       return [
-        { name: 'build', command: 'go build ./...' },
-        { name: 'test', command: 'go test ./...' },
-        { name: 'lint', command: 'go vet ./...' },
+        gate('build', 'go', ['build', './...']),
+        gate('test', 'go', ['test', './...']),
+        gate('lint', 'go', ['vet', './...']),
       ];
     case 'react':
     case 'vue':
       return [
-        { name: 'build', command: 'npm run build' },
-        { name: 'test', command: 'npm test -- --run --passWithNoTests' },
-        { name: 'lint', command: 'npm run lint' },
+        npmGate('build', ['run', 'build']),
+        npmGate('test', ['test', '--', '--run', '--passWithNoTests']),
+        npmGate('lint', ['run', 'lint']),
       ];
-    // cargo-leptos manages the SSR + WASM dual build; trunk manages CSR WASM.
-    // Tests run via cargo test --workspace (not cargo leptos test — that doesn't exist).
     case 'rust-leptos':
       return [
-        { name: 'build', command: 'cargo leptos build --release' },
-        { name: 'test', command: 'cargo test --workspace' },
-        { name: 'lint', command: 'cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check' },
+        gate('build', 'cargo', ['leptos', 'build', '--release']),
+        gate('test', 'cargo', ['test', '--workspace']),
+        LEPTOS_CLIPPY,
+        LEPTOS_FMT,
       ];
     case 'rust-leptos-csr':
       return [
-        { name: 'build', command: 'trunk build --release' },
-        { name: 'test', command: 'cargo test --workspace' },
-        { name: 'lint', command: 'cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check' },
+        gate('build', 'trunk', ['build', '--release']),
+        gate('test', 'cargo', ['test', '--workspace']),
+        LEPTOS_CLIPPY,
+        LEPTOS_FMT,
       ];
     case 'mcp-server-node-ts':
       return [
-        { name: 'build', command: 'npm run build' },
-        { name: 'test', command: 'npm test -- --run --passWithNoTests' },
-        { name: 'lint', command: 'npm run lint' },
+        npmGate('build', ['run', 'build']),
+        npmGate('test', ['test', '--', '--run', '--passWithNoTests']),
+        npmGate('lint', ['run', 'lint']),
       ];
     case 'mcp-server-python':
       return [
-        {
-          name: 'build',
-          command: pythonShellPath('python', '-m', 'compileall', '-q', '.'),
-        },
-        { name: 'test', command: pythonShellPath('pytest', '-q', '--tb=short') },
-        { name: 'lint', command: pythonShellPath('ruff', 'check', '.') },
+        pythonGate(cwd, 'build', 'python', ['-m', 'compileall', '-q', '.']),
+        pythonGate(cwd, 'test', 'pytest', ['-q', '--tb=short']),
+        pythonGate(cwd, 'lint', 'ruff', ['check', '.']),
       ];
     default:
       throw new Error(
@@ -118,14 +144,15 @@ export function gatesFor(stack: string): RalphLoopGate[] {
   }
 }
 
+export function formatGateCommand(gateDef: RalphLoopGate): string {
+  return [gateDef.command, ...gateDef.args].join(' ');
+}
+
 export interface RunRalphLoopOptions {
   stack: string;
   cwd: string;
-  /** Cap on captured stderr per gate (chars). Defaults to 4000. */
   maxStderrChars?: number;
-  /** Per-gate timeout in seconds. Defaults to 600. */
   timeoutSeconds?: number;
-  /** Receives a status line every time a gate starts/finishes. */
   onProgress?: (event: { gate: GateName; phase: 'start' | 'pass' | 'fail' }) => void;
 }
 
@@ -143,77 +170,43 @@ export async function runRalphLoop(
     onProgress,
   } = options;
 
-  const gates = gatesFor(stack);
+  const gates = gatesFor(stack, cwd);
   const start = Date.now();
 
-  for (const gate of gates) {
-    onProgress?.({ gate: gate.name, phase: 'start' });
-    const result = await runShell(gate.command, cwd, timeoutSeconds, maxStderrChars);
-    if (result.code !== 0) {
-      onProgress?.({ gate: gate.name, phase: 'fail' });
+  for (const gateDef of gates) {
+    onProgress?.({ gate: gateDef.name, phase: 'start' });
+    const result = await safeSpawn(gateDef.command, gateDef.args, {
+      cwd,
+      timeoutSeconds,
+      maxChars: maxStderrChars,
+    });
+
+    const stderr = result.timedOut
+      ? appendCapped(
+          result.stderr,
+          `\n[Ralph Loop] timed out after ${timeoutSeconds}s`,
+          maxStderrChars,
+        )
+      : result.stderr;
+
+    const code =
+      result.timedOut && result.code === 0 ? 124 : result.code;
+
+    if (code !== 0) {
+      onProgress?.({ gate: gateDef.name, phase: 'fail' });
       return {
         passed: false,
-        failedAt: gate.name,
-        failedCommand: gate.command,
-        stderr: result.stderr,
+        failedAt: gateDef.name,
+        failedCommand: formatGateCommand(gateDef),
+        stderr,
         stdout: result.stdout,
         durationMs: Date.now() - start,
       };
     }
-    onProgress?.({ gate: gate.name, phase: 'pass' });
+    onProgress?.({ gate: gateDef.name, phase: 'pass' });
   }
 
   return { passed: true, durationMs: Date.now() - start };
-}
-
-// ─── Internal ────────────────────────────────────────────────────────────────
-
-interface ShellResult {
-  code: number;
-  stdout: string;
-  stderr: string;
-}
-
-function runShell(
-  command: string,
-  cwd: string,
-  timeoutSeconds: number,
-  maxChars: number,
-): Promise<ShellResult> {
-  return new Promise((resolve) => {
-    const proc = spawn(command, {
-      cwd,
-      shell: true,
-    });
-
-    let stdout = '';
-    let stderr = '';
-    proc.stdout?.on('data', (chunk) => {
-      stdout = appendCapped(stdout, chunk.toString(), maxChars);
-    });
-    proc.stderr?.on('data', (chunk) => {
-      stderr = appendCapped(stderr, chunk.toString(), maxChars);
-    });
-
-    const timer = setTimeout(() => {
-      proc.kill('SIGTERM');
-      stderr += `\n[Ralph Loop] timed out after ${timeoutSeconds}s`;
-    }, timeoutSeconds * 1000);
-
-    proc.on('error', (err) => {
-      clearTimeout(timer);
-      resolve({
-        code: 1,
-        stdout,
-        stderr: appendCapped(stderr, `spawn error: ${err.message}`, maxChars),
-      });
-    });
-
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ code: code ?? 0, stdout, stderr });
-    });
-  });
 }
 
 function appendCapped(buffer: string, chunk: string, max: number): string {
@@ -222,26 +215,7 @@ function appendCapped(buffer: string, chunk: string, max: number): string {
 }
 
 /**
- * Resolve a Python tool path: prefers `.venv/bin/<tool>` (or `.venv\Scripts\<tool>.exe`
- * on Windows) when a venv is present in the project. Falls back to the bare
- * command on PATH otherwise.
- */
-function pythonShellPath(tool: string, ...args: string[]): string {
-  // We can't probe at module load (we don't know cwd yet), so encode the
-  // resolution in the shell command itself: try venv first, otherwise PATH.
-  const venvWin = `.venv\\Scripts\\${tool}.exe`;
-  const venvNix = `.venv/bin/${tool}`;
-  const argsStr = args.join(' ');
-  if (process.platform === 'win32') {
-    return `if exist ${venvWin} (${venvWin} ${argsStr}) else (${tool} ${argsStr})`;
-  }
-  return `if [ -x ${venvNix} ]; then ${venvNix} ${argsStr}; else ${tool} ${argsStr}; fi`;
-}
-
-/**
- * Read the project's stack from `dare.config.json`. Combines `structure`,
- * `backend`, `frontend` and (for MCP) `mcpLanguage` into the stack key used
- * by `gatesFor()`.
+ * Read the project's stack from `dare.config.json`.
  */
 export async function resolveStackFromConfig(cwd: string): Promise<string> {
   const cfgPath = path.join(cwd, 'dare.config.json');
@@ -260,7 +234,6 @@ export async function resolveStackFromConfig(cwd: string): Promise<string> {
   if (cfg.structure === 'mcp-server') {
     return `mcp-server-${cfg.mcpLanguage ?? 'node-ts'}`;
   }
-  // For monorepo / backend, prefer the backend stack; for frontend-only, the frontend.
   if (cfg.backend) return cfg.backend;
   if (cfg.frontend) return cfg.frontend;
   throw new Error(

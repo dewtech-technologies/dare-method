@@ -1,0 +1,9 @@
+--- a/repo/src/math.ts
++++ b/repo/src/math.ts
+@@ -1,5 +1,5 @@
+ export function add(a: number, b: number): number {
+-  return a + b + 1;
++  return a + b;
+ }
+ export function sub(a: number, b: number): number {
+   return a - b + 1;

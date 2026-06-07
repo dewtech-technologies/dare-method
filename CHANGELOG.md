@@ -9,6 +9,26 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.3.0] — 2026-06
+
+Release **Reliable Verification Core** — núcleo determinístico de verificação pós-Ralph Loop (opt-in via `dare.config.json#verification`).
+
+### ✨ Adicionado
+
+- **`verification/**` — mutation (Stryker/mutmut/cargo-mutants/Infection), fail-to-pass, anti-tamper, type-check, decay policy, best-of-N (worktrees + Pareto), prerank exec-free, telemetria GraphRAG (`gate` + `verified_by`).**
+- **`dare execute --verify` / `--no-verify` / `--full-mutation` / `--verdict-json` / `--best-of` / `--policy` / `--prerank`** — flags BLUEPRINT 5.1.1; exit codes 0/1/3/4.
+- **`dare bench`** — harness determinístico de fixtures (`Fix·Rate`, solve-rate, baseline + regressão > 3pp).
+- **`exec/safe-spawn.ts`** — spawn argv `shell:false`, env saneado (RS-06).
+- **Bloco `verification` em novos projetos** (`enabled: false`) + migration `add-verification-defaults` (UPDATE-MANIFEST 3.3.0).
+
+### 🐛 Corrigido
+
+- **RS-06:** `ralph-loop.ts` migrado para argv explícito; zero `shell:true` no núcleo de produção.
+
+### 📝 Notas
+
+- Verificação é **opt-in** (RNF-06): ausência do bloco `verification` mantém comportamento clássico build/test/lint.
+
 ## [3.2.0] — 2026-06
 
 Release focada na **qualidade dos artefatos de brownfield** (`dare reverse` / `dare dna`). Até a v3.1, os artefatos gerados eram quase só esqueleto: `IDEIA.md` e as specs de módulo continham placeholders `<!-- AGENT -->` em vez de dados reais coletados da aplicação. Agora a camada determinística (sem LLM) **roda por padrão** e renderiza dados reais (endpoints + entidades) nos artefatos; o agente da IDE apenas enriquece a semântica em cima de fatos concretos.

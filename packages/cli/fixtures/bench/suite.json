@@ -1,0 +1,34 @@
+{
+  "fixtures": [
+    {
+      "id": "fix-001-nest-correct",
+      "stack": "node-nestjs",
+      "description": "Golden patch fixes failing add() without pass-to-pass regression"
+    },
+    {
+      "id": "fix-002-nest-weak-test",
+      "stack": "node-nestjs",
+      "description": "Patch passes weak assertion but leaves mutant alive (O-01)"
+    },
+    {
+      "id": "fix-003-fastapi-correct",
+      "stack": "python-fastapi",
+      "description": "Golden patch fixes divide() without pass-to-pass regression"
+    },
+    {
+      "id": "fix-004-fastapi-regression",
+      "stack": "python-fastapi",
+      "description": "Patch fixes fail-to-pass but breaks a pass-to-pass test"
+    },
+    {
+      "id": "fix-005-nest-partial",
+      "stack": "node-nestjs",
+      "description": "Patch fixes only part of the fail-to-pass suite"
+    },
+    {
+      "id": "fix-006-fastapi-weak-test",
+      "stack": "python-fastapi",
+      "description": "Patch satisfies weak test but mutant survives (O-01)"
+    }
+  ]
+}

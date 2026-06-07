@@ -1,0 +1,2 @@
+add sums two numbers
+sub subtracts two numbers

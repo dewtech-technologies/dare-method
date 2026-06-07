@@ -1,0 +1,1 @@
+{"id":"fix-006-fastapi-weak-test","stack":"python-fastapi","description":"Patch satisfies weak test but mutant survives (O-01)"}

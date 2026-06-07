@@ -12,6 +12,7 @@
  */
 import path from 'node:path';
 import fs from 'fs-extra';
+import { assertRelativeSafe } from '../utils/path-safety.js';
 import type { DareDnaArtifact, StackId } from './types.js';
 import { DARE_DNA } from './types.js';
 
@@ -81,17 +82,6 @@ export interface DnaEmitOpts {
   readonly content: string;
   /** Subpath relative to opts.dir. Must not be absolute and must not contain '..'. */
   readonly targetPath: string;
-}
-
-function assertRelativeSafe(targetPath: string): void {
-  if (path.isAbsolute(targetPath)) {
-    throw new Error(`targetPath must be relative, got absolute: ${targetPath}`);
-  }
-  // Normalize and check for parent traversal.
-  const norm = path.posix.normalize(targetPath.replace(/\\/g, '/'));
-  if (norm.startsWith('..') || norm.includes('/../')) {
-    throw new Error(`targetPath must not contain '..': ${targetPath}`);
-  }
 }
 
 /**

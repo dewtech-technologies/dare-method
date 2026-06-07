@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-07T18:06:11.030Z",
+  "tasks": {
+    "task-001": {
+      "status": "DONE",
+      "output": "packages/cli/src/verification/types.ts — contratos readonly seção 4.1 Blueprint.",
+      "duration": 40205
+    },
+    "task-002": {
+      "status": "DONE",
+      "output": "packages/cli/src/exec/safe-spawn.ts + sanitizeEnv; testes safe-spawn (argv, timeout 124, truncate, env).",
+      "duration": 37990
+    },
+    "task-003": {
+      "status": "DONE",
+      "output": "packages/cli/src/utils/path-safety.ts; dna-emitter importa util; path-safety + dna-emitter.spec verdes.",
+      "duration": 41021
+    },
+    "task-004": {
+      "status": "DONE",
+      "output": "packages/cli/src/utils/logger.ts (pino, DARE_LOG_LEVEL, scope); logger.test.ts verde.",
+      "duration": 39573
+    },
+    "task-005": {
+      "status": "DONE",
+      "output": "packages/cli/src/verification/config.ts + zod; DEFAULTS seção 4.1; parseVerificationConfig + VerificationConfigError; config.test.ts (4). pnpm install zod.",
+      "duration": 41889
+    },
+    "task-006": {
+      "status": "DONE",
+      "output": "packages/cli/eslint.config.js RS-06; no-shell-true.test.ts; ralph-loop ignorado até T-010; stack-bootstrap shell:false.",
+      "duration": 38414
+    },
+    "task-010": {
+      "status": "DONE",
+      "output": "ralph-loop.ts: RalphLoopGate+args[], gatesFor argv todas stacks, resolvePythonBin, safeSpawn; Leptos lint split; sem shell:true. ralph-loop.test.ts (19).",
+      "duration": 44154
+    },
+    "task-020": {
+      "status": "DONE",
+      "output": "verification/gates/fail-to-pass.ts; record/checkFailToPass/testCommandFor; npm-invoke; fail-to-pass.test.ts (5).",
+      "duration": 41015
+    },
+    "task-021": {
+      "status": "DONE",
+      "output": "gates/anti-tamper.ts: snapshotTests/checkAntiTamper AST-lite JS/Py/Rust/PHP; skip/only detection; anti-tamper.test.ts (6).",
+      "duration": 52573
+    },
+    "task-030": {
+      "status": "DONE",
+      "output": "verification/gates/mutation/adapter.ts + registry.ts (lazy ESM); placeholders stryker/mutmut/cargo-mutants/infection; mutation-registry.test.ts (4).",
+      "duration": 42308
+    },
+    "task-031": {
+      "status": "DONE",
+      "output": "gates/mutation/stryker.ts: isAvailable, run (safeSpawn+npmInvoke), parseStrykerReport; fixture+mutation-stryker.test.ts (5); @stryker-mutator/core@8.7.1 devDep.",
+      "duration": 44218
+    },
+    "task-032": {
+      "status": "DONE",
+      "output": "gates/mutation/mutmut.ts: isAvailable (resolvePythonBin+--version>=3.2), run via safeSpawn, parseMutmutReport; fallback export_cicd_stats; fixture mutmut.results.json; mutation-mutmut.test.ts (5).",
+      "duration": 46326
+    },
+    "task-033": {
+      "status": "DONE",
+      "output": "gates/mutation/cargo-mutants.ts: isAvailable (cargo mutants --version>=25), run via safeSpawn with --in-diff git diff + --json --timeout; parseCargoMutantsReport from mutants.out/outcomes.json (caught/timeout->killed, missed->survived, unviable->noCoverage); fixture+mutation-cargo-mutants.test.ts (5).",
+      "duration": 42378
+    },
+    "task-034": {
+      "status": "DONE",
+      "output": "gates/mutation/infection.ts: isAvailable (vendor/bin/infection --version>=0.29), run via safeSpawn with --only-covering-test-cases --filter --logger-json=infection.json; parseInfectionReport (killed+timeout+error->killed, escaped->survived, notTested->noCoverage); fixture+mutation-infection.test.ts (5).",
+      "duration": 46958
+    },
+    "task-035": {
+      "status": "DONE",
+      "output": "gates/type-check.ts: typeCommandFor + checkTypes por stack; SKIP explicito; type-check.test.ts (4).",
+      "duration": 61981
+    },
+    "task-040": {
+      "status": "DONE",
+      "output": "decay/signature.ts: failureSignature 8-hex sha256 com normalizacao de paths/timestamps/linhas; failure-signature.test.ts (4).",
+      "duration": 92188
+    },
+    "task-041": {
+      "status": "DONE",
+      "output": "decay/policy.ts: decideNextAction + isSaturated (5 ramos RF-06); decay-policy.test.ts (9); docs/ralph-loop.md aponta regra canonica.",
+      "duration": 50525
+    },
+    "task-042": {
+      "status": "DONE",
+      "output": "state-store.ts: PersistedTaskState.attempts + appendAttempt/getAttempts monotonic; saveState preserva attempts; state-store.test.ts (4).",
+      "duration": 49155
+    },
+    "task-050": {
+      "status": "DONE",
+      "output": "verification/runner.ts: runVerification/createRunVerification com DI; ordem fail-to-pass→anti-tamper→type→mutation; curto-circuito; FailToPassMissingError; MutationToolNotFoundError; logger pino; runner.test.ts (7). Gates aux: type-check.ts + anti-tamper.ts (deps).",
+      "duration": 60592
+    },
+    "task-051": {
+      "status": "DONE",
+      "output": "execute-verification.ts + wire em execute.ts: flags --verify/--no-verify/--full-mutation/--verdict-json, runPostRalphVerification, recordFailureAndVerdict, exit 0/1/3/4 com mensagens BLUEPRINT 5.1.1; 9 testes execute.verify verdes; tsc+build OK",
+      "duration": 95025
+    },
+    "task-060": {
+      "status": "DONE",
+      "output": "verification/best-of-n/worktree.ts (safeSpawn git argv, assertRelativeSafe); worktree.test.ts (3).",
+      "duration": 44826
+    },
+    "task-061": {
+      "status": "DONE",
+      "output": "selectByPareto + Candidate em types.ts; 5 testes",
+      "duration": 86823
+    },
+    "task-062": {
+      "status": "DONE",
+      "output": "best-of-n/runner.ts: runBestOfN + promoteWinnerPatch; best-of-n-runner.test.ts (2)",
+      "duration": 93882
+    },
+    "task-063": {
+      "status": "DONE",
+      "output": "best-of-n/selector/prerank.ts: prerank + reorderByPrerank RS-07; prerank.test.ts (5)",
+      "duration": 58803
+    },
+    "task-064": {
+      "status": "DONE",
+      "output": "execute.ts: --best-of/--policy/--prerank + validateBestOf/validatePolicy; execute.best-of.spec.ts (4)",
+      "duration": 61982
+    },
+    "task-070": {
+      "status": "DONE",
+      "output": "recordVerification + gate/verified_by types; 3 testes",
+      "duration": 76472
+    },
+    "task-071": {
+      "status": "DONE",
+      "output": "fixtures loader + 6 fixtures bench; vitest exclude fixtures/",
+      "duration": 60579
+    },
+    "task-072": {
+      "status": "DONE",
+      "output": "computeFixtureResult + buildReport; 4 testes",
+      "duration": 53230
+    },
+    "task-073": {
+      "status": "DONE",
+      "output": "bench/harness.ts: runFixture/runSuite; bench-harness.test.ts (4)",
+      "duration": 61236
+    },
+    "task-074": {
+      "status": "DONE",
+      "output": "commands/bench.ts + bin/dare.ts; bench.spec.ts (3); dare-bench IDE parity",
+      "duration": 60986
+    },
+    "task-075": {
+      "status": "DONE",
+      "output": "execute.ts: recordVerification best-effort pos-verificacao; execute.telemetry.spec.ts (2)",
+      "duration": 58037
+    },
+    "task-080": {
+      "status": "DONE",
+      "output": "verification/__tests__/security.test.ts RS-01/02/03/06/07 (5)",
+      "duration": 57190
+    },
+    "task-081": {
+      "status": "DONE",
+      "output": "release.yml bench job + bench-baseline.json artifact",
+      "duration": 58182
+    },
+    "task-082": {
+      "status": "DONE",
+      "output": "project-generator.ts: verification via defaultVerificationConfigForProject() (import DEFAULTS); UPDATE-MANIFEST 3.3.0 + migration add-verification-defaults; UpdateApplier handler; config.ts seedVerificationDefaultsIfAbsent; project-generator.test.ts (3). tsc+vitest verdes.",
+      "duration": 91576
+    },
+    "task-083": {
+      "status": "DONE",
+      "output": "README verification core; ROADMAP/CHANGELOG v3.3.0; package.json 3.3.0",
+      "duration": 57306
+    }
+  }
+}
