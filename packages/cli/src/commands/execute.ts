@@ -30,6 +30,22 @@ import {
 } from '../dag-runner/ralph-loop.js';
 import { runReview } from '../utils/ReviewRunner.js';
 import { readProjectConfig } from '../utils/UpdateDetector.js';
+import {
+  gateToAspect,
+  loadVerificationConfig,
+  recordFailureAndVerdict,
+  runPostRalphVerification,
+  shouldRunVerification,
+  validateBestOf,
+  validatePolicy,
+  applyPolicyOverride,
+  resolveBestOfCount,
+} from './execute-verification.js';
+import { recordVerification } from '../verification/telemetry.js';
+import { runBestOfN } from '../verification/best-of-n/runner.js';
+import { createLogger } from '../utils/logger.js';
+
+const execLog = createLogger('execute');
 
 /**
  * `dare execute` — orchestrate DAG execution.
@@ -61,6 +77,13 @@ interface ExecuteOptions {
   duration?: string;
   noGraph: boolean;
   parallelHint: boolean;
+  verify?: boolean;
+  noVerify?: boolean;
+  fullMutation?: boolean;
+  verdictJson?: boolean;
+  bestOf?: string;
+  policy?: string;
+  prerank?: boolean;
 }
 
 export const executeCommand = new Command('execute')
@@ -78,6 +101,13 @@ export const executeCommand = new Command('execute')
   .option('--duration <ms>', 'Task duration in ms (used with --complete)')
   .option('--no-graph', 'Skip knowledge-graph ingestion for this call', false)
   .option('--parallel-hint', 'When using --next, mark every rank-equal task as RUNNING', false)
+  .option('--verify', 'Run verification core after Ralph Loop passes', false)
+  .option('--no-verify', 'Skip verification even when enabled in dare.config.json', false)
+  .option('--full-mutation', 'Disable incremental mutation for this completion', false)
+  .option('--verdict-json', 'Emit LoopVerdict as JSON on stdout', false)
+  .option('--best-of <n>', 'Run N verification candidates (best-of-N)')
+  .option('--policy <p>', 'Override loop policy (decay|fixed)')
+  .option('--prerank', 'Enable exec-free prerank ordering (never authorizes DONE)', false)
   .action(async (options: ExecuteOptions) => {
     const cwd = process.cwd();
     const dagPath = path.resolve(cwd, options.dag);
@@ -212,6 +242,30 @@ async function handleComplete(
       (result.stderr ?? '').trim(),
     ].join('\n');
 
+    try {
+      const config = await loadVerificationConfig(cwd, options.fullMutation);
+      if (
+        shouldRunVerification({
+          verify: options.verify,
+          noVerify: options.noVerify,
+          configEnabled: config.enabled,
+        })
+      ) {
+        await recordFailureAndVerdict({
+          cwd,
+          taskId,
+          stack,
+          passed: false,
+          failedAspect: gateToAspect(result.failedAt),
+          stderr: result.stderr ?? errorBody,
+          loop: config.loop,
+          verdictJson: options.verdictJson,
+        });
+      }
+    } catch {
+      // decay is best-effort when config is invalid — Ralph failure still blocks DONE
+    }
+
     markFailed(dag, taskId, {
       error: errorBody,
       durationMs: reportedDuration ?? ralphMs,
@@ -254,7 +308,123 @@ async function handleComplete(
     process.exit(1);
   }
 
-  // Gates passed — mark DONE
+  let verificationConfig = await loadVerificationConfig(cwd, options.fullMutation);
+  if (options.policy) {
+    const policyErr = validatePolicy(options.policy);
+    if (policyErr) {
+      console.error(chalk.red(policyErr));
+      process.exit(1);
+    }
+    verificationConfig = applyPolicyOverride(verificationConfig, options.policy);
+  }
+
+  const bestOfN = options.bestOf
+    ? parseInt(options.bestOf, 10)
+    : resolveBestOfCount(undefined, verificationConfig);
+  const bestOfErr = validateBestOf(bestOfN, verificationConfig.bestOfN.max);
+  if (bestOfErr) {
+    console.error(chalk.red(bestOfErr));
+    process.exit(1);
+  }
+
+  if (options.prerank) {
+    verificationConfig = {
+      ...verificationConfig,
+      prerank: { enabled: true },
+    };
+  }
+
+  let verification: Awaited<ReturnType<typeof runPostRalphVerification>>;
+
+  if (
+    bestOfN > 1 &&
+    shouldRunVerification({
+      verify: options.verify,
+      noVerify: options.noVerify,
+      configEnabled: verificationConfig.enabled,
+    })
+  ) {
+    try {
+      const { winner } = await runBestOfN({
+        taskId,
+        repoRoot: cwd,
+        n: bestOfN,
+        stack,
+        config: verificationConfig,
+        fillCandidate: async () => {
+          /* Skill/agent fills worktrees; CLI only orchestrates verification. */
+        },
+      });
+      verification = {
+        ran: true,
+        passed: winner.verification.passed,
+        exitCode: winner.verification.passed ? 0 : 1,
+        verificationResult: winner.verification,
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(chalk.red(`Error: best-of-N failed: ${msg}`));
+      markFailed(dag, taskId, { error: msg, durationMs: reportedDuration ?? ralphMs, graph });
+      await persist(dag, stateFile, canvasPath);
+      process.exit(1);
+    }
+  } else {
+    verification = await runPostRalphVerification({
+      taskId,
+      cwd,
+      stack,
+      verify: options.verify,
+      noVerify: options.noVerify,
+      fullMutation: options.fullMutation,
+      verdictJson: options.verdictJson,
+    });
+  }
+
+  if (verification.errorMessage) {
+    console.error(chalk.red(verification.errorMessage));
+    markFailed(dag, taskId, {
+      error: verification.errorMessage,
+      durationMs: reportedDuration ?? ralphMs,
+      graph,
+    });
+    await persist(dag, stateFile, canvasPath);
+    process.exit(verification.exitCode);
+  }
+
+  if (verification.ran && !verification.passed) {
+    const failReason =
+      verification.verificationResult?.aspects
+        .filter((a) => a.verdict === 'FAIL')
+        .map((a) => `${a.aspect}: ${a.reason}`)
+        .join('; ') ?? 'verification failed';
+
+    markFailed(dag, taskId, {
+      error: failReason,
+      durationMs: reportedDuration ?? ralphMs,
+      graph,
+    });
+    console.log(chalk.red.bold(`\n❌ ${taskId} FAILED — verification blocked DONE.`));
+    console.log(chalk.gray(`   ${failReason}`));
+    await persist(dag, stateFile, canvasPath);
+    process.exit(1);
+  }
+
+  if (
+    verification.ran &&
+    verification.verificationResult &&
+    graph &&
+    !options.noGraph
+  ) {
+    try {
+      recordVerification(graph, verification.verificationResult);
+    } catch (err) {
+      execLog.warn(
+        { err: err instanceof Error ? err.message : String(err), taskId },
+        'telemetry write failed (best-effort)',
+      );
+    }
+  }
+
   const task = markDone(dag, taskId, {
     output: options.output,
     tokens,
@@ -262,7 +432,10 @@ async function handleComplete(
     graph,
   });
 
-  console.log(chalk.green.bold(`\n✅ ${task.id} DONE — Ralph Loop passed in ${ralphMs}ms.`));
+  const verifyNote = verification.ran ? ' + verification PASS' : '';
+  console.log(
+    chalk.green.bold(`\n✅ ${task.id} DONE — Ralph Loop passed in ${ralphMs}ms${verifyNote}.`),
+  );
   if (task.tokens) console.log(chalk.gray(`   tokens: ${task.tokens}`));
 
   await persist(dag, stateFile, canvasPath);

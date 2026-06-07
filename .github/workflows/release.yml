@@ -94,6 +94,24 @@ jobs:
           pnpm -r build
           pnpm -r test
 
+      - name: DARE bench regression gate (RF-08)
+        run: |
+          cd packages/cli
+          pnpm build
+          node dist/bin/dare.js bench \
+            --suite fixtures/bench \
+            --json \
+            --baseline fixtures/bench/bench-baseline.json \
+            --fail-on-regression 3 \
+            > ../../bench-report.json
+        continue-on-error: false
+
+      - name: Upload bench report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-report
+          path: bench-report.json
+
       - name: Commit version bump
         run: |
           git add package.json packages/cli/package.json

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "ranAt": "2026-06-01T00:00:00.000Z",
+  "suite": "fixtures/bench",
+  "totals": {
+    "fixtures": 6,
+    "solved": 0,
+    "solveRate": 0
+  },
+  "results": []
+}

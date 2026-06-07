@@ -1,0 +1,10 @@
+{
+  "name": "dare-method",
+  "structure": "mcp-server",
+  "mcpLanguage": "node-ts",
+  "version": "3.2.0",
+  "review": {
+    "onComplete": false,
+    "strict": false
+  }
+}

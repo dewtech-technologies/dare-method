@@ -18,6 +18,7 @@ import type {
   UpdatePlan,
 } from '../types/UpdateManifest.types.js';
 import { classifyChange, readProjectConfig } from './UpdateDetector.js';
+import { seedVerificationDefaultsIfAbsent } from '../verification/config.js';
 
 /** Where templates ship inside the CLI bundle. */
 function getTemplatesRoot(): string {
@@ -221,6 +222,13 @@ async function runMigration(
       if (!cfg.refine) {
         cfg.refine = { thresholds: { low: 5, med: 12, high: 20 } };
       }
+      await fs.writeJSON(configPath, cfg, { spaces: 2 });
+      return;
+    }
+    case 'add-verification-defaults': {
+      const configPath = path.join(projectRoot, 'dare.config.json');
+      const cfg = (await readProjectConfig(projectRoot)) as Record<string, unknown>;
+      seedVerificationDefaultsIfAbsent(cfg);
       await fs.writeJSON(configPath, cfg, { spaces: 2 });
       return;
     }

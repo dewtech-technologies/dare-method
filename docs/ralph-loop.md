@@ -64,9 +64,12 @@ Em prática observada na Dewtech:
 | 1 (passou primeira) | ~30% | task simples ou bem especificada |
 | 2-3 | ~50% | normal — IA pegou erro de tipagem, import, edge case |
 | 4-6 | ~15% | task estava ambígua ou Validation Gates incompletos |
-| 7+ | ~5% | **STOP** — provavelmente tem problema arquitetural, volte ao Blueprint |
+| 7+ | ~5% | **ESCALATE** — provavelmente tem problema arquitetural, volte ao Blueprint |
 
-A regra empírica: **se o Ralph Loop passa de 6 iterações no mesmo erro, abortar.** A IA está tentando "fazer passar o teste" de jeito errado, e provavelmente o problema é a especificação ou o BLUEPRINT.
+> **Regra canônica (v3.2+):** o teto e a saturação de falhas repetidas são decididos de forma
+> determinística por `packages/cli/src/verification/decay/policy.ts` (`decideNextAction`), não por
+> um cap fixo contraditório neste doc. O agente consome o `LoopVerdict` (`CONTINUE`, `FRESH_START`,
+> `REPLAN`, `ESCALATE`, `DONE`) emitido pelo CLI após cada tentativa.
 
 ## 🎯 Validation Gates — o que torna tudo possível
 

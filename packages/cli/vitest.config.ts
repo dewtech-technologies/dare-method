@@ -8,6 +8,11 @@ export default defineConfig({
     // files (e.g. MCP echo tests) depend on packages installed in the
     // generated project (zod, the MCP SDK), not in the CLI workspace.
     // Exclude them so `vitest run` only collects the CLI's own tests.
-    exclude: ['**/node_modules/**', '**/dist/**', 'templates/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'templates/**',
+      'fixtures/**',
+    ],
   },
 });

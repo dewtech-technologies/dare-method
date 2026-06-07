@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-framework",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "DARE Framework - Distributed AI-assisted Requirements Engineering",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
   "scripts": {
     "dev": "pnpm --recursive --parallel dev",
     "build": "pnpm --recursive build",
-    "test": "pnpm --recursive test",
-    "lint": "pnpm --recursive lint",
+    "test": "pnpm --filter @dewtech/dare-cli exec vitest run",
+    "lint": "pnpm --filter @dewtech/dare-cli lint",
     "format": "pnpm --recursive format",
     "cli": "pnpm -F @dewtech/dare-cli"
   },

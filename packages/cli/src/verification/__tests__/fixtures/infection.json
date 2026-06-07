@@ -1,0 +1,33 @@
+{
+  "stats": {
+    "totalMutantsCount": 10,
+    "killedCount": 4,
+    "notTestedCount": 2,
+    "escapedCount": 2,
+    "errorCount": 1,
+    "timeOutCount": 1,
+    "msi": 60,
+    "mutationCodeCoverage": 80,
+    "coveredCodeMsi": 75
+  },
+  "killed": [
+    {
+      "mutator": {
+        "mutatorName": "TrueValue",
+        "originalFilePath": "app/Services/UserService.php",
+        "originalStartLine": 12
+      }
+    }
+  ],
+  "escaped": [
+    {
+      "mutator": {
+        "mutatorName": "GreaterThan",
+        "originalFilePath": "app/Http/Controllers/UserController.php",
+        "originalStartLine": 28
+      }
+    }
+  ],
+  "timeouted": [],
+  "uncovered": []
+}

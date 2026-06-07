@@ -1,50 +1,66 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import {
   gatesFor,
   resolveStackFromConfig,
+  resolvePythonBin,
   runRalphLoop,
+  formatGateCommand,
 } from '../../dag-runner/ralph-loop.js';
+import * as safeSpawnMod from '../../exec/safe-spawn.js';
 
 describe('gatesFor', () => {
-  it('returns build/test/lint for php-laravel', () => {
+  it('returns build/test/lint argv for php-laravel', () => {
     const gates = gatesFor('php-laravel');
     expect(gates.map((g) => g.name)).toEqual(['build', 'test', 'lint']);
-    expect(gates.find((g) => g.name === 'test')?.command).toContain('artisan test');
+    const test = gates.find((g) => g.name === 'test');
+    expect(test?.command).toBe('php');
+    expect(test?.args).toEqual(['artisan', 'test']);
   });
 
-  it('returns build/test/lint for node-nestjs', () => {
+  it('returns argv for node-nestjs', () => {
     const gates = gatesFor('node-nestjs');
     expect(gates.map((g) => g.name)).toEqual(['build', 'test', 'lint']);
-    expect(gates.find((g) => g.name === 'build')?.command).toBe('npm run build');
+    const build = gates.find((g) => g.name === 'build');
+    expect(build?.args).toContain('run');
+    expect(build?.args).toContain('build');
   });
 
-  it('returns build/test/lint for rust-axum', () => {
+  it('returns argv for rust-axum', () => {
     const gates = gatesFor('rust-axum');
-    expect(gates.find((g) => g.name === 'lint')?.command).toContain('clippy');
+    const lint = gates.find((g) => g.name === 'lint');
+    expect(lint?.command).toBe('cargo');
+    expect(lint?.args).toContain('clippy');
   });
 
-  it('returns build/test/lint for go-gin', () => {
+  it('returns argv for go-gin', () => {
     const gates = gatesFor('go-gin');
-    expect(gates.map((g) => g.name)).toEqual(['build', 'test', 'lint']);
-    expect(gates.find((g) => g.name === 'build')?.command).toBe('go build ./...');
-    expect(gates.find((g) => g.name === 'test')?.command).toBe('go test ./...');
-    expect(gates.find((g) => g.name === 'lint')?.command).toBe('go vet ./...');
+    expect(gates.find((g) => g.name === 'build')?.args).toEqual(['build', './...']);
+    expect(gates.find((g) => g.name === 'test')?.args).toEqual(['test', './...']);
+    expect(gates.find((g) => g.name === 'lint')?.args).toEqual(['vet', './...']);
   });
 
-  it('returns the same gates for go-stdlib (same Go toolchain)', () => {
-    const gin = gatesFor('go-gin');
-    const stdlib = gatesFor('go-stdlib');
-    expect(stdlib).toEqual(gin);
+  it('returns the same gates for go-stdlib', () => {
+    expect(gatesFor('go-stdlib')).toEqual(gatesFor('go-gin'));
   });
 
-  it('returns gates for python-fastapi (with venv-aware shell)', () => {
-    const gates = gatesFor('python-fastapi');
+  it('returns python argv using resolvePythonBin', () => {
+    const cwd = path.join(os.tmpdir(), 'ralph-py-gates');
+    const gates = gatesFor('python-fastapi', cwd);
     expect(gates).toHaveLength(3);
-    // The lint command tries the venv first, then falls back to PATH.
-    expect(gates.find((g) => g.name === 'lint')?.command).toMatch(/\.venv/);
+    const lint = gates.find((g) => g.name === 'lint');
+    expect(lint?.command).toBe(resolvePythonBin(cwd, 'ruff'));
+    expect(lint?.args).toEqual(['check', '.']);
+  });
+
+  it('splits leptos lint into clippy and fmt gates', () => {
+    const gates = gatesFor('rust-leptos');
+    const lintGates = gates.filter((g) => g.name === 'lint');
+    expect(lintGates).toHaveLength(2);
+    expect(lintGates[0]?.args).toContain('clippy');
+    expect(lintGates[1]?.args).toEqual(['fmt', '--check']);
   });
 
   it('throws for unknown stack', () => {
@@ -52,11 +68,41 @@ describe('gatesFor', () => {
   });
 });
 
+describe('resolvePythonBin', () => {
+  let cwd: string;
+
+  beforeEach(async () => {
+    cwd = path.join(
+      os.tmpdir(),
+      `ralph-venv-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
+    await fs.ensureDir(cwd);
+  });
+
+  afterEach(async () => {
+    await fs.remove(cwd).catch(() => undefined);
+  });
+
+  it('prefers posix venv bin when present', async () => {
+    const bin = path.join(cwd, '.venv', 'bin', 'pytest');
+    await fs.ensureDir(path.dirname(bin));
+    await fs.writeFile(bin, '');
+    expect(resolvePythonBin(cwd, 'pytest')).toBe(bin);
+  });
+
+  it('falls back to bare tool name', () => {
+    expect(resolvePythonBin(cwd, 'pytest')).toBe('pytest');
+  });
+});
+
 describe('resolveStackFromConfig', () => {
   let cwd: string;
 
   beforeEach(async () => {
-    cwd = path.join(os.tmpdir(), `dare-stack-resolve-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    cwd = path.join(
+      os.tmpdir(),
+      `dare-stack-resolve-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     await fs.ensureDir(cwd);
   });
 
@@ -69,8 +115,7 @@ describe('resolveStackFromConfig', () => {
       structure: 'backend',
       backend: 'php-laravel',
     });
-    const stack = await resolveStackFromConfig(cwd);
-    expect(stack).toBe('php-laravel');
+    expect(await resolveStackFromConfig(cwd)).toBe('php-laravel');
   });
 
   it('falls back to frontend when no backend', async () => {
@@ -78,8 +123,7 @@ describe('resolveStackFromConfig', () => {
       structure: 'frontend',
       frontend: 'react',
     });
-    const stack = await resolveStackFromConfig(cwd);
-    expect(stack).toBe('react');
+    expect(await resolveStackFromConfig(cwd)).toBe('react');
   });
 
   it('builds composite key for mcp-server', async () => {
@@ -87,51 +131,95 @@ describe('resolveStackFromConfig', () => {
       structure: 'mcp-server',
       mcpLanguage: 'python',
     });
-    const stack = await resolveStackFromConfig(cwd);
-    expect(stack).toBe('mcp-server-python');
+    expect(await resolveStackFromConfig(cwd)).toBe('mcp-server-python');
   });
 
   it('throws when config is absent', async () => {
-    await expect(resolveStackFromConfig(cwd)).rejects.toThrow(/dare\.config\.json not found/);
+    await expect(resolveStackFromConfig(cwd)).rejects.toThrow(
+      /dare\.config\.json not found/,
+    );
   });
 
   it('throws when config has no stack info', async () => {
-    await fs.writeJson(path.join(cwd, 'dare.config.json'), { structure: 'monorepo' });
-    await expect(resolveStackFromConfig(cwd)).rejects.toThrow(/no backend\/frontend/);
+    await fs.writeJson(path.join(cwd, 'dare.config.json'), {
+      structure: 'monorepo',
+    });
+    await expect(resolveStackFromConfig(cwd)).rejects.toThrow(
+      /no backend\/frontend/,
+    );
   });
 });
 
 describe('runRalphLoop (integration)', () => {
-  // Use a fake stack with shell commands that don't depend on any toolchain,
-  // so the test runs everywhere (including CI Linux/macOS/Windows).
   let cwd: string;
 
   beforeEach(async () => {
-    cwd = path.join(os.tmpdir(), `dare-ralph-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    cwd = path.join(
+      os.tmpdir(),
+      `dare-ralph-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     await fs.ensureDir(cwd);
+    vi.restoreAllMocks();
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await fs.remove(cwd).catch(() => undefined);
   });
 
   it('returns passed=true when every gate exits 0', async () => {
-    // Inject a fake stack via gatesFor by patching at runtime would be too
-    // invasive — instead we exercise the runner via shell `node -e` snippets.
-    // We can't easily change gatesFor, so instead we rely on the rust-axum
-    // gates being well-formed and just verify the result type for an unknown
-    // command (which should fail).
-    // Skip happy-path here; covered by E2E.
-    expect(true).toBe(true);
+    vi.spyOn(safeSpawnMod, 'safeSpawn').mockResolvedValue({
+      code: 0,
+      stdout: '',
+      stderr: '',
+      timedOut: false,
+    });
+
+    const result = await runRalphLoop({ stack: 'go-gin', cwd });
+    expect(result.passed).toBe(true);
+    expect(safeSpawnMod.safeSpawn).toHaveBeenCalledTimes(3);
   });
 
-  it('returns passed=false with stderr when a gate fails (unknown command)', async () => {
-    // Manually call the internal pipe by passing an unknown stack — but we
-    // need a known stack. Use a subprocess: run a stack that surely fails
-    // (rust-axum without cargo). Mocking the shell is overkill; integration
-    // is verified end-to-end via the E2E script.
-    // Here we simply verify that calling runRalphLoop with an unknown stack
-    // raises (validates gatesFor error path).
+  it('returns passed=false with stderr when a gate fails', async () => {
+    vi.spyOn(safeSpawnMod, 'safeSpawn')
+      .mockResolvedValueOnce({
+        code: 0,
+        stdout: '',
+        stderr: '',
+        timedOut: false,
+      })
+      .mockResolvedValueOnce({
+        code: 1,
+        stdout: '',
+        stderr: 'build broke',
+        timedOut: false,
+      });
+
+    const result = await runRalphLoop({ stack: 'go-gin', cwd });
+    expect(result.passed).toBe(false);
+    expect(result.failedAt).toBe('test');
+    expect(result.stderr).toContain('build broke');
+    expect(result.failedCommand).toBe(formatGateCommand(gatesFor('go-gin')[1]!));
+  });
+
+  it('maps timeout to non-zero exit', async () => {
+    vi.spyOn(safeSpawnMod, 'safeSpawn').mockResolvedValue({
+      code: 0,
+      stdout: '',
+      stderr: '',
+      timedOut: true,
+    });
+
+    const result = await runRalphLoop({
+      stack: 'go-gin',
+      cwd,
+      timeoutSeconds: 2,
+    });
+    expect(result.passed).toBe(false);
+    expect(result.stderr).toContain('timed out');
+  });
+
+  it('throws for unknown stack', async () => {
     await expect(
       runRalphLoop({ stack: 'elixir-phoenix', cwd }),
     ).rejects.toThrow(/no gate definition/);

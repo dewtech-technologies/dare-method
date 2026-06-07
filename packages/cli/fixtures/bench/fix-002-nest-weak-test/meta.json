@@ -1,0 +1,1 @@
+{"id":"fix-002-nest-weak-test","stack":"node-nestjs","description":"Patch passes weak assertion but leaves mutant alive (O-01)"}

@@ -1,0 +1,41 @@
+{
+  "cargo_mutants_version": "25.1.0",
+  "start_time": "2026-06-04T10:00:00Z",
+  "end_time": "2026-06-04T10:05:12Z",
+  "summary": {
+    "caught": 3,
+    "missed": 1,
+    "unviable": 2,
+    "timeout": 1
+  },
+  "outcomes": [
+    {
+      "mutant_name": "src/lib.rs:4:replace",
+      "outcome": "caught"
+    },
+    {
+      "mutant_name": "src/lib.rs:8:delete",
+      "outcome": "caught"
+    },
+    {
+      "mutant_name": "src/util.rs:12:replace",
+      "outcome": "caught"
+    },
+    {
+      "mutant_name": "src/util.rs:20:replace",
+      "outcome": "missed"
+    },
+    {
+      "mutant_name": "src/lib.rs:15:replace",
+      "outcome": "unviable"
+    },
+    {
+      "mutant_name": "src/lib.rs:18:replace",
+      "outcome": "unviable"
+    },
+    {
+      "mutant_name": "src/handler.rs:7:replace",
+      "outcome": "timeout"
+    }
+  ]
+}

@@ -35,6 +35,7 @@ const CLI_COMMANDS: Record<string, string> = {
   update: 'dare-update',
   review: 'dare-review',
   refine: 'dare-refine',
+  bench: 'dare-bench',
   skill: 'dare-skill',
   welcome: 'dare-welcome',
 };

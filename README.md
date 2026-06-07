@@ -14,7 +14,7 @@
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
-> 🚀 **v3.2.0** — **paridade total CLI ↔ IDE**: todo comando do `dare` CLI é invocável como `/dare-*` nas 3 IDEs (Cursor · Claude Code · Antigravity). **Coleta determinística no brownfield**: `dare reverse`/`dare dna` agora extraem **dados reais** (endpoints, entidades) em vez de esqueletos. 11 stacks com gerador completo internalizado + a **Suíte Brownfield** (`dare reverse` · `dare dna` · `dare migrate`). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.3.0** — **Reliable Verification Core**: mutation testing, fail-to-pass, anti-tamper, decay policy, best-of-N e `dare bench` (opt-in via `dare.config.json#verification`). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
@@ -177,6 +177,29 @@ Porque a IA, igual ao Ralph Wiggum, **persiste confiante** mesmo errando. Não d
 
 - [Ralph Loops: automação iterativa e o novo papel do engenheiro](https://medium.com/@itaifos/ralph-loops-automa%C3%A7%C3%A3o-iterativa-e-o-novo-papel-do-engenheiro-93df8b4e37e5) — Itai Fos (Medium)
 - [The greatest AI fix for your bug](https://www.crazystack.com.br/2025-3/the-greatest-ai-fix-for-your-b) — CrazyStack
+
+---
+
+## 🛡️ Reliable Verification Core (v3.3)
+
+Núcleo **determinístico** que roda **após** o Ralph Loop quando `verification.enabled: true` em `dare.config.json` (opt-in — novos projetos nascem com `enabled: false`).
+
+| Gate | O que valida |
+|---|---|
+| **fail-to-pass** | Spec executável falhava antes da implementação (RF-02) |
+| **anti-tamper** | Suíte não foi enfraquecida (skip/only, menos asserções) |
+| **mutation** | Stryker / mutmut / cargo-mutants / Infection — score ≥ `minScore` |
+| **type-check** | Aspecto opcional por stack |
+| **decay** | Política de retentativa (`decideNextAction` — ver [ralph-loop.md](docs/ralph-loop.md)) |
+| **best-of-N** | N worktrees + seletor Pareto; `--best-of N` no `dare execute --complete` |
+
+```bash
+# Liga verificação nesta conclusão de task
+dare execute --complete task-042 --verify --output "..."
+
+# Bench determinístico (qualidade dos gates, não solve-rate do agente)
+dare bench --suite fixtures/bench --json --baseline bench-baseline.json --fail-on-regression 3
+```
 
 ---
 
@@ -637,10 +660,9 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 
 Veja o [**ROADMAP.md**](ROADMAP.md) na raiz do repositório com:
 
-- **Shipped** — tudo que está em produção na v3.0.0 (29 skills nas 3 IDEs, stack Ruby on Rails 8, CLI/GraphRAG/MCP/DAG)
-- **Em desenvolvimento ativo (v3.1.x)** — stacks de scaffold completas para NestJS/FastAPI/Go-Gin/MCP/Laravel, frontend stacks, registry remoto público
-- **Planejado (v3.2.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
-- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.0.0 atual
+- **Shipped** — tudo que está em produção na v3.2.0 (paridade total CLI ↔ IDE `/dare-*` nas 3 IDEs, 11 stacks com gerador completo, suíte brownfield `reverse`/`dna`/`migrate` com coleta determinística, CLI/GraphRAG/MCP/DAG)
+- **Planejado (v3.3.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
+- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.2.0 atual
 
 Detalhes técnicos de cada release ficam no [**CHANGELOG.md**](CHANGELOG.md).
 

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "2.0.0",
+  "thresholds": { "high": 80, "low": 60 },
+  "files": {
+    "src/math.ts": {
+      "language": "typescript",
+      "source": "export function add(a: number, b: number): number { return a + b; }",
+      "mutants": [
+        {
+          "id": "math-1",
+          "mutatorName": "ArithmeticOperator",
+          "location": {
+            "start": { "line": 1, "column": 58 },
+            "end": { "line": 1, "column": 59 }
+          },
+          "status": "Killed"
+        },
+        {
+          "id": "math-2",
+          "mutatorName": "ArithmeticOperator",
+          "location": {
+            "start": { "line": 1, "column": 58 },
+            "end": { "line": 1, "column": 59 }
+          },
+          "status": "Survived"
+        },
+        {
+          "id": "math-3",
+          "mutatorName": "BlockStatement",
+          "location": {
+            "start": { "line": 1, "column": 45 },
+            "end": { "line": 1, "column": 62 }
+          },
+          "status": "NoCoverage"
+        },
+        {
+          "id": "math-4",
+          "mutatorName": "ArithmeticOperator",
+          "location": {
+            "start": { "line": 1, "column": 58 },
+            "end": { "line": 1, "column": 59 }
+          },
+          "status": "Killed"
+        },
+        {
+          "id": "math-5",
+          "mutatorName": "ArithmeticOperator",
+          "location": {
+            "start": { "line": 1, "column": 58 },
+            "end": { "line": 1, "column": 59 }
+          },
+          "status": "Timeout"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,151 @@
+%% DARE DAG — Reliable Verification Core — Development Tasks
+%% Generated: 2026-06-04T22:25:45.971Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_001["task-001\nverification/types.ts — contratos (Config, Result, LoopVerdict, Aspect)\n⏳ PENDING"]
+    task_002["task-002\nexec/safe-spawn.ts — spawn argv shell:false + env saneado + timeout (RS-06)\n⏳ PENDING"]
+    task_003["task-003\nutils/path-safety.ts — extrair assertRelativeSafe + reuso no dna-emitter (RS-01)\n⏳ PENDING"]
+    task_004["task-004\nutils/logger.ts — pino compartilhado (RNF-04)\n⏳ PENDING"]
+    task_006["task-006\nLint custom: proibir shell:true fora de __tests__ (RS-06)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_005["task-005\nverification/config.ts — parseVerificationConfig (zod) + DEFAULTS\n⏳ PENDING"]
+    task_010["task-010\nralph-loop.ts → gatesFor argv[] + resolvePythonBin + safeSpawn (RS-06)\n⏳ PENDING"]
+    task_020["task-020\ngates/fail-to-pass.ts — baseline + checkFailToPass (RF-02)\n⏳ PENDING"]
+    task_021["task-021\ngates/anti-tamper.ts — snapshot + checkAntiTamper + AST-lite asserts (RF-03)\n⏳ PENDING"]
+    task_030["task-030\nmutation/adapter.ts (interface) + registry.ts (adapterForStack)\n⏳ PENDING"]
+    task_035["task-035\ngates/type-check.ts — aspecto type-check opcional (A-12)\n⏳ PENDING"]
+    task_040["task-040\ndecay/signature.ts — failureSignature estável\n⏳ PENDING"]
+    task_042["task-042\nstate-store.ts — persistir attempts[] (retrocompatível)\n⏳ PENDING"]
+    task_060["task-060\nbest-of-n/worktree.ts — git worktree add/list/remove via argv (RS-01)\n⏳ PENDING"]
+    task_061["task-061\nbest-of-n/selector/pareto.ts — selectByPareto determinístico (RF-05)\n⏳ PENDING"]
+    task_070["task-070\ntelemetry.ts + graphrag/types.ts (NodeType 'gate', EdgeType 'verified_by') (RF-10)\n⏳ PENDING"]
+    task_071["task-071\nbench/fixtures.ts + fixtures/bench/** (≥6 fixtures, inclui patches errados p/ O-01)\n⏳ PENDING"]
+    task_072["task-072\nbench/report.ts — solve-rate + Fix·Rate + comparação de baseline\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_031["task-031\nmutation/stryker.ts — adapter JS/TS (CANONICAL, MUST)\n⏳ PENDING"]
+    task_032["task-032\nmutation/mutmut.ts — adapter Python (MUST, delta de T-031)\n⏳ PENDING"]
+    task_033["task-033\nmutation/cargo-mutants.ts — adapter Rust (SHOULD, delta de T-031)\n⏳ PENDING"]
+    task_034["task-034\nmutation/infection.ts — adapter PHP (SHOULD, delta de T-031)\n⏳ PENDING"]
+    task_041["task-041\ndecay/policy.ts — decideNextAction (regra canônica única) + isSaturated\n⏳ PENDING"]
+    task_050["task-050\nverification/runner.ts — runVerification (orquestra aspectos pós-Ralph)\n⏳ PENDING"]
+    task_063["task-063\nbest-of-n/selector/prerank.ts — verificador exec-free (RF-09 COULD, RS-07)\n⏳ PENDING"]
+    task_073["task-073\nbench/harness.ts — runFixture (aplica patch isolado, roda f2p + p2p)\n⏳ PENDING"]
+    task_082["task-082\nproject-generator.ts + UPDATE-MANIFEST.json — bloco verification (defaults, enabled:false)\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_051["task-051\nexecute.ts — wire runVerification + decay + flags --verify/--verdict-json + exit codes\n⏳ PENDING"]
+    task_062["task-062\nbest-of-n/runner.ts — runBestOfN (worktrees + verificação + promoção)\n⏳ PENDING"]
+    task_074["task-074\ncommands/bench.ts + registro em bin/dare.ts (dare bench)\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_064["task-064\nexecute.ts — flags --best-of/--policy/--prerank/--full-mutation\n⏳ PENDING"]
+    task_075["task-075\nexecute.ts — gravar telemetria do gate no DONE (RF-10)\n⏳ PENDING"]
+    task_081["task-081\n.github/workflows/release.yml — job dare bench + gate de regressão (RF-08)\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    task_080["task-080\nAuditoria de segurança: no-network, env-sanitize, prerank-never-DONE, path-safety, pnpm audit\n⏳ PENDING"]
+  end
+  subgraph rank_6 ["Rank 6"]
+    direction TB
+    task_083["task-083\nDocs (README/ROADMAP/CHANGELOG) + bump v3.2.0\n⏳ PENDING"]
+  end
+  task_001 --> task_005
+  task_002 --> task_010
+  task_001 --> task_020
+  task_002 --> task_020
+  task_001 --> task_021
+  task_002 --> task_021
+  task_001 --> task_030
+  task_002 --> task_030
+  task_030 --> task_031
+  task_030 --> task_032
+  task_030 --> task_033
+  task_030 --> task_034
+  task_001 --> task_035
+  task_002 --> task_035
+  task_001 --> task_040
+  task_001 --> task_041
+  task_040 --> task_041
+  task_001 --> task_042
+  task_005 --> task_050
+  task_020 --> task_050
+  task_021 --> task_050
+  task_030 --> task_050
+  task_035 --> task_050
+  task_050 --> task_051
+  task_041 --> task_051
+  task_042 --> task_051
+  task_002 --> task_060
+  task_003 --> task_060
+  task_001 --> task_061
+  task_050 --> task_062
+  task_060 --> task_062
+  task_061 --> task_062
+  task_061 --> task_063
+  task_051 --> task_064
+  task_062 --> task_064
+  task_001 --> task_070
+  task_001 --> task_071
+  task_001 --> task_072
+  task_071 --> task_073
+  task_072 --> task_073
+  task_002 --> task_073
+  task_073 --> task_074
+  task_051 --> task_075
+  task_070 --> task_075
+  task_051 --> task_080
+  task_062 --> task_080
+  task_064 --> task_080
+  task_074 --> task_081
+  task_005 --> task_082
+  task_080 --> task_083
+  task_081 --> task_083
+  task_082 --> task_083
+  class task_001 st_pending;
+  class task_002 st_pending;
+  class task_003 st_pending;
+  class task_004 st_pending;
+  class task_005 st_pending;
+  class task_006 st_pending;
+  class task_010 st_pending;
+  class task_020 st_pending;
+  class task_021 st_pending;
+  class task_030 st_pending;
+  class task_031 st_pending;
+  class task_032 st_pending;
+  class task_033 st_pending;
+  class task_034 st_pending;
+  class task_035 st_pending;
+  class task_040 st_pending;
+  class task_041 st_pending;
+  class task_042 st_pending;
+  class task_050 st_pending;
+  class task_051 st_pending;
+  class task_060 st_pending;
+  class task_061 st_pending;
+  class task_062 st_pending;
+  class task_063 st_pending;
+  class task_064 st_pending;
+  class task_070 st_pending;
+  class task_071 st_pending;
+  class task_072 st_pending;
+  class task_073 st_pending;
+  class task_074 st_pending;
+  class task_075 st_pending;
+  class task_080 st_pending;
+  class task_081 st_pending;
+  class task_082 st_pending;
+  class task_083 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

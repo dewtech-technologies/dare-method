@@ -1293,7 +1293,7 @@ function banner(msg: string): void {
 
 async function hasCommand(cmd: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const probe = spawn(cmd, ['--version'], { shell: true, stdio: 'ignore' });
+    const probe = spawn(cmd, ['--version'], { shell: false, stdio: 'ignore' });
     probe.on('error', () => resolve(false));
     probe.on('close', (code) => resolve(code === 0));
   });
@@ -1305,7 +1305,7 @@ async function runCmd(cmd: string, args: string[], cwd: string): Promise<void> {
     const proc = spawn(cmd, args, {
       cwd,
       stdio: 'inherit',
-      shell: true,
+      shell: false,
     });
     proc.on('error', (err) => reject(err));
     proc.on('close', (code) => {

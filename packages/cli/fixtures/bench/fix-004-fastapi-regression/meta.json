@@ -1,0 +1,1 @@
+{"id":"fix-004-fastapi-regression","stack":"python-fastapi","description":"Patch fixes fail-to-pass but breaks a pass-to-pass test"}

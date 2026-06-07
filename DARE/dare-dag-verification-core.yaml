@@ -1,0 +1,454 @@
+title: "Reliable Verification Core — Development Tasks"
+version: "3.3.0"
+generated: "2026-06-04T22:00:00Z"
+
+# Feature: verification-core
+# Branch:  feat/verification-core
+# Design:  DARE/DESIGN-Feature-verification-core.md
+# Blueprint: DARE/BLUEPRINT-Feature-verification-core.md
+#
+# Regra de ouro: CLI 100% determinístico; toda inferência LLM (gerar testes/candidatos)
+# vive nas skills das IDEs. Detalhe executável por task em DARE/EXECUTION/.
+# parallel_group (campo informativo): tasks com o mesmo grupo podem rodar em worktrees.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: Foundation ───────────────────────────────────────────────────
+  - id: task-001
+    title: "verification/types.ts — contratos (Config, Result, LoopVerdict, Aspect)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-001-verification-types.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/types.ts copiando LITERALMENTE os contratos da
+      seção 4.1 do DARE/BLUEPRINT-Feature-verification-core.md: LoopPolicy, SaturationAction,
+      MutationTool, MutationConfig, LoopConfig, BestOfNConfig, VerificationConfig, Aspect, Verdict,
+      AspectResult, VerificationResult, LoopAction, AttemptRecord, LoopVerdict. Tudo readonly.
+      Só tipos/const — nenhum código executável. Gate: tsc --noEmit. Sem TODO/stub.
+      Leia a spec: DARE/EXECUTION/task-001-verification-types.md.
+
+  - id: task-002
+    title: "exec/safe-spawn.ts — spawn argv shell:false + env saneado + timeout (RS-06)"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-002-safe-spawn.md
+    subtask_prompt: |
+      Criar packages/cli/src/exec/safe-spawn.ts com safeSpawn(command, args[], {cwd, timeoutSeconds,
+      maxChars?, env?}) → {code, stdout, stderr, timedOut} (BLUEPRINT 5.2.8). spawn com shell:false,
+      argv explícito, env saneado (remover SECRET/TOKEN/KEY/PASSWORD salvo allowlist), truncar em maxChars
+      (default 4000), timeout via SIGTERM. NUNCA shell:true. Testes: roda argv, ignora metachars de shell,
+      timeout, trunca, env saneado. Gates: tsc --noEmit; vitest run safe-spawn.
+      Leia: DARE/EXECUTION/task-002-safe-spawn.md.
+
+  - id: task-003
+    title: "utils/path-safety.ts — extrair assertRelativeSafe + reuso no dna-emitter (RS-01)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-003-path-safety.md
+    subtask_prompt: |
+      Extrair assertRelativeSafe de packages/cli/src/stacks/dna-emitter.ts para
+      packages/cli/src/utils/path-safety.ts (lógica idêntica: rejeita absoluto e '..'). Atualizar
+      dna-emitter.ts para importar do util e remover a cópia local. Testes path-safety + paridade do
+      dna-emitter sem regressão. Gates: tsc --noEmit; vitest run path-safety; vitest run dna-emitter.
+      Leia: DARE/EXECUTION/task-003-path-safety.md.
+
+  - id: task-004
+    title: "utils/logger.ts — pino compartilhado (RNF-04)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-004-logger.md
+    subtask_prompt: |
+      Criar packages/cli/src/utils/logger.ts: createLogger(scope) e logger default usando pino.
+      Nível por DARE_LOG_LEVEL (default 'info'); pino-pretty em TTY, JSON em CI. Child com {scope}.
+      Testes: child scope, nível por env. Sem console.log no núcleo. Gates: tsc --noEmit; vitest run logger.
+      Leia: DARE/EXECUTION/task-004-logger.md.
+
+  - id: task-005
+    title: "verification/config.ts — parseVerificationConfig (zod) + DEFAULTS"
+    depends_on: [task-001]
+    complexity: MED
+    spec_file: EXECUTION/task-005-config.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/config.ts: DEFAULTS (seção 4.1, enabled:false),
+      parseVerificationConfig(raw) e VerificationConfigError (BLUEPRINT 5.2.2). Adicionar zod ao
+      package.json do CLI. Bloco ausente ⇒ {...DEFAULTS, enabled:false} (RNF-06); presente ⇒ merge
+      profundo + safeParse com ranges (minScore 0..1, maxAttempts≥1, bestOfN.max≥default≥1).
+      Testes: default disabled, merge parcial, erro com path, range. Gates: tsc --noEmit; vitest run config.
+      Leia: DARE/EXECUTION/task-005-config.md.
+
+  - id: task-006
+    title: "Lint custom: proibir shell:true fora de __tests__ (RS-06)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-006-lint-no-shell.md
+    subtask_prompt: |
+      Em packages/cli/eslint.config.js adicionar no-restricted-syntax barrando Property shell:true em
+      src/**/*.ts (ignorando testes), mensagem apontando para exec/safe-spawn.ts. Criar teste de guarda
+      no-shell-true.test.ts varrendo src por /shell\s*:\s*true/. Gates: pnpm lint; vitest run no-shell-true.
+      Coordenar com task-010 (Ralph ainda tem shell:true até lá). Leia: DARE/EXECUTION/task-006-lint-no-shell.md.
+
+  # ─── Fase 2: Refatoração RS-06 do Ralph Loop ──────────────────────────────
+  - id: task-010
+    title: "ralph-loop.ts → gatesFor argv[] + resolvePythonBin + safeSpawn (RS-06)"
+    depends_on: [task-002]
+    complexity: HIGH
+    spec_file: EXECUTION/task-010-ralph-argv.md
+    subtask_prompt: |
+      Refatorar packages/cli/src/dag-runner/ralph-loop.ts (BLUEPRINT 5.3): RalphLoopGate ganha args[];
+      gatesFor devolve {command,args[]} para TODAS as stacks; gates com '&&' viram gates sequenciais;
+      resolvePythonBin(cwd,tool) resolve venv em JS (substitui pythonShellPath); runShell → safeSpawn.
+      Remover shell:true. Ajustar __tests__/dag-runner/ralph-loop.test.ts (mesmos pass/fail/timeout).
+      Gates: tsc --noEmit; vitest run ralph-loop; pnpm lint. Leia: DARE/EXECUTION/task-010-ralph-argv.md.
+
+  # ─── Fase 3: Spec gates (RF-02, RF-03) ────────────────────────────────────
+  - id: task-020
+    title: "gates/fail-to-pass.ts — baseline + checkFailToPass (RF-02)"
+    depends_on: [task-001, task-002]
+    complexity: HIGH
+    spec_file: EXECUTION/task-020-fail-to-pass.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/fail-to-pass.ts (BLUEPRINT 5.2.5):
+      recordFailToPassBaseline (roda a spec contra código pré-impl, exige allFailed; persiste em
+      .dare/verification/<id>.json) e checkFailToPass (baseline ausente→FAIL p/ exit 4; passa só se a
+      mesma spec agora passa). Extrair helper testCommandFor(stack). Usa safeSpawn. CLI não gera testes.
+      Testes com tmp project. Gates: tsc --noEmit; vitest run fail-to-pass. Leia: DARE/EXECUTION/task-020-fail-to-pass.md.
+
+  - id: task-021
+    title: "gates/anti-tamper.ts — snapshot + checkAntiTamper + AST-lite asserts (RF-03)"
+    depends_on: [task-001, task-002]
+    complexity: HIGH
+    spec_file: EXECUTION/task-021-anti-tamper.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/anti-tamper.ts (BLUEPRINT 5.2.5): snapshotTests
+      (conta asserções AST-lite por stack: JS/TS expect/assert; Python assert/self.assert*) e
+      checkAntiTamper (FAIL se assertionCount caiu, teste virou skip/only, arquivo do baseline sumiu, ou
+      cobertura caiu). reason específico por causa. Testes: contagem JS/Py, assert removido, skip, arquivo
+      deletado, fortalecido=PASS. Gates: tsc --noEmit; vitest run anti-tamper. Leia: DARE/EXECUTION/task-021-anti-tamper.md.
+
+  # ─── Fase 4: Mutation (RF-01) — parallel_group: mutation-adapters ──────────
+  - id: task-030
+    title: "mutation/adapter.ts (interface) + registry.ts (adapterForStack)"
+    depends_on: [task-001, task-002]
+    complexity: MED
+    spec_file: EXECUTION/task-030-mutation-adapter.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/mutation/adapter.ts (MutationRunInput/Output,
+      MutationAdapter, MutationToolNotFoundError, UnknownMutationStackError) e
+      packages/cli/src/verification/registry.ts (adapterForStack, listMutationAdapters) com lazy import
+      (BLUEPRINT 5.2.4). Mapa stack→tool: node/react/vue/mcp-node→stryker; python/mcp-python→mutmut;
+      rust*→cargo-mutants; php-laravel→infection. Sem impl de ferramenta aqui. Gates: tsc --noEmit; vitest run mutation-registry.
+      Leia: DARE/EXECUTION/task-030-mutation-adapter.md.
+
+  - id: task-031
+    title: "mutation/stryker.ts — adapter JS/TS (CANONICAL, MUST)"
+    depends_on: [task-030]
+    parallel_group: mutation-adapters
+    complexity: HIGH
+    spec_file: EXECUTION/task-031-mutation-stryker.md
+    subtask_prompt: |
+      Implementar packages/cli/src/verification/gates/mutation/stryker.ts (MutationAdapter para StrykerJS,
+      BLUEPRINT 5.2.4). isAvailable via 'npx stryker --version'; run incremental (--mutate dos changedFiles)
+      via safeSpawn SEM rede; parsear reports/mutation/mutation.json; score=killed/(killed+survived); 0
+      mutantes→NaN(SKIP). Teste usa FIXTURE de relatório real do schema Stryker. Esta é a spec canônica de adapter.
+      Gates: tsc --noEmit; vitest run mutation-stryker. Leia: DARE/EXECUTION/task-031-mutation-stryker.md.
+
+  - id: task-032
+    title: "mutation/mutmut.ts — adapter Python (MUST, delta de T-031)"
+    depends_on: [task-030]
+    parallel_group: mutation-adapters
+    complexity: HIGH
+    spec_file: EXECUTION/task-032-mutation-mutmut.md
+    subtask_prompt: |
+      Implementar packages/cli/src/verification/gates/mutation/mutmut.ts (delta de task-031, Python).
+      tool 'mutmut'; stacks python-fastapi/mcp-server-python; isAvailable via resolvePythonBin+version;
+      run 'mutmut run --paths-to-mutate <changed .py>' via safeSpawn sem rede; parsear 'mutmut results --json';
+      score=killed/(killed+survived). Teste com fixture real. Gates: tsc --noEmit; vitest run mutation-mutmut.
+      Leia: DARE/EXECUTION/task-032-mutation-mutmut.md.
+
+  - id: task-033
+    title: "mutation/cargo-mutants.ts — adapter Rust (SHOULD, delta de T-031)"
+    depends_on: [task-030]
+    parallel_group: mutation-adapters
+    complexity: MED
+    spec_file: EXECUTION/task-033-mutation-cargo-mutants.md
+    subtask_prompt: |
+      Implementar packages/cli/src/verification/gates/mutation/cargo-mutants.ts (delta de task-031, Rust).
+      tool 'cargo-mutants'; stacks rust-axum/rust-leptos*; isAvailable 'cargo mutants --version';
+      run 'cargo mutants --in-diff <diff> --json' via safeSpawn; parsear mutants.out/outcomes.json
+      (caught→killed, missed→survived). Teste com fixture real. Gates: tsc --noEmit; vitest run mutation-cargo-mutants.
+      Leia: DARE/EXECUTION/task-033-mutation-cargo-mutants.md.
+
+  - id: task-034
+    title: "mutation/infection.ts — adapter PHP (SHOULD, delta de T-031)"
+    depends_on: [task-030]
+    parallel_group: mutation-adapters
+    complexity: MED
+    spec_file: EXECUTION/task-034-mutation-infection.md
+    subtask_prompt: |
+      Implementar packages/cli/src/verification/gates/mutation/infection.ts (delta de task-031, PHP).
+      tool 'infection'; stack php-laravel; isAvailable 'vendor/bin/infection --version';
+      run com --filter=<changed> --logger-json=infection.json via safeSpawn; parsear infection.json
+      (killed; escaped→survived). Teste com fixture real. Gates: tsc --noEmit; vitest run mutation-infection.
+      Leia: DARE/EXECUTION/task-034-mutation-infection.md.
+
+  - id: task-035
+    title: "gates/type-check.ts — aspecto type-check opcional (A-12)"
+    depends_on: [task-001, task-002]
+    complexity: LOW
+    spec_file: EXECUTION/task-035-type-check.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/type-check.ts: checkTypes({stack,cwd,timeoutSeconds})
+      → AspectResult. typeCommandFor(stack): TS→tsc --noEmit; python→mypy se presente senão SKIP; demais
+      SKIP. Roda via safeSpawn; code0→PASS senão FAIL; ausente→SKIP explícito. Opt-in (config.typeCheck.enabled).
+      Testes: clean PASS, type error FAIL, SKIP. Gates: tsc --noEmit; vitest run type-check.
+      Leia: DARE/EXECUTION/task-035-type-check.md.
+
+  # ─── Fase 5: Decay-aware (RF-06) ──────────────────────────────────────────
+  - id: task-040
+    title: "decay/signature.ts — failureSignature estável"
+    depends_on: [task-001]
+    complexity: MED
+    spec_file: EXECUTION/task-040-failure-signature.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/decay/signature.ts: failureSignature({failedAspect,stderr})→8 hex
+      (BLUEPRINT 5.2.3). Normalizar (lowercase; remover paths/timestamps/hex/linhas; manter nomes de teste,
+      tipo de erro, aspect) e sha256(...).slice(0,8). Mesma falha→mesmo hash; diferentes→diferentes.
+      Testes: estável por path/linha, difere por erro/aspect, formato 8 hex. Gates: tsc --noEmit; vitest run failure-signature.
+      Leia: DARE/EXECUTION/task-040-failure-signature.md.
+
+  - id: task-041
+    title: "decay/policy.ts — decideNextAction (regra canônica única) + isSaturated"
+    depends_on: [task-001, task-040]
+    complexity: HIGH
+    spec_file: EXECUTION/task-041-decay-policy.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/decay/policy.ts: decideNextAction(...) e isSaturated(history,window)
+      (BLUEPRINT 5.2.3). Regra única: passed→DONE; n>=maxAttempts→ESCALATE; saturado→onSaturation
+      (fresh-start/replan/escalate); fixed e n<max→CONTINUE; senão CONTINUE. reason canônico por ramo.
+      Função pura. Testes table-driven dos 5 ramos + isSaturated. Atualizar ralph-loop.md (regra única).
+      Gates: tsc --noEmit; vitest run decay-policy. Leia: DARE/EXECUTION/task-041-decay-policy.md.
+
+  - id: task-042
+    title: "state-store.ts — persistir attempts[] (retrocompatível)"
+    depends_on: [task-001]
+    complexity: MED
+    spec_file: EXECUTION/task-042-state-attempts.md
+    subtask_prompt: |
+      Estender packages/cli/src/dag-runner/state-store.ts: PersistedTaskState += attempts?: AttemptRecord[]
+      e helpers appendAttempt(cwd,taskId,attempt) / getAttempts(cwd,taskId). n monotônico (length+1).
+      Retrocompat: state antigo sem attempts ⇒ []. Testes: default [], append monotônico, persiste no reload,
+      não quebra campos existentes. Gates: tsc --noEmit; vitest run state-store.
+      Leia: DARE/EXECUTION/task-042-state-attempts.md.
+
+  # ─── Fase 6: Runner + integração no execute ───────────────────────────────
+  - id: task-050
+    title: "verification/runner.ts — runVerification (orquestra aspectos pós-Ralph)"
+    depends_on: [task-005, task-020, task-021, task-030, task-035]
+    complexity: HIGH
+    spec_file: EXECUTION/task-050-runner.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/runner.ts: runVerification(opts)→VerificationResult (BLUEPRINT 5.2.1).
+      config.enabled false⇒no-op PASS. Ordem barato→caro com curto-circuito: fail-to-pass (ausente→
+      FailToPassMissingError p/ exit 4), anti-tamper, type-check (se on), mutation (tool ausente→
+      MutationToolNotFoundError p/ exit 3; score<minScore→FAIL; 0 mutantes→SKIP). Loga vereditos via logger.
+      Injeção de gates p/ teste. Gates: tsc --noEmit; vitest run runner. Leia: DARE/EXECUTION/task-050-runner.md.
+
+  - id: task-051
+    title: "execute.ts — wire runVerification + decay + flags --verify/--verdict-json + exit codes"
+    depends_on: [task-050, task-041, task-042]
+    complexity: HIGH
+    spec_file: EXECUTION/task-051-execute-wire.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/execute.ts handleComplete (BLUEPRINT 5.1.1): após runRalphLoop,
+      se verificação ligada (--verify/config.enabled, salvo --no-verify) rodar runVerification com changedFiles
+      (git diff via safeSpawn). Registrar AttemptRecord (failureSignature), calcular LoopVerdict (decideNextAction),
+      markDone/markFailed. Exit 0/1/3/4 com STRINGS EXATAS da seção 5.1.1. Flags --verify/--no-verify/
+      --full-mutation/--verdict-json. RNF-06: sem config ⇒ comportamento atual. Gates: tsc --noEmit; vitest run execute.verify.
+      Leia: DARE/EXECUTION/task-051-execute-wire.md.
+
+  # ─── Fase 7: best-of-N + seletor (RF-04/05/09) ────────────────────────────
+  - id: task-060
+    title: "best-of-n/worktree.ts — git worktree add/list/remove via argv (RS-01)"
+    depends_on: [task-002, task-003]
+    complexity: MED
+    spec_file: EXECUTION/task-060-worktree.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/best-of-n/worktree.ts: createWorktree/removeWorktree/listWorktrees
+      (BLUEPRINT 5.2.6) via safeSpawn('git', ['worktree',...]). Path relativo .dare/worktrees/<id> validado
+      com assertRelativeSafe; branch dare/cand-<id>. listWorktrees parseia --porcelain. Testes em repo git tmp:
+      create+list, remove, reject unsafe id. Gates: tsc --noEmit; vitest run worktree. Leia: DARE/EXECUTION/task-060-worktree.md.
+
+  - id: task-061
+    title: "best-of-n/selector/pareto.ts — selectByPareto determinístico (RF-05)"
+    depends_on: [task-001]
+    complexity: MED
+    spec_file: EXECUTION/task-061-selector-pareto.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/best-of-n/selector/pareto.ts: selectByPareto(candidates)
+      (BLUEPRINT 5.2.6). Descartar candidatos com aspecto FAIL; Pareto-dominância sobre test/lint/type/mutation;
+      empate→maior mutationScore→menor id; NoViableCandidateError se todos falham. Declarar tipo Candidate em
+      verification/types.ts (coordenar com task-001/task-062). Testes determinísticos. Gates: tsc --noEmit; vitest run selector-pareto.
+      Leia: DARE/EXECUTION/task-061-selector-pareto.md.
+
+  - id: task-062
+    title: "best-of-n/runner.ts — runBestOfN (worktrees + verificação + promoção)"
+    depends_on: [task-050, task-060, task-061]
+    complexity: HIGH
+    spec_file: EXECUTION/task-062-best-of-n-runner.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/best-of-n/runner.ts: runBestOfN({taskId,repoRoot,n,config,fillCandidate})
+      (BLUEPRINT 5.2.6). Cria N worktrees, chama fillCandidate(wt) (ponte p/ a skill — CLI NÃO gera código),
+      runVerification por candidato (cwds isolados), selectByPareto, promove winner (git apply via safeSpawn),
+      cleanup garantido (try/finally). Testes com fillCandidate fake; sem import de LLM. Gates: tsc --noEmit; vitest run best-of-n-runner.
+      Leia: DARE/EXECUTION/task-062-best-of-n-runner.md.
+
+  - id: task-063
+    title: "best-of-n/selector/prerank.ts — verificador exec-free (RF-09 COULD, RS-07)"
+    depends_on: [task-061]
+    complexity: MED
+    spec_file: EXECUTION/task-063-prerank.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/best-of-n/selector/prerank.ts: prerank(inputs)→PrerankScore[]
+      (0..1, só ordenação) (BLUEPRINT 5.2.6 / RF-09). Heurística determinística do diff (tamanho, hunks, testes
+      tocados); API externa opcional via DARE_PRERANK_API (fora do gate). RS-07: NUNCA autoriza DONE/PASS — só
+      reordena. Testes: scores em [0,1], determinístico, sem caminho p/ DONE. Gates: tsc --noEmit; vitest run prerank.
+      Leia: DARE/EXECUTION/task-063-prerank.md.
+
+  - id: task-064
+    title: "execute.ts — flags --best-of/--policy/--prerank/--full-mutation"
+    depends_on: [task-051, task-062]
+    complexity: MED
+    spec_file: EXECUTION/task-064-best-of-flags.md
+    subtask_prompt: |
+      Adicionar a packages/cli/src/commands/execute.ts as flags --best-of <n> (1..bestOfN.max, erro com
+      string exata da seção 5.1.1), --policy <decay|fixed> (erro com string exata), --prerank, --full-mutation
+      (BLUEPRINT 5.1.1). best-of>1 chama runBestOfN com fillCandidate (geração é da skill); --policy sobrescreve
+      decay; --prerank nunca autoriza DONE. Testes: range, enum, defaults do config. Gates: tsc --noEmit; vitest run execute.best-of.
+      Leia: DARE/EXECUTION/task-064-best-of-flags.md.
+
+  # ─── Fase 8: bench (RF-07/08) + telemetria (RF-10) ────────────────────────
+  - id: task-070
+    title: "telemetry.ts + graphrag/types.ts (NodeType 'gate', EdgeType 'verified_by') (RF-10)"
+    depends_on: [task-001]
+    complexity: MED
+    spec_file: EXECUTION/task-070-telemetry.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/telemetry.ts: recordVerification(graph,result) (BLUEPRINT 5.2.8/A-10).
+      Estender packages/cli/src/graphrag/types.ts: NodeType += 'gate'; EdgeType += 'verified_by' (ajustar
+      GraphStatistics). Upsert nó gate:<id> + aresta task:<id> --verified_by--> gate:<id>; fallback em
+      task.metadata.verification se backend não aceitar tipos novos; idempotente. Testes com JsonGraph tmp.
+      Gates: tsc --noEmit; vitest run telemetry. Leia: DARE/EXECUTION/task-070-telemetry.md.
+
+  - id: task-071
+    title: "bench/fixtures.ts + fixtures/bench/** (≥6 fixtures, inclui patches errados p/ O-01)"
+    depends_on: [task-001]
+    complexity: HIGH
+    spec_file: EXECUTION/task-071-bench-fixtures.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/bench/fixtures.ts (FixtureMeta, loadSuite, loadFixture; valida
+      arquivos + assertRelativeSafe) e packages/cli/fixtures/bench/** com ≥6 fixtures (BLUEPRINT 5.2.7/3):
+      cada uma com meta.json, repo/ (snapshot mínimo executável), patch.diff, fail_to_pass.txt, pass_to_pass.txt.
+      Incluir ≥2 casos de patch que passa em teste fraco (mutante não morto) p/ O-01 e 1 de regressão p2p.
+      Sem segredos (RS-05). Gates: tsc --noEmit; vitest run bench-fixtures. Leia: DARE/EXECUTION/task-071-bench-fixtures.md.
+
+  - id: task-072
+    title: "bench/report.ts — solve-rate + Fix·Rate + comparação de baseline"
+    depends_on: [task-001]
+    complexity: MED
+    spec_file: EXECUTION/task-072-bench-report.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/bench/report.ts: computeFixtureResult e buildReport (BLUEPRINT 5.1.2/5.2.7).
+      Fix·Rate = passToPassRegressed ? 0 : f2p.passed/f2p.total; solved = fixRate===1 && !regressed;
+      solveRate = solved/fixtures; regression vs baseline (deltaPp, failed se queda > failOnRegressionPp default 3).
+      Funções puras. Testes: zera com regressão p2p, solve-rate, flag de regressão dentro/fora do limiar.
+      Gates: tsc --noEmit; vitest run bench-report. Leia: DARE/EXECUTION/task-072-bench-report.md.
+
+  - id: task-073
+    title: "bench/harness.ts — runFixture (aplica patch isolado, roda f2p + p2p)"
+    depends_on: [task-071, task-072, task-002]
+    complexity: HIGH
+    spec_file: EXECUTION/task-073-bench-harness.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/bench/harness.ts: runFixture(meta,baseDir) e runSuite(suiteDir,{filter})
+      (BLUEPRINT 5.2.7). Copia repo/ p/ tmp isolado (sem rede), git apply patch via safeSpawn, roda f2p e p2p
+      (testCommandFor(stack)), conta passados, chama computeFixtureResult; re-run de confirmação p/ flaky; cleanup
+      try/finally. Determinístico, sem LLM. Testes: solved, regressão zera, rejeita teste fraco, cleanup.
+      Gates: tsc --noEmit; vitest run bench-harness. Leia: DARE/EXECUTION/task-073-bench-harness.md.
+
+  - id: task-074
+    title: "commands/bench.ts + registro em bin/dare.ts (dare bench)"
+    depends_on: [task-073]
+    complexity: MED
+    spec_file: EXECUTION/task-074-bench-command.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/bench.ts (Commander) com --suite/--json/--baseline/--fail-on-regression/
+      --filter (BLUEPRINT 5.1.2): runSuite + buildReport; --json imprime JSON (schemaVersion 1), senão tabela;
+      exit 0 ok, 1 regressão, 2 suite inválida. Registrar em packages/cli/src/bin/dare.ts. Testes: mini-suite JSON,
+      exit 1 regressão, exit 2 suite ausente. Gates: tsc --noEmit; vitest run bench.spec. Leia: DARE/EXECUTION/task-074-bench-command.md.
+
+  - id: task-075
+    title: "execute.ts — gravar telemetria do gate no DONE (RF-10)"
+    depends_on: [task-051, task-070]
+    complexity: LOW
+    spec_file: EXECUTION/task-075-telemetry-wire.md
+    subtask_prompt: |
+      Em packages/cli/src/commands/execute.ts, após PASS total chamar recordVerification(graph,result) usando o
+      graph já aberto (tryOpenGraph); respeitar --no-graph; erro de telemetria é best-effort (warn via logger,
+      não reprova a task). Testes: grava gate+verified_by no DONE; skip com --no-graph; falha de telemetria não
+      derruba a task. Gates: tsc --noEmit; vitest run execute.telemetry. Leia: DARE/EXECUTION/task-075-telemetry-wire.md.
+
+  # ─── Fase 9: Segurança (N-1) + CI + config + docs/bump ────────────────────
+  - id: task-080
+    title: "Auditoria de segurança: no-network, env-sanitize, prerank-never-DONE, path-safety, pnpm audit"
+    depends_on: [task-051, task-062, task-064]
+    complexity: MED
+    spec_file: EXECUTION/task-080-security-audit.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/__tests__/security.test.ts (BLUEPRINT 8): provar RS-06 (0 shell:true),
+      RS-03 (mutação sem rede), RS-02 (env saneado; segredo não vaza em stdout/relatório), RS-07 (prerank nunca
+      retorna DONE/PASS), RS-01 (worktree/fixture rejeitam ..). Rodar pnpm audit --audit-level=high (0 HIGH; se CVE
+      sem fix, registrar em KNOWN-CVES.md). Gates: vitest run security; pnpm audit --audit-level=high.
+      Leia: DARE/EXECUTION/task-080-security-audit.md.
+
+  - id: task-081
+    title: ".github/workflows/release.yml — job dare bench + gate de regressão (RF-08)"
+    depends_on: [task-074]
+    complexity: MED
+    spec_file: EXECUTION/task-081-ci-release-bench.md
+    subtask_prompt: |
+      Modificar .github/workflows/release.yml (BLUEPRINT Fase 9): job bench que builda o CLI e roda
+      'dare bench --suite fixtures/bench --json --baseline bench-baseline.json --fail-on-regression 3', publica
+      bench-report.json como artifact (O-06) e FALHA se exit 1 (regressão > 3pp). Atualizar baseline só em tag de
+      release estável. Gate: actionlint release.yml. Leia: DARE/EXECUTION/task-081-ci-release-bench.md.
+
+  - id: task-082
+    title: "project-generator.ts + UPDATE-MANIFEST.json — bloco verification (defaults, enabled:false)"
+    depends_on: [task-005]
+    complexity: MED
+    spec_file: EXECUTION/task-082-config-defaults-migration.md
+    subtask_prompt: |
+      Adicionar bloco verification (== DEFAULTS de config.ts, enabled:false) ao configData em
+      packages/cli/src/utils/project-generator.ts e uma migration em packages/cli/templates/UPDATE-MANIFEST.json
+      que insere o bloco se ausente (padrão das migrations review/refine). Evitar drift importando DEFAULTS.
+      Testes: projeto novo tem verification.enabled false + defaults; migration adiciona quando ausente.
+      Gates: tsc --noEmit; vitest run project-generator. Leia: DARE/EXECUTION/task-082-config-defaults-migration.md.
+
+  - id: task-083
+    title: "Docs (README/ROADMAP/CHANGELOG) + bump v3.3.0"
+    depends_on: [task-080, task-081, task-082]
+    complexity: LOW
+    spec_file: EXECUTION/task-083-docs-bump.md
+    subtask_prompt: |
+      Atualizar README.md (seção Reliable Verification Core: mutation, fail-to-pass, decay, best-of-N, dare bench),
+      ROADMAP.md (feature entregue v3.3; repo já estava em v3.2.0), CHANGELOG.md ([3.3.0] Added/Fixed RS-06/Notes opt-in), bump
+      packages/cli/package.json e package.json para 3.3.0; apontar ralph-loop.md p/ a regra de decay (task-041).
+      Sem placeholders. Gates: pnpm -r build; pnpm -r test. Leia: DARE/EXECUTION/task-083-docs-bump.md.

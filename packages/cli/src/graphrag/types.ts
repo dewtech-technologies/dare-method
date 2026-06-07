@@ -1,5 +1,21 @@
-export type NodeType = 'task' | 'file' | 'schema' | 'endpoint' | 'component' | 'entity' | 'concept';
-export type EdgeType = 'depends_on' | 'implements' | 'uses' | 'references' | 'related_to' | 'contains' | 'extends';
+export type NodeType =
+  | 'task'
+  | 'file'
+  | 'schema'
+  | 'endpoint'
+  | 'component'
+  | 'entity'
+  | 'concept'
+  | 'gate';
+export type EdgeType =
+  | 'depends_on'
+  | 'implements'
+  | 'uses'
+  | 'references'
+  | 'related_to'
+  | 'contains'
+  | 'extends'
+  | 'verified_by';
 
 export interface GraphNode {
   id: string;
