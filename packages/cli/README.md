@@ -164,6 +164,8 @@ Pick **one** of the two paths per stack:
 | `mcp-rust` (beta) | Rust 1.78+ (rustup) | `rust:1.83` |
 | `mcp-go` (beta) | Go 1.23+ — https://go.dev/dl/ | `golang:1.25` |
 
+> **v3.3.0:** **Reliable Verification Core** (opt-in via `dare.config.json#verification`) — turns the Ralph Loop's "tests pass" gate into "correct & robust": mutation testing, fail-to-pass specs, anti-tamper, a decay-aware loop policy, best-of-N candidate selection over git worktrees, and a `dare bench` regression harness (solve-rate + Fix·Rate). Absent the `verification` block, behavior is unchanged.
+
 > **v3.2.0:** full **CLI ↔ IDE parity** — every one of the 18 CLI commands is invocable as `/dare-<cmd>` across all three IDEs (Cursor, Claude Code, Antigravity); a parity test fails the build if a command is missing a skill. Brownfield commands now **collect real data by default**: `dare reverse`/`dna` extract endpoints + entities and render them into `IDEIA.md` and the module specs (no more skeleton-only artifacts).
 
 > **v3.1.0:** all **11 stacks** ship a full generator internalized in `@dewtech/dare-cli` — 7 backend (ruby-rails-8, node-nestjs, python-fastapi, php-laravel, rust-axum, go-gin, go-stdlib) + 4 MCP (mcp-node-ts, mcp-python, mcp-rust, mcp-go). No isolated stack packages; everything is in one publishable tarball (fixes the `npm install -g` 404 of earlier releases). `dare new` was removed — `dare init` is the only scaffolding entrypoint.

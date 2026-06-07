@@ -245,7 +245,7 @@ Cada implementação tem README próprio com setup detalhado.
 
 ---
 
-## 🔌 Skills & comandos (v3.2.0)
+## 🔌 Skills & comandos (v3.3.0)
 
 **Paridade total CLI ↔ IDE:** os **18 comandos** do `dare` CLI (`init`, `bootstrap`, `discover`, `reverse`, `dna`, `migrate`, `design`, `blueprint`, `execute`, `graph`, `dag`, `validate`, `info`, `update`, `review`, `refine`, `skill`, `welcome`) são invocáveis como `/dare-<comando>` nas 3 IDEs, mais as skills transversais e de stack. Cada uma existe em formato nativo de cada IDE:
 
@@ -660,9 +660,9 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 
 Veja o [**ROADMAP.md**](ROADMAP.md) na raiz do repositório com:
 
-- **Shipped** — tudo que está em produção na v3.2.0 (paridade total CLI ↔ IDE `/dare-*` nas 3 IDEs, 11 stacks com gerador completo, suíte brownfield `reverse`/`dna`/`migrate` com coleta determinística, CLI/GraphRAG/MCP/DAG)
+- **Shipped** — tudo que está em produção na v3.3.0 (**Reliable Verification Core** opt-in: mutation testing, fail-to-pass, anti-tamper, decay policy, best-of-N e `dare bench`) + v3.2.0 (paridade total CLI ↔ IDE `/dare-*` nas 3 IDEs, 11 stacks com gerador completo, suíte brownfield `reverse`/`dna`/`migrate` com coleta determinística, CLI/GraphRAG/MCP/DAG)
 - **Planejado (v3.3.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
-- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.2.0 atual
+- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.3.0 atual
 
 Detalhes técnicos de cada release ficam no [**CHANGELOG.md**](CHANGELOG.md).
 
