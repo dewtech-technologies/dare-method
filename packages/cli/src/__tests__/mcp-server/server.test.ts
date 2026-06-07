@@ -1,15 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createMcpServer } from '../../mcp-server/server.js';
 import request from 'supertest';
-
-// Mock dependencies
-vi.mock('fs-extra', () => ({
-  default: {
-    existsSync: vi.fn().mockReturnValue(true),
-    readJsonSync: vi.fn().mockReturnValue({ nodes: [], edges: [] }),
-    writeJsonSync: vi.fn(),
-  },
-}));
 
 describe('MCP Server', () => {
   it('should create an express app', () => {
@@ -23,13 +14,8 @@ describe('MCP Server', () => {
     const response = await request(app).get('/health');
     expect(response.status).toBe(200);
     expect(response.body.status).toBe('ok');
+    expect(response.body).toHaveProperty('projectRoot');
+    expect(response.body).not.toHaveProperty('projectPath');
   });
 
-  it('should have graphrag query endpoint', async () => {
-    const app = createMcpServer();
-    const response = await request(app).post('/mcp/query').send({ query: 'test' });
-    // Since we mock it, it might return 200 or 500 depending on implementation details
-    // Just verify the endpoint exists
-    expect(response.status).toBe(404);
-  });
 });

@@ -1,0 +1,253 @@
+title: "Security Hardening — Development Tasks"
+version: "3.4.0"
+generated: "2026-06-07T12:00:00Z"
+
+# Feature: security-hardening
+# Branch:  feat/security-hardening
+# Design:  DARE/DESIGN-Feature-security-hardening.md
+# Blueprint: DARE/BLUEPRINT-Feature-security-hardening.md
+#
+# Regra de ouro: endurecimento 100% determinístico (middleware, path safety, CI gates).
+# Detalhe executável por task em DARE/EXECUTION/.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: Path safety + init (H1) ─────────────────────────────────────
+  - id: task-101
+    title: "path-safety — assertWithinRoot + resolveSafePath + PathEscapeError"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-101-path-safety-extend.md
+    subtask_prompt: |
+      Estender packages/cli/src/utils/path-safety.ts (BLUEPRINT §3.1):
+      - Manter assertRelativeSafe existente (sem regressão).
+      - export class PathEscapeError extends Error { readonly code = 'PATH_ESCAPE' }
+      - export function assertWithinRoot(root: string, resolved: string): void
+        → throw PathEscapeError('Path escape: resolved path is outside allowed root') se resolved
+        não estiver sob root (usar path.resolve + realpathSync quando possível).
+      - export function resolveSafePath(root: string, ...segments: string[]): string
+        → assertRelativeSafe em cada segmento; join; assertWithinRoot; retorna path resolvido.
+      Regras: normalizar \→/ antes de checar '..'; rejeitar UNC \\server\share como root de escrita.
+      Testes em packages/cli/src/verification/__tests__/path-safety.test.ts (estender):
+      should_resolve_safe_child, should_reject_dotdot_escape, should_reject_absolute_segment,
+      should_reject_outside_root, windows_drive_fixture (skip se não win32).
+      Gates: tsc --noEmit; vitest run path-safety. Leia: DARE/EXECUTION/task-101-path-safety-extend.md.
+
+  - id: task-102
+    title: "init-validation.ts — validateProjectName + resolveProjectOutputDir"
+    depends_on: [task-101]
+    complexity: MED
+    spec_file: EXECUTION/task-102-init-validation.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/init-validation.ts (BLUEPRINT §3.2):
+      export const PROJECT_NAME_RE = /^[a-z0-9-_]+$/;
+      export function validateProjectName(name: string): ValidateProjectNameResult;
+      export function resolveProjectOutputDir(cwd: string, name: string): string;
+      export function assertWithinCwd(cwd: string, targetDir: string): void;
+      Mensagens EXATAS (stderr, exit 1 no caller):
+      - '..'/absoluto: Error: project name must be a simple directory name under the current folder (got '<name>')
+      - regex inválida: Error: project name may only contain lowercase letters, numbers, hyphens and underscores (got '<name>')
+      - fora do cwd: Error: project directory must stay inside the current working directory
+      assertWithinCwd usa assertWithinRoot de path-safety. Testes init-validation.test.ts cobrindo
+      tabela §5: ../../tmp/x, /etc/passwd, valid-name, ..\\escape (win), my--app OK, MyApp fail.
+      Gates: tsc --noEmit; vitest run init-validation. Leia: DARE/EXECUTION/task-102-init-validation.md.
+
+  - id: task-103
+    title: "dare init wire — runNonInteractive + project-generator guard"
+    depends_on: [task-102]
+    complexity: MED
+    spec_file: EXECUTION/task-103-init-wire.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/init.ts e utils/project-generator.ts (BLUEPRINT §5):
+      1) Extrair regex interativa (init.ts ~linha 40) para validateProjectName compartilhado.
+      2) Em runNonInteractive (~316): ANTES de generateProjectStructure:
+         const validated = validateProjectName(name);
+         if (!validated.ok) { console.error(chalk.red(validated.error)); process.exit(1); }
+         const outputDir = resolveProjectOutputDir(process.cwd(), validated.sanitized);
+      3) Em generateProjectStructure (~68): assertWithinCwd(process.cwd(), path.resolve(outputDir));
+      Testes de integração init.spec.ts ou init-validation já cobrem traversal; adicionar teste
+      que runNonInteractive com '../../tmp/x' exit 1 sem criar diretório.
+      Gates: tsc --noEmit; vitest run init-validation; vitest run init (se existir).
+      Leia: DARE/EXECUTION/task-103-init-wire.md.
+
+  # ─── Fase 2: MCP middleware (C1/C2) ──────────────────────────────────────
+  - id: task-110
+    title: "MCP middleware auth.ts — Bearer token + loopback bypass"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-110-mcp-auth.md
+    subtask_prompt: |
+      Criar packages/cli/src/mcp-server/middleware/auth.ts (BLUEPRINT §3.3):
+      export interface McpAuthOptions { token: string; allowLoopbackWithoutToken?: boolean }
+      export function createAuthMiddleware(opts: McpAuthOptions): RequestHandler;
+      Comportamento: sem Bearer válido E IP não-loopback → 401 { error: 'Unauthorized' }.
+      Loopback (127.0.0.1, ::1) + token ausente → permitido se allowLoopbackWithoutToken (default true).
+      Aceitar Authorization: Bearer <token> OU query ?token= (só loopback).
+      Token NUNCA logado — usar '[REDACTED]' se logar. Testes auth.test.ts:
+      should_allow_loopback_without_token, should_reject_non_loopback_without_token,
+      should_accept_valid_bearer, should_reject_invalid_token, should_redact_token_in_logs.
+      Gates: tsc --noEmit; vitest run auth. Leia: DARE/EXECUTION/task-110-mcp-auth.md.
+
+  - id: task-111
+    title: "MCP cors.ts + error-handler.ts — allowlist + sanitized 5xx"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-111-mcp-cors-error.md
+    subtask_prompt: |
+      Criar packages/cli/src/mcp-server/middleware/cors.ts e error-handler.ts (BLUEPRINT §3.3):
+      cors: createCorsMiddleware(opts?) — default origins localhost/127.0.0.1:*; origin fora da
+      allowlist → sem Access-Control-Allow-Origin; requests sem Origin header → permitidos.
+      error-handler: createErrorHandler(logger) → ErrorRequestHandler; log interno
+      logger.error({ err, correlationId, route }, 'mcp request failed'); body SEMPRE
+      { success: false, error: 'Internal server error', correlationId: uuid v4 }.
+      PROIBIDO err.message/stack/paths absolutos no body. Testes error-sanitize.test.ts:
+      should_never_leak_absolute_paths_in_5xx_body, should_include_correlation_id.
+      Gates: tsc --noEmit; vitest run error-sanitize. Leia: DARE/EXECUTION/task-111-mcp-cors-error.md.
+
+  - id: task-112
+    title: "server.ts hardening — middleware chain, helmet, resolveSafePath"
+    depends_on: [task-101, task-110, task-111]
+    complexity: HIGH
+    spec_file: EXECUTION/task-112-mcp-server.md
+    subtask_prompt: |
+      Refatorar packages/cli/src/mcp-server/server.ts (BLUEPRINT §4, §7):
+      - Adicionar dep helmet em package.json; aplicar helmet + express.json({ limit: env DARE_MCP_BODY_LIMIT default 1mb }).
+      - Remover cors() aberto; usar createAuthMiddleware, createCorsMiddleware, createErrorHandler.
+      - Root = process.env.DARE_PROJECT_PATH || process.cwd(); projectPath no body IGNORADO com
+        logger.warn('deprecated projectPath ignored') uma vez por request.
+      - Toda I/O via resolveSafePath(projectRoot, 'DARE', filename).
+      - GET /health: { status:'ok', version, projectRoot: basename only } — sem path absoluto.
+      - POST /context/query: query vazio → 400 { error:'query is required' }; type inválido → 400.
+      - GET /tasks/:taskId: taskId regex ^task-[0-9]{3}$ ou ^task-[0-9a-z-]+$ senão 400.
+      Testes path-confinement.test.ts: 20+ fixtures projectPath malicioso → 403/400, zero bytes fora root.
+      Gates: tsc --noEmit; vitest run path-confinement; vitest run mcp-server (se existir).
+      Leia: DARE/EXECUTION/task-112-mcp-server.md.
+
+  - id: task-113
+    title: "bin/server.ts — bind 127.0.0.1 + token boot mascarado"
+    depends_on: [task-112]
+    complexity: MED
+    spec_file: EXECUTION/task-113-mcp-bin.md
+    subtask_prompt: |
+      Modificar packages/cli/src/mcp-server/bin/server.ts (BLUEPRINT §3.4, A-4/A-5):
+      - Host default DARE_MCP_BIND=127.0.0.1; app.listen(PORT, host) — NUNCA listen(PORT) sem host.
+      - Se DARE_MCP_BIND=0.0.0.0 → logger.warn explícito sobre exposição LAN.
+      - Token: DARE_MCP_TOKEN ou uuid gerado no boot; imprimir UMA vez mascarado (ex: abcd...wxyz).
+      - PROIBIDO console.log do token completo. Passar token para createMcpServer/createAuthMiddleware.
+      Teste: grep/boot log não contém token completo; bind default é 127.0.0.1.
+      Gates: tsc --noEmit; vitest run auth (redact); revisar server boot manualmente.
+      Leia: DARE/EXECUTION/task-113-mcp-bin.md.
+
+  # ─── Fase 3: CI / supply-chain ────────────────────────────────────────────
+  - id: task-120
+    title: "ci.yml — eslint real bloqueante (RF-10)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-120-ci-eslint.md
+    subtask_prompt: |
+      Modificar .github/workflows/ci.yml (BLUEPRINT §6.1): substituir step faux-lint
+      "Type check all packages" (~68-69) por:
+      - name: ESLint (packages/cli)
+        run: pnpm --filter @dewtech/dare-cli lint
+      Job deve falhar se eslint retorna ≠ 0. Garantir script lint existe em packages/cli/package.json.
+      Gates: pnpm --filter @dewtech/dare-cli lint localmente verde.
+      Leia: DARE/EXECUTION/task-120-ci-eslint.md.
+
+  - id: task-121
+    title: "coverage gate — vitest thresholds + KNOWN-COV-BASELINE.md"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-121-coverage-gate.md
+    subtask_prompt: |
+      Adicionar cobertura bloqueante (BLUEPRINT §6.2):
+      1) packages/cli/vitest.config.ts — coverage provider v8, thresholds iniciais
+         { lines:70, functions:65, branches:60, statements:70 } OU valor atual-2pp se baseline menor.
+      2) Criar KNOWN-COV-BASELINE.md documentando limiar inicial e meta gradual (+2pp/release).
+      3) ci.yml job build-and-test: step "Test with coverage gate"
+         run: pnpm --filter @dewtech/dare-cli exec vitest run --coverage
+      Gates: vitest run --coverage local passa com thresholds configurados.
+      Leia: DARE/EXECUTION/task-121-coverage-gate.md.
+
+  - id: task-122
+    title: "publish.yml — npm publish --provenance (RF-09)"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-122-publish-provenance.md
+    subtask_prompt: |
+      Modificar .github/workflows/publish.yml (BLUEPRINT §6.3):
+      - permissions: contents: write, id-token: write
+      - setup-node com registry-url https://registry.npmjs.org
+      - Publish: pnpm --filter @dewtech/dare-cli publish --access public --provenance
+      Documentar em comentário YAML: configurar trusted publisher npm ↔ GitHub antes v3.4.0.
+      Atualizar publish-smoke.yml se necessário para validar pacote publicado.
+      Gates: YAML válido; dry-run local se possível.
+      Leia: DARE/EXECUTION/task-122-publish-provenance.md.
+
+  - id: task-123
+    title: "pin actions SHA + verify-actions-pinned.mjs (RF-12)"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-123-actions-pin.md
+    subtask_prompt: |
+      Pin todas as actions por SHA com comentário da tag (BLUEPRINT §6.4) em:
+      ci.yml, publish.yml, publish-smoke.yml, release.yml.
+      Formato: uses: actions/checkout@<sha> # v4.2.2
+      Criar scripts/verify-actions-pinned.mjs: varre .github/workflows/*.yml; falha exit 1 se
+      encontrar uses: org/action@vN sem SHA (regex). Adicionar step no CI ou teste vitest que roda o script.
+      Gates: node scripts/verify-actions-pinned.mjs exit 0.
+      Leia: DARE/EXECUTION/task-123-actions-pin.md.
+
+  - id: task-124
+    title: "SECURITY.md — MCP surface + provenance (RF-13)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-124-security-md.md
+    subtask_prompt: |
+      Atualizar SECURITY.md (BLUEPRINT §6.5) com seções:
+      - Superfície MCP HTTP (bind loopback default, Bearer token, sem disclosure de paths)
+      - Pacote @dewtech/dare-cli publicado no npm
+      - Provenance npm / OIDC trusted publishing
+      - Manter SLA de disclosure existente
+      Gates: markdown válido; links internos corretos.
+      Leia: DARE/EXECUTION/task-124-security-md.md.
+
+  # ─── Fase 4: Auditoria N-1 ───────────────────────────────────────────────
+  - id: task-130
+    title: "security-hardening regression audit (N-1)"
+    depends_on: [task-103, task-113, task-120, task-121, task-122, task-123]
+    complexity: HIGH
+    spec_file: EXECUTION/task-130-security-audit.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/security-hardening.test.ts integrando O-01..O-08:
+      - Traversal 100% rejeitado (reusa path-confinement + init-validation fixtures)
+      - Erro 5xx sem regex ([A-Za-z]:\\|/etc/|/home/) no body
+      - Token ausente em logs de boot (grep fixture)
+      - verify-actions-pinned.mjs exit 0
+      - pnpm audit --prod --audit-level=high sem HIGH (mock ou skip se CI-only)
+      Consolidar testes MCP em mcp-server/__tests__/ se ainda dispersos.
+      Gates: vitest run security-hardening; vitest run path-confinement error-sanitize auth init-validation.
+      Leia: DARE/EXECUTION/task-130-security-audit.md.
+
+  # ─── Fase 5: Docs + release ──────────────────────────────────────────────
+  - id: task-131
+    title: "CHANGELOG + bump v3.4.0 + breaking notes"
+    depends_on: [task-130, task-124]
+    complexity: LOW
+    spec_file: EXECUTION/task-131-release-docs.md
+    subtask_prompt: |
+      Release v3.4.0 (BLUEPRINT §12):
+      - CHANGELOG [3.4.0]: auth MCP obrigatória fora loopback, bind 127.0.0.1 default,
+        dare init valida nome (breaking para nomes inválidos), CI eslint+coverage, provenance npm.
+      - README: seção segurança MCP (token, bind, DARE_MCP_* env vars).
+      - Bump packages/cli/package.json e root package.json para 3.4.0.
+      Gates: pnpm test verde; CHANGELOG formatado.
+      Leia: DARE/EXECUTION/task-131-release-docs.md.

@@ -1,0 +1,65 @@
+%% DARE DAG — Security Hardening — Development Tasks
+%% Generated: 2026-06-07T18:35:20.631Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_101["task-101\npath-safety — assertWithinRoot + resolveSafePath + PathEscapeError\n⏳ PENDING"]
+    task_110["task-110\nMCP middleware auth.ts — Bearer token + loopback bypass\n⏳ PENDING"]
+    task_111["task-111\nMCP cors.ts + error-handler.ts — allowlist + sanitized 5xx\n⏳ PENDING"]
+    task_120["task-120\nci.yml — eslint real bloqueante (RF-10)\n⏳ PENDING"]
+    task_121["task-121\ncoverage gate — vitest thresholds + KNOWN-COV-BASELINE.md\n⏳ PENDING"]
+    task_122["task-122\npublish.yml — npm publish --provenance (RF-09)\n⏳ PENDING"]
+    task_123["task-123\npin actions SHA + verify-actions-pinned.mjs (RF-12)\n⏳ PENDING"]
+    task_124["task-124\nSECURITY.md — MCP surface + provenance (RF-13)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_102["task-102\ninit-validation.ts — validateProjectName + resolveProjectOutputDir\n⏳ PENDING"]
+    task_112["task-112\nserver.ts hardening — middleware chain, helmet, resolveSafePath\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_103["task-103\ndare init wire — runNonInteractive + project-generator guard\n⏳ PENDING"]
+    task_113["task-113\nbin/server.ts — bind 127.0.0.1 + token boot mascarado\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_130["task-130\nsecurity-hardening regression audit (N-1)\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_131["task-131\nCHANGELOG + bump v3.4.0 + breaking notes\n⏳ PENDING"]
+  end
+  task_101 --> task_102
+  task_102 --> task_103
+  task_101 --> task_112
+  task_110 --> task_112
+  task_111 --> task_112
+  task_112 --> task_113
+  task_103 --> task_130
+  task_113 --> task_130
+  task_120 --> task_130
+  task_121 --> task_130
+  task_122 --> task_130
+  task_123 --> task_130
+  task_130 --> task_131
+  task_124 --> task_131
+  class task_101 st_pending;
+  class task_102 st_pending;
+  class task_103 st_pending;
+  class task_110 st_pending;
+  class task_111 st_pending;
+  class task_112 st_pending;
+  class task_113 st_pending;
+  class task_120 st_pending;
+  class task_121 st_pending;
+  class task_122 st_pending;
+  class task_123 st_pending;
+  class task_124 st_pending;
+  class task_130 st_pending;
+  class task_131 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

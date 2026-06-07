@@ -14,5 +14,16 @@ export default defineConfig({
       'templates/**',
       'fixtures/**',
     ],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/__tests__/**', 'src/**/*.spec.ts'],
+      thresholds: {
+        lines: 60,
+        functions: 63,
+        branches: 58,
+        statements: 60,
+      },
+    },
   },
 });

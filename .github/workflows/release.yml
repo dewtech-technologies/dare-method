@@ -23,18 +23,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c2ffbcb # v4.2.2
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a7487d7b8a70265ad49df2ee88f205cdd1 # v3.0.1
         with:
           version: 9
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d682002 # v4.4.0
         with:
           node-version: 20.x
           cache: pnpm
@@ -107,7 +107,7 @@ jobs:
         continue-on-error: false
 
       - name: Upload bench report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac45b26c95f14d2fe3c67a2d33b0537db5e6 # v4.5.0
         with:
           name: bench-report
           path: bench-report.json

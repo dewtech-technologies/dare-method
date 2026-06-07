@@ -1,8 +1,16 @@
-import express, { Request, Response, Express } from 'express';
-import cors from 'cors';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import express, { type Express, type Request, type Response, type NextFunction } from 'express';
 import fs from 'fs-extra';
-import path from 'path';
+import helmet from 'helmet';
 import pino from 'pino';
+import { PathEscapeError, resolveSafePath } from '../utils/path-safety.js';
+import { createAuthMiddleware } from './middleware/auth.js';
+import { createCorsMiddleware } from './middleware/cors.js';
+import { createErrorHandler } from './middleware/error-handler.js';
+
+const require = createRequire(import.meta.url);
+const { version: pkgVersion } = require('../../package.json') as { version: string };
 
 const logger = pino({ transport: { target: 'pino-pretty' } });
 
@@ -10,6 +18,7 @@ export interface ContextQuery {
   type: 'file' | 'task' | 'dependency' | 'architecture' | 'schema' | 'endpoint';
   query: string;
   limit?: number;
+  /** @deprecated Ignored — server uses DARE_PROJECT_PATH / cwd only */
   projectPath?: string;
 }
 
@@ -27,17 +36,92 @@ export interface TaskStatus {
   updatedAt: string;
 }
 
-export function createMcpServer(projectPath: string = process.cwd()): Express {
-  const app: Express = express();
-  app.use(cors());
-  app.use(express.json());
+const CONTEXT_TYPES = new Set<ContextQuery['type']>([
+  'file',
+  'task',
+  'dependency',
+  'architecture',
+  'schema',
+  'endpoint',
+]);
 
-  // Health check
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', version: '0.1.0', projectPath });
+const TASK_STATUSES = new Set<TaskStatus['status']>([
+  'PENDING',
+  'IN_PROGRESS',
+  'DONE',
+  'FAILED',
+  'SKIPPED',
+]);
+
+const TASK_ID_RE = /^(task-[0-9]{3}|task-[0-9a-z-]+)$/;
+
+export interface McpServerOptions {
+  authToken?: string;
+  allowLoopbackWithoutToken?: boolean;
+}
+
+function dareFile(projectRoot: string, ...segments: string[]): string {
+  return resolveSafePath(projectRoot, 'DARE', ...segments);
+}
+
+function projectConfigPath(projectRoot: string): string {
+  return resolveSafePath(projectRoot, 'dare.config.json');
+}
+
+function isValidTaskId(taskId: string): boolean {
+  return TASK_ID_RE.test(taskId);
+}
+
+function sendPathEscape(res: Response): void {
+  res.status(403).json({ error: 'Forbidden' });
+}
+
+function runSafe<T>(res: Response, next: NextFunction, fn: () => Promise<T>): void {
+  fn().catch((err) => {
+    if (err instanceof PathEscapeError) {
+      sendPathEscape(res);
+      return;
+    }
+    next(err);
+  });
+}
+
+export function createMcpServer(
+  projectRoot: string = process.env.DARE_PROJECT_PATH || process.cwd(),
+  options: McpServerOptions = {},
+): Express {
+  const authToken = options.authToken ?? process.env.DARE_MCP_TOKEN ?? 'dare-mcp-dev-token';
+  const bodyLimit = process.env.DARE_MCP_BODY_LIMIT || '1mb';
+
+  const app: Express = express();
+  app.set('trust proxy', true);
+
+  app.use(
+    createAuthMiddleware({
+      token: authToken,
+      allowLoopbackWithoutToken: options.allowLoopbackWithoutToken ?? true,
+    }),
+  );
+  app.use(createCorsMiddleware());
+  app.use(helmet());
+  app.use(express.json({ limit: bodyLimit }));
+
+  app.use((req, _res, next) => {
+    const body = req.body as ContextQuery | undefined;
+    if (body && typeof body.projectPath === 'string' && body.projectPath.length > 0) {
+      logger.warn('deprecated projectPath ignored');
+    }
+    next();
   });
 
-  // List available MCP tools
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      version: pkgVersion,
+      projectRoot: path.basename(projectRoot),
+    });
+  });
+
   app.get('/tools', (_req: Request, res: Response) => {
     res.json({
       tools: [
@@ -51,16 +135,24 @@ export function createMcpServer(projectPath: string = process.cwd()): Express {
     });
   });
 
-  // Main context query endpoint - saves tokens by returning only relevant context
-  app.post('/context/query', async (req: Request, res: Response) => {
-    const { type, query, limit = 5, projectPath: reqPath } = req.body as ContextQuery;
-    const basePath = reqPath || projectPath;
+  app.post('/context/query', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const { type, query, limit = 5 } = req.body as ContextQuery;
 
-    try {
+      if (!query || typeof query !== 'string' || query.trim() === '') {
+        res.status(400).json({ error: 'query is required' });
+        return;
+      }
+
+      if (!type || !CONTEXT_TYPES.has(type)) {
+        res.status(400).json({ error: 'invalid context type' });
+        return;
+      }
+
       const results: ContextResult[] = [];
 
       if (type === 'architecture' || type === 'file') {
-        const blueprintPath = path.join(basePath, 'DARE', 'BLUEPRINT.md');
+        const blueprintPath = dareFile(projectRoot, 'BLUEPRINT.md');
         if (await fs.pathExists(blueprintPath)) {
           const content = await fs.readFile(blueprintPath, 'utf-8');
           const lines = content.split('\n');
@@ -76,9 +168,9 @@ export function createMcpServer(projectPath: string = process.cwd()): Express {
                 relevantSections.push({ section: currentSection, content: sectionContent, relevance: 0.8 });
               }
               currentSection = line.replace(/^#+\s*/, '');
-              sectionContent = line + '\n';
+              sectionContent = `${line}\n`;
             } else {
-              sectionContent += line + '\n';
+              sectionContent += `${line}\n`;
               if (line.toLowerCase().includes(queryLower)) {
                 relevantSections.push({ section: currentSection, content: sectionContent, relevance: 1.0 });
               }
@@ -101,13 +193,13 @@ export function createMcpServer(projectPath: string = process.cwd()): Express {
       }
 
       if (type === 'task') {
-        const tasksPath = path.join(basePath, 'DARE', 'TASKS.md');
+        const tasksPath = dareFile(projectRoot, 'TASKS.md');
         if (await fs.pathExists(tasksPath)) {
           const content = await fs.readFile(tasksPath, 'utf-8');
           const queryLower = query.toLowerCase();
-          const lines = content.split('\n').filter((l) => l.toLowerCase().includes(queryLower));
+          const matched = content.split('\n').filter((l) => l.toLowerCase().includes(queryLower));
 
-          lines.slice(0, limit).forEach((line, i) => {
+          matched.slice(0, limit).forEach((line, i) => {
             results.push({
               id: `task-${i}`,
               type: 'task',
@@ -120,13 +212,13 @@ export function createMcpServer(projectPath: string = process.cwd()): Express {
       }
 
       if (type === 'dependency') {
-        const dagPath = path.join(basePath, 'DARE', 'dare-dag.yaml');
+        const dagPath = dareFile(projectRoot, 'dare-dag.yaml');
         if (await fs.pathExists(dagPath)) {
           const content = await fs.readFile(dagPath, 'utf-8');
           const queryLower = query.toLowerCase();
-          const lines = content.split('\n').filter((l) => l.toLowerCase().includes(queryLower));
+          const matched = content.split('\n').filter((l) => l.toLowerCase().includes(queryLower));
 
-          lines.slice(0, limit).forEach((line, i) => {
+          matched.slice(0, limit).forEach((line, i) => {
             results.push({
               id: `dag-${i}`,
               type: 'dependency',
@@ -139,103 +231,123 @@ export function createMcpServer(projectPath: string = process.cwd()): Express {
       }
 
       res.json({ success: true, results, total: results.length, query, type });
-    } catch (err) {
-      logger.error(err);
-      res.status(500).json({ success: false, error: String(err) });
-    }
+    });
   });
 
-  // Get BLUEPRINT.md
-  app.get('/blueprint', async (_req: Request, res: Response) => {
-    const blueprintPath = path.join(projectPath, 'DARE', 'BLUEPRINT.md');
-    if (!await fs.pathExists(blueprintPath)) {
-      res.status(404).json({ error: 'BLUEPRINT.md not found. Run: dare blueprint' });
-      return;
-    }
-    const content = await fs.readFile(blueprintPath, 'utf-8');
-    res.json({ content, source: 'DARE/BLUEPRINT.md' });
+  app.get('/blueprint', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const blueprintPath = dareFile(projectRoot, 'BLUEPRINT.md');
+      if (!(await fs.pathExists(blueprintPath))) {
+        res.status(404).json({ error: 'BLUEPRINT.md not found. Run: dare blueprint' });
+        return;
+      }
+      const content = await fs.readFile(blueprintPath, 'utf-8');
+      res.json({ content, source: 'DARE/BLUEPRINT.md' });
+    });
   });
 
-  // Get dare-dag.yaml
-  app.get('/dag', async (_req: Request, res: Response) => {
-    const dagPath = path.join(projectPath, 'DARE', 'dare-dag.yaml');
-    if (!await fs.pathExists(dagPath)) {
-      res.status(404).json({ error: 'dare-dag.yaml not found. Run: dare blueprint' });
-      return;
-    }
-    const content = await fs.readFile(dagPath, 'utf-8');
-    res.json({ content, source: 'DARE/dare-dag.yaml' });
+  app.get('/dag', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const dagPath = dareFile(projectRoot, 'dare-dag.yaml');
+      if (!(await fs.pathExists(dagPath))) {
+        res.status(404).json({ error: 'dare-dag.yaml not found. Run: dare blueprint' });
+        return;
+      }
+      const content = await fs.readFile(dagPath, 'utf-8');
+      res.json({ content, source: 'DARE/dare-dag.yaml' });
+    });
   });
 
-  // Get task status
-  app.get('/tasks/:taskId', async (req: Request, res: Response) => {
-    const { taskId } = req.params;
-    const tasksPath = path.join(projectPath, 'DARE', 'TASKS.md');
-    if (!await fs.pathExists(tasksPath)) {
-      res.status(404).json({ error: 'TASKS.md not found' });
-      return;
-    }
-    const content = await fs.readFile(tasksPath, 'utf-8');
-    const line = content.split('\n').find((l) => l.includes(taskId));
-    if (!line) {
-      res.status(404).json({ error: `Task ${taskId} not found` });
-      return;
-    }
+  app.get('/tasks/:taskId', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const { taskId } = req.params;
+      if (!isValidTaskId(taskId)) {
+        res.status(400).json({ error: 'invalid task id' });
+        return;
+      }
 
-    let status = 'PENDING';
-    if (line.includes('✅')) status = 'DONE';
-    else if (line.includes('🔄')) status = 'IN_PROGRESS';
-    else if (line.includes('❌')) status = 'FAILED';
-    else if (line.includes('⏭️')) status = 'SKIPPED';
+      const tasksPath = dareFile(projectRoot, 'TASKS.md');
+      if (!(await fs.pathExists(tasksPath))) {
+        res.status(404).json({ error: 'TASKS.md not found' });
+        return;
+      }
+      const content = await fs.readFile(tasksPath, 'utf-8');
+      const line = content.split('\n').find((l) => l.includes(taskId));
+      if (!line) {
+        res.status(404).json({ error: `Task ${taskId} not found` });
+        return;
+      }
 
-    res.json({ id: taskId, status, line });
+      let status: TaskStatus['status'] = 'PENDING';
+      if (line.includes('✅')) status = 'DONE';
+      else if (line.includes('🔄')) status = 'IN_PROGRESS';
+      else if (line.includes('❌')) status = 'FAILED';
+      else if (line.includes('⏭️')) status = 'SKIPPED';
+
+      res.json({ id: taskId, status, line });
+    });
   });
 
-  // Update task status
-  app.put('/tasks/:taskId', async (req: Request, res: Response) => {
-    const { taskId } = req.params;
-    const { status } = req.body as { status: TaskStatus['status'] };
-    const tasksPath = path.join(projectPath, 'DARE', 'TASKS.md');
+  app.put('/tasks/:taskId', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const { taskId } = req.params;
+      if (!isValidTaskId(taskId)) {
+        res.status(400).json({ error: 'invalid task id' });
+        return;
+      }
 
-    if (!await fs.pathExists(tasksPath)) {
-      res.status(404).json({ error: 'TASKS.md not found' });
-      return;
-    }
+      const { status } = req.body as { status?: TaskStatus['status'] };
+      if (!status || !TASK_STATUSES.has(status)) {
+        res.status(400).json({ error: 'invalid task status' });
+        return;
+      }
 
-    const icons: Record<string, string> = {
-      PENDING: '⏳ PENDING',
-      IN_PROGRESS: '🔄 IN_PROGRESS',
-      DONE: '✅ DONE',
-      FAILED: '❌ FAILED',
-      SKIPPED: '⏭️ SKIPPED',
-    };
+      const tasksPath = dareFile(projectRoot, 'TASKS.md');
+      if (!(await fs.pathExists(tasksPath))) {
+        res.status(404).json({ error: 'TASKS.md not found' });
+        return;
+      }
 
-    const content = await fs.readFile(tasksPath, 'utf-8');
-    const lines = content.split('\n');
-    const lineIdx = lines.findIndex((l) => l.includes(taskId));
+      const icons: Record<TaskStatus['status'], string> = {
+        PENDING: '⏳ PENDING',
+        IN_PROGRESS: '🔄 IN_PROGRESS',
+        DONE: '✅ DONE',
+        FAILED: '❌ FAILED',
+        SKIPPED: '⏭️ SKIPPED',
+      };
 
-    if (lineIdx === -1) {
-      res.status(404).json({ error: `Task ${taskId} not found` });
-      return;
-    }
+      const content = await fs.readFile(tasksPath, 'utf-8');
+      const lines = content.split('\n');
+      const lineIdx = lines.findIndex((l) => l.includes(taskId));
 
-    lines[lineIdx] = lines[lineIdx]
-      .replace(/⏳ PENDING|🔄 IN_PROGRESS|✅ DONE|❌ FAILED|⏭️ SKIPPED/, icons[status] || status);
+      if (lineIdx === -1) {
+        res.status(404).json({ error: `Task ${taskId} not found` });
+        return;
+      }
 
-    await fs.writeFile(tasksPath, lines.join('\n'));
-    res.json({ success: true, id: taskId, status });
+      lines[lineIdx] = lines[lineIdx].replace(
+        /⏳ PENDING|🔄 IN_PROGRESS|✅ DONE|❌ FAILED|⏭️ SKIPPED/,
+        icons[status],
+      );
+
+      await fs.writeFile(tasksPath, lines.join('\n'));
+      res.json({ success: true, id: taskId, status });
+    });
   });
 
-  // Get project config
-  app.get('/project', async (_req: Request, res: Response) => {
-    const configPath = path.join(projectPath, 'dare.config.json');
-    if (!await fs.pathExists(configPath)) {
-      res.status(404).json({ error: 'dare.config.json not found. Run: dare init' });
-      return;
-    }
-    const config = await fs.readJSON(configPath);
-    res.json(config);
+  app.get('/project', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const configPath = projectConfigPath(projectRoot);
+      if (!(await fs.pathExists(configPath))) {
+        res.status(404).json({ error: 'dare.config.json not found. Run: dare init' });
+        return;
+      }
+      const config = await fs.readJSON(configPath);
+      res.json(config);
+    });
   });
+
+  app.use(createErrorHandler(logger));
 
   return app;
 }

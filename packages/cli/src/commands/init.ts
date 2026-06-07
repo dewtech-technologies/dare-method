@@ -4,6 +4,10 @@ import chalk from 'chalk';
 import ora from 'ora';
 import path from 'path';
 import { generateProjectStructure } from '../utils/project-generator.js';
+import {
+  validateProjectName,
+  resolveProjectOutputDir,
+} from './init-validation.js';
 
 export const initCommand = new Command('init')
   .description('Initialize a new DARE project with interactive setup')
@@ -36,8 +40,12 @@ export const initCommand = new Command('init')
         default: projectName || 'my-dare-project',
         when: !projectName,
         validate: (input: string) => {
-          if (!input.trim()) return 'Project name cannot be empty';
-          if (!/^[a-z0-9-_]+$/.test(input)) return 'Use only lowercase letters, numbers, hyphens and underscores';
+          const result = validateProjectName(input);
+          if (!result.ok) {
+            return result.error.startsWith('Error: ')
+              ? result.error.slice('Error: '.length)
+              : result.error;
+          }
           return true;
         },
       },
@@ -215,7 +223,14 @@ export const initCommand = new Command('init')
       },
     ]);
 
-    const name = projectName || answers.name;
+    const rawName = projectName || answers.name;
+    const validated = validateProjectName(rawName);
+    if (!validated.ok) {
+      console.error(chalk.red(validated.error));
+      process.exit(1);
+    }
+    const name = validated.sanitized;
+    const outputDir = resolveProjectOutputDir(process.cwd(), name);
     const spinner = ora(`Creating project ${chalk.cyan(name)}...`).start();
 
     try {
@@ -233,7 +248,7 @@ export const initCommand = new Command('init')
         toolchain: answers.toolchain,
         rustWorkspaceLayout: answers.rustWorkspaceLayout,
         cratePrefix: answers.cratePrefix,
-        outputDir: path.resolve(process.cwd(), name),
+        outputDir,
       });
 
       spinner.succeed(chalk.green(`Project ${chalk.bold(name)} created successfully!`));
@@ -313,7 +328,14 @@ async function runNonInteractive(
   projectName: string | undefined,
   options: { stack?: string; mcp?: string; transport?: string; toolchain?: string; nonInteractive?: boolean },
 ): Promise<void> {
-  const name = projectName ?? 'my-dare-project';
+  const rawName = projectName ?? 'my-dare-project';
+  const validated = validateProjectName(rawName);
+  if (!validated.ok) {
+    console.error(chalk.red(validated.error));
+    process.exit(1);
+  }
+  const name = validated.sanitized;
+  const outputDir = resolveProjectOutputDir(process.cwd(), name);
 
   if (!options.stack && !options.mcp) {
     console.error(chalk.red('Error: --non-interactive requires --stack <id> or --mcp <language>'));
@@ -353,7 +375,7 @@ async function runNonInteractive(
         graphrag: 'sqlite',
         mcp: false,
         toolchain,
-        outputDir: path.resolve(process.cwd(), name),
+        outputDir,
       });
     } else {
       await generateProjectStructure({
@@ -364,7 +386,7 @@ async function runNonInteractive(
         graphrag: 'sqlite',
         mcp: false,
         toolchain,
-        outputDir: path.resolve(process.cwd(), name),
+        outputDir,
       });
     }
     spinner.succeed(chalk.green(`Project ${chalk.bold(name)} created.`));

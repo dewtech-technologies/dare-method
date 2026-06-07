@@ -15,7 +15,8 @@ let tmpRoot: string;
 let appDir: string;
 
 beforeAll(async () => {
-  tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'init-rails-it-'));
+  tmpRoot = path.join(process.cwd(), `.init-rails-it-${Date.now()}`);
+  await fs.ensureDir(tmpRoot);
   appDir = path.join(tmpRoot, 'my-rails-app');
 
   await generateProjectStructure({
@@ -96,7 +97,8 @@ describe('dare init — all backends route through registry scaffolders', () => 
   ] as const;
 
   it.each(BACKENDS)('%s emits DARE DNA (llms.txt + .dare/skills.yml + dare-ci.yml)', async (stack) => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), `init-${stack}-`));
+    const root = path.join(process.cwd(), `.init-${stack}-${Date.now()}`);
+    await fs.ensureDir(root);
     const dir = path.join(root, 'app');
     try {
       await generateProjectStructure({
@@ -125,7 +127,8 @@ describe('dare init — MCP variants route through registry scaffolders', () => 
   const LANGS = ['node-ts', 'python', 'rust', 'go'] as const;
 
   it.each(LANGS)('mcp %s emits server + transports + DNA', async (lang) => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), `init-mcp-${lang}-`));
+    const root = path.join(process.cwd(), `.init-mcp-${lang}-${Date.now()}`);
+    await fs.ensureDir(root);
     const dir = path.join(root, 'srv');
     try {
       await generateProjectStructure({

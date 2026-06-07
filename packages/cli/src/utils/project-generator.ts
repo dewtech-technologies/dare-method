@@ -31,6 +31,7 @@ import {
   type ToolchainMode,
 } from './stack-bootstrap.js';
 import { defaultVerificationConfigForProject } from '../verification/config.js';
+import { assertWithinCwd } from '../commands/init-validation.js';
 
 export interface ProjectConfig {
   name: string;
@@ -66,6 +67,7 @@ export interface ProjectConfig {
 export async function generateProjectStructure(config: ProjectConfig): Promise<void> {
   const { outputDir, name, structure, backend, frontend, ide, graphrag, mcp } = config;
 
+  assertWithinCwd(process.cwd(), path.resolve(outputDir));
   await fs.ensureDir(outputDir);
 
   // 0) Run the official scaffold for the chosen stack BEFORE laying down DARE

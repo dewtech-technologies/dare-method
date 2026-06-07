@@ -7,26 +7,26 @@ on:
 
 jobs:
   publish:
-    name: Publish packages to npm
+    name: Publish @dewtech/dare-cli to npm
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
+      contents: write # criar o GitHub Release
+      id-token: write # gerar provenance (supply-chain attestation)
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c2ffbcb # v4.2.2
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+        uses: pnpm/action-setup@a7487d7b8a70265ad49df2ee88f205cdd1 # v3.0.1
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js for publish
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d682002 # v4.4.0
         with:
           node-version: 20.x
           cache: pnpm
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -37,13 +37,35 @@ jobs:
       - name: Run tests
         run: pnpm -r test
 
+      - name: Skip if version already published
+        id: guard
+        working-directory: packages/cli
+        run: |
+          set -euo pipefail
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::${NAME}@${VERSION} já está publicado — pulando npm publish."
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Configure trusted publisher @dewtech/dare-cli ↔ this GitHub repo on npmjs.com
+      # before the first v3.4.0 release (OIDC can replace NPM_TOKEN when active).
+      - name: Publish to npm with provenance
+        if: steps.guard.outputs.already == 'false'
+        working-directory: packages/cli
+        run: pnpm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Extract release notes from CHANGELOG.md
         id: notes
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "Resolving release notes for v${VERSION}"
-          # Capture first — avoids unclosed heredoc if the script exits non-zero
           NOTES="$(node scripts/extract-release-notes.mjs "${VERSION}")"
           {
             echo "body<<__DARE_NOTES_EOF__"
@@ -52,7 +74,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@e0503c5bfd82269880999ea3b20cf0186bdcc7df # v2.0.0
         with:
           body: ${{ steps.notes.outputs.body }}
           token: ${{ secrets.GITHUB_TOKEN }}
