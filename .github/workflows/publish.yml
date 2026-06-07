@@ -56,7 +56,7 @@ jobs:
       - name: Publish to npm with provenance
         if: steps.guard.outputs.already == 'false'
         working-directory: packages/cli
-        run: pnpm publish --access public --provenance
+        run: pnpm publish --access public --provenance --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
