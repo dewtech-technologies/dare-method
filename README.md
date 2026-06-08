@@ -833,7 +833,7 @@ Veja o [**ROADMAP.md**](ROADMAP.md) na raiz do repositório com:
 
 - **Shipped** — em produção na **v3.8.0**: Formal Verification Gate (Dafny default, opt-in estrito, anti-bypass, exit 5), Brownfield Discovery (v3.7), Agent Hooks + Steering (v3.6), Dual Graph + fix Neo4j (v3.5), Security Hardening (v3.4), Reliable Verification Core (v3.3); + paridade CLI↔IDE `/dare-*` nas 3 IDEs, 11 stacks com gerador completo, suíte brownfield `reverse`/`dna`/`migrate`, CLI/GraphRAG/MCP/DAG
 - **Planejado (v3.9.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
-- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.8.0 atual
+- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.8.1 atual
 
 Detalhes técnicos de cada release ficam no [**CHANGELOG.md**](CHANGELOG.md).
 

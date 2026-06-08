@@ -16,19 +16,25 @@
           "type": "modified",
           "path": "dare.config.json#version",
           "description": "Campo `version` agora rastreia a release do DARE (antes era placeholder `0.1.0` zombie)",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         },
         {
           "type": "added",
           "path": "dare.config.json#review",
           "description": "Adiciona objeto `review` ({ onComplete, strict }) em dare.config.json — gate opt-in pré-DONE no Ralph Loop",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         },
         {
           "type": "added",
           "path": "dare.config.json#refine",
           "description": "Adiciona objeto `refine.thresholds` em dare.config.json para customizar buckets de complexidade",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         }
       ],
       "migrations": [
@@ -53,28 +59,36 @@
           "type": "added",
           "path": "dare.config.json#verification",
           "description": "Adiciona objeto `verification` (enabled:false + defaults) — gate opt-in pós-Ralph Loop",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         },
         {
           "type": "added",
           "path": ".claude/commands/dare-bench.md",
           "templateSource": "ide/claude/.claude/commands/dare-bench.md",
           "description": "Comando `/dare-bench` (Claude Code) — harness determinístico de fixtures (Fix·Rate, solve-rate, regressão)",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "added",
           "path": ".cursor/commands/dare-bench.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-bench.md",
           "description": "Comando `/dare-bench` (Cursor) — harness determinístico de fixtures (Fix·Rate, solve-rate, regressão)",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "added",
           "path": ".agents/skills/dare-bench/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-bench/SKILL.md",
           "description": "Skill `dare-bench` (Antigravity) — harness determinístico de fixtures (Fix·Rate, solve-rate, regressão)",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         }
       ],
       "migrations": [
@@ -102,21 +116,27 @@
           "path": ".claude/commands/dare-graph.md",
           "templateSource": "ide/claude/.claude/commands/dare-graph.md",
           "description": "Skill `dare-graph` (Claude Code) atualizada com subcomandos owners/impact/trace/locate",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "modified",
           "path": ".cursor/commands/dare-graph.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-graph.md",
           "description": "Skill `dare-graph` (Cursor) atualizada com subcomandos owners/impact/trace/locate",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "modified",
           "path": ".agents/skills/dare-graph/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-graph/SKILL.md",
           "description": "Skill `dare-graph` (Antigravity) atualizada com subcomandos owners/impact/trace/locate",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         }
       ],
       "migrations": []
@@ -131,54 +151,70 @@
           "path": ".claude/commands/dare-hooks.md",
           "templateSource": "ide/claude/.claude/commands/dare-hooks.md",
           "description": "Comando `/dare-hooks` (Claude Code) — hooks determinísticos com trust gate",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "added",
           "path": ".cursor/commands/dare-hooks.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-hooks.md",
           "description": "Comando `/dare-hooks` (Cursor) — hooks determinísticos com trust gate",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "added",
           "path": ".agents/skills/dare-hooks/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-hooks/SKILL.md",
           "description": "Skill `dare-hooks` (Antigravity) — hooks determinísticos com trust gate",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         },
         {
           "type": "added",
           "path": ".claude/commands/dare-steering.md",
           "templateSource": "ide/claude/.claude/commands/dare-steering.md",
           "description": "Comando `/dare-steering` (Claude Code) — steering por precedência via MCP",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "added",
           "path": ".cursor/commands/dare-steering.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-steering.md",
           "description": "Comando `/dare-steering` (Cursor) — steering por precedência via MCP",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "added",
           "path": ".agents/skills/dare-steering/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-steering/SKILL.md",
           "description": "Skill `dare-steering` (Antigravity) — steering por precedência via MCP",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         },
         {
           "type": "added",
           "path": "dare.config.json#hooks",
           "description": "Adiciona objeto `hooks` (trusted:false + defaults opt-in) em dare.config.json",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         },
         {
           "type": "added",
           "path": "dare.config.json#steering",
           "description": "Adiciona objeto `steering` (defaults opt-in) em dare.config.json",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         }
       ],
       "migrations": [
@@ -199,63 +235,81 @@
           "path": ".claude/commands/dare-patterns.md",
           "templateSource": "ide/claude/.claude/commands/dare-patterns.md",
           "description": "Comando `/dare-patterns` (Claude Code) — auto-discovery determinístico de padrões do legado",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "added",
           "path": ".cursor/commands/dare-patterns.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-patterns.md",
           "description": "Comando `/dare-patterns` (Cursor) — auto-discovery determinístico de padrões do legado",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "added",
           "path": ".agents/skills/dare-patterns/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-patterns/SKILL.md",
           "description": "Skill `dare-patterns` (Antigravity) — auto-discovery determinístico de padrões do legado",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         },
         {
           "type": "modified",
           "path": ".claude/commands/dare-design.md",
           "templateSource": "ide/claude/.claude/commands/dare-design.md",
           "description": "Skill `dare-design` (Claude Code) com `--interactive` + personas Analyst/PM",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "modified",
           "path": ".cursor/commands/dare-design.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-design.md",
           "description": "Skill `dare-design` (Cursor) com `--interactive` + personas Analyst/PM",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "modified",
           "path": ".agents/skills/dare-design/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-design/SKILL.md",
           "description": "Skill `dare-design` (Antigravity) com `--interactive` + personas Analyst/PM",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         },
         {
           "type": "modified",
           "path": ".claude/commands/dare-blueprint.md",
           "templateSource": "ide/claude/.claude/commands/dare-blueprint.md",
           "description": "Skill `dare-blueprint` (Claude Code) com persona Architect",
-          "appliesTo": ["claude-code"]
+          "appliesTo": [
+            "claude-code"
+          ]
         },
         {
           "type": "modified",
           "path": ".cursor/commands/dare-blueprint.md",
           "templateSource": "ide/cursor/.cursor/commands/dare-blueprint.md",
           "description": "Skill `dare-blueprint` (Cursor) com persona Architect",
-          "appliesTo": ["cursor"]
+          "appliesTo": [
+            "cursor"
+          ]
         },
         {
           "type": "modified",
           "path": ".agents/skills/dare-blueprint/SKILL.md",
           "templateSource": "ide/antigravity/.agents/skills/dare-blueprint/SKILL.md",
           "description": "Skill `dare-blueprint` (Antigravity) com persona Architect",
-          "appliesTo": ["antigravity"]
+          "appliesTo": [
+            "antigravity"
+          ]
         }
       ],
       "migrations": []
@@ -269,7 +323,9 @@
           "type": "added",
           "path": "dare.config.json#verification.formal",
           "description": "Adiciona bloco `verification.formal` (enabled:false + defaults) — gate de prova formal opt-in por módulo marcado",
-          "appliesTo": ["*"]
+          "appliesTo": [
+            "*"
+          ]
         }
       ],
       "migrations": [
@@ -279,6 +335,13 @@
           "optional": false
         }
       ]
+    },
+    "3.8.1": {
+      "releasedAt": "2026-06",
+      "summary": "Patch — dare update entrega skills/comandos/config das v3.4→v3.8 a projetos existentes",
+      "changelog": "Correcao de manutencao do `dare update`. O UPDATE-MANIFEST.json parava na v3.3.0, entao projetos existentes nao recebiam os artefatos das v3.4-v3.8. Esta release faz o backfill do manifesto (ver entradas 3.4.0-3.8.0). Sem artefato novo de projeto nesta 3.8.1.",
+      "changes": [],
+      "migrations": []
     }
   }
 }

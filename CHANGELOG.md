@@ -9,6 +9,13 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.8.1] — 2026-06
+
+Patch de manutenção do **`dare update`**. O `UPDATE-MANIFEST.json` parava na v3.3.0 — então projetos existentes que rodavam `dare update` para v3.4.0→v3.8.0 **não recebiam** os comandos/skills nem os blocos de config novos (o `dare update` é 100% manifest-driven). Esta release faz o **backfill** do manifesto.
+
+### 🐛 Corrigido
+- **`dare update` agora entrega tudo das v3.4→v3.8 a projetos existentes**: `dare-bench` (v3.3, faltava), `dare-hooks` + `dare-steering` (v3.6), `dare-patterns` (v3.7) e a `dare-graph` atualizada (v3.5) nas 3 IDEs; + os blocos de config `hooks`/`steering` (v3.6) e `verification.formal` (v3.8) via migrations `add-hooks-steering-defaults` e `add-formal-defaults`. Todos os `templateSource` validados (0 paths quebrados).
+
 ## [3.8.0] — 2026-06
 
 Release **Formal Verification Gate** — gate opt-in que PROVA (não só testa) módulos críticos marcados (sem LLM no CLI).
