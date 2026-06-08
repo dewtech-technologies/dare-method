@@ -9,6 +9,28 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.6.0] — 2026-06
+
+Release **Agent Hooks + Steering Files** — hooks determinísticos com trust gate + steering por precedência via MCP.
+
+### ✨ Adicionado
+
+- **Agent Hooks:** eventos fechados (`on-save`, `on-file-create`, `on-task-complete`, `pre-commit`),
+  allowlist canônica, dispatcher `spawn shell:false` + argv, trust gate (`trusted:false` opt-in / `--trust`),
+  idempotência por hash de estado, telemetria via grafo.
+- Comandos `dare hooks list|run|validate` e `dare steering list|show`.
+- **Steering files:** reuso de `PROJECT-DNA.md` como base + precedência determinística
+  (base → project → glob → priority → path).
+- Rota MCP `GET /steering?file=<rel>` servindo steering às 3 IDEs.
+- Adapters: Claude `settings.json` (on-save) + git `pre-commit` (universal).
+
+### 📝 Notas
+
+- Hooks **nativos** de Cursor/Antigravity **adiados** para versão futura (§0); fallback
+  `pre-commit` + `dare hooks run <event>` manual; steering dessas IDEs via MCP.
+- Opt-in: ausência de bloco `hooks`/`steering` = comportamento idêntico a v3.5.0.
+- Nenhum LLM no CLI (RF-10): dispatch só emite gatilho; raciocínio na skill da IDE.
+
 ## [3.5.0] — 2026-06
 
 Release **Dual Graph** — grafo dual requisito↔código determinístico (sem LLM no CLI).

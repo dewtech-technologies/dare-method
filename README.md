@@ -229,6 +229,45 @@ Localização opcional antes do patch do agente: `dare.config.json` → `"graph"
 
 ---
 
+## 🪝 Agent Hooks (v3.6)
+
+Hooks são **opt-in** (`hooks.trusted: false` por default). Repo clonado não auto-executa até revisar a config ou passar `--trust`.
+
+```json
+{
+  "hooks": {
+    "trusted": false,
+    "on": {
+      "on-save": [{ "action": "lint" }],
+      "pre-commit": [{ "action": "dare-validate" }]
+    }
+  }
+}
+```
+
+```bash
+dare hooks list
+dare hooks validate
+dare hooks run on-save --file src/foo.ts --trust
+```
+
+Ações permitidas: `dare-validate`, `dare-review`, `graph-register`, `lint`, `test` — sempre via `spawn(shell:false)`.
+
+## 🧭 Steering files (v3.6)
+
+Precedência determinística: PROJECT-DNA (base) → `scope:project` → `scope:glob` (por `priority`, empate por path).
+
+```bash
+dare steering list
+dare steering show src/auth/login.ts --json
+```
+
+IDEs consomem steering via MCP: `GET /steering?file=<rel>`.
+
+> Hooks nativos Cursor/Antigravity adiados; use `pre-commit` + `dare hooks run` manual. Ver `templates/HOOKS-ADAPTER.md`.
+
+---
+
 ## 🔁 Fluxo completo
 
 ```

@@ -6,8 +6,8 @@
 > **Base de evidências:** sem paper. Fundamentação por **competidor** (AWS Kiro — *agent hooks* +
 > *steering files*; Agent OS — *standards*) e pela tese de **context engineering just-in-time**
 > (injetar a convenção certa no momento certo, em vez de prompt fixo). ID de ideia: **`idea-6`**
-> (casa com `DARE-METHOD-Analise-e-Proposta.md`). **Target: v3.3.0** (repo em v3.2.0,
-> `packages/cli/package.json:3`).
+> (casa com `DARE-METHOD-Analise-e-Proposta.md`). **Target: v3.6.0** (repo em v3.5.0;
+> v3.3.0 verification-core + v3.4.0 security-hardening + v3.5.0 dual-graph já entregues).
 
 ## Contexto no Projeto Existente
 
