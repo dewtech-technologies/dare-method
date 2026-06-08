@@ -34,7 +34,7 @@ Re-derivar do **código atual** (não de docs antigas). Para cada página, varre
 - Atualizar a seção **"O que há de novo"** do `index.md` com a release atual.
 
 ### 2. `README.md` (raiz)
-- **Banner** (`> 🚀 **vX** — …`): versão atual + feature headline.
+- **Banner** (`> 🚀 **vX.Y.Z** — …`): o **número da versão é SEMPRE a release atual** — inclusive em **patches** (a 3.8.1/3.8.2 deixaram o banner travado em 3.8.0; **não repetir**). O *headline* pode continuar a última feature, mas a versão no banner acompanha o `package.json`.
 - Título **"## 🔌 Skills & comandos (vX)"**.
 - Seção **Roadmap "Shipped"** + **"Histórico … até a vX atual"**.
 - Contagens de skills/comandos, se mudaram.
