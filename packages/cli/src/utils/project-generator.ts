@@ -31,6 +31,7 @@ import {
   type ToolchainMode,
 } from './stack-bootstrap.js';
 import { defaultVerificationConfigForProject } from '../verification/config.js';
+import { defaultHookConfigForProject } from '../hooks/config.js';
 import { assertWithinCwd } from '../commands/init-validation.js';
 
 export interface ProjectConfig {
@@ -105,6 +106,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
       thresholds: { low: 5, med: 12, high: 20 },
     },
     verification: defaultVerificationConfigForProject(),
+    hooks: defaultHookConfigForProject(),
   };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;

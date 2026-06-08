@@ -1,0 +1,247 @@
+title: "Agent Hooks + Steering Files — Development Tasks"
+version: "3.6.0"
+generated: "2026-06-07T20:00:00Z"
+
+# Feature: agent-hooks-steering
+# Branch:  feat/agent-hooks-steering
+# Design:  DARE/DESIGN-Feature-agent-hooks-steering.md
+# Blueprint: DARE/BLUEPRINT-Feature-agent-hooks-steering.md
+#
+# Regra de ouro: o CLI é 100% determinístico — registra, valida, resolve precedência e
+#   despacha hooks/steering via spawn(cmd, argv, { shell:false }); NUNCA chama LLM (RF-10).
+#   A camada semântica (review que raciocina) vive nas skills das IDEs.
+#
+# ESCOPO TRAVADO (BLUEPRINT §0):
+#   - Hooks por evento: APENAS Claude Code (settings.json) + git pre-commit (universal).
+#   - Steering files: nas 3 IDEs (Claude/Cursor/Antigravity) via MCP (GET /steering).
+#   - Hooks nativos de Cursor/Antigravity: FORA da v3.6.0 (adiado; fallback pre-commit).
+#     NÃO há task de gatilho nativo Cursor/Antigravity neste DAG.
+#
+# Pré-requisitos (NÃO reimplementar): assertRelativeSafe/resolveSafePath/PathEscapeError
+#   (utils/path-safety.ts); MCP hardening v3.4.0 (mcp-server/server.ts, middleware/auth.ts);
+#   config Zod opt-in (verification/config.ts); dna-detector.ts → PROJECT-DNA.md (RF-08);
+#   telemetria graph-ingest.ts addNode/addEdge (RF-12).
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: Foundation — tipos + config + segurança ───────────────────────
+  - id: task-301
+    title: "hooks/types.ts + steering/types.ts — contratos fechados"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-301-foundation-types.md
+    subtask_prompt: |
+      Criar packages/cli/src/hooks/types.ts e packages/cli/src/steering/types.ts (BLUEPRINT §4.1, §4.3).
+      hooks/types.ts: HookEvent (união FECHADA on-save|on-file-create|on-task-complete|pre-commit, A-2/RF-02),
+      const HOOK_EVENTS readonly, HookAction (action: AllowedActionKey, args?), HookConfig (on: Partial<Record<HookEvent,...>>, trusted:boolean),
+      HookEventPayload (event, file?, taskId?), HookResult (event, action, exitCode, skipped, verdict?, durationMs).
+      steering/types.ts: SteeringScope ('project'|'glob'), SteeringFrontMatter (scope, glob?, priority?, title?),
+      SteeringFile (path, frontMatter, body, isBase), SteeringResolution (file, blocks, resolvedAt).
+      Copiar contratos exatos do blueprint. PROIBIDO HookEvent como string livre (§11).
+      Gates: tsc --noEmit. Leia: DARE/EXECUTION/task-301-foundation-types.md.
+
+  - id: task-302
+    title: "hooks/allowlist.ts — conjunto FECHADO de ações + resolveAction"
+    depends_on: [task-301]
+    complexity: MED
+    spec_file: EXECUTION/task-302-allowlist.md
+    subtask_prompt: |
+      Criar packages/cli/src/hooks/allowlist.ts (BLUEPRINT §4.2, A-3/RS-01/RS-06).
+      AllowedActionKey FECHADA: 'dare-validate'|'dare-review'|'graph-register'|'lint'|'test'.
+      ResolvedCommand { cmd, argv:readonly string[] } — argv por elemento, NUNCA string única.
+      resolveAction(action, payload, stack:{lint?,test?}) → ResolvedCommand; chave fora ⇒ ActionNotAllowedError
+      ('Hook action '<key>' is not in the allowlist'). dare-validate→['validate','--strict'];
+      dare-review→['review','<taskId>','--strict','--format','json']; lint/test resolvem do stack do dare.config.json.
+      PROIBIDO escape-hatch ('*','shell','custom') ou allowlist de fonte não versionada (§11).
+      Teste hooks/__tests__/allowlist.test.ts: dentro resolve, fora ⇒ ActionNotAllowedError.
+      Gates: tsc --noEmit; vitest run allowlist. Leia: DARE/EXECUTION/task-302-allowlist.md.
+
+  - id: task-303
+    title: "hooks/config.ts — Zod schema opt-in + seedHooksDefaults"
+    depends_on: [task-301, task-302]
+    complexity: MED
+    spec_file: EXECUTION/task-303-hooks-config.md
+    subtask_prompt: |
+      Criar packages/cli/src/hooks/config.ts (BLUEPRINT §4.1, A-1, espelha verification/config.ts:131,166,174).
+      parseHookConfig(rawConfig): HookConfig — bloco 'hooks' ausente ⇒ { on:{}, trusted:false } (opt-in/RNF-03);
+      bloco inválido ⇒ HookConfigError ('Invalid hooks config: <path>: <message>').
+      Zod: on com chaves ∈ HOOK_EVENTS (z.enum), cada action ∈ AllowedActionKey, trusted boolean default false.
+      seedHooksDefaultsIfAbsent (espelha seedVerificationDefaultsIfAbsent) insere bloco inerte trusted:false.
+      Aplicar assertRelativeSafe (utils/path-safety.ts) em qualquer path do config. Sem fork de loader (lê dare.config.json).
+      Teste hooks/__tests__/config.test.ts: ausente⇒inerte; inválido⇒HookConfigError com path/mensagem.
+      Gates: tsc --noEmit; vitest run config. Leia: DARE/EXECUTION/task-303-hooks-config.md.
+
+  # ─── Fase 2: Steering — loader + resolver (RF-06/RF-07/RF-08) ───────────────
+  - id: task-304
+    title: "steering/loader.ts — descoberta + PROJECT-DNA base (reuso) + .env* bloqueado"
+    depends_on: [task-301]
+    complexity: MED
+    spec_file: EXECUTION/task-304-steering-loader.md
+    subtask_prompt: |
+      Criar packages/cli/src/steering/loader.ts (BLUEPRINT §4.4 loadSteeringFiles, A-5/A-7, RF-08).
+      loadSteeringFiles(projectRoot): SteeringFile[] — descobre .dare/steering/*.md (front-matter Zod via SteeringFrontMatter),
+      e LÊ DARE/PROJECT-DNA.md como bloco base (isBase:true, scope:'project', priority:0). PROIBIDO re-extrair convenções:
+      reusar o markdown/dna-facts.json de dna-detector.ts (RF-08, §11). .env* JAMAIS elegível como steering (RS-04, blocklist explícita).
+      Validar todo path com assertRelativeSafe (utils/path-safety.ts); front-matter por Zod; glob sanitizado (RS-03).
+      Teste steering/__tests__/loader.test.ts: descoberta + .env ignorado + PROJECT-DNA vira isBase.
+      Gates: tsc --noEmit; vitest run loader. Leia: DARE/EXECUTION/task-304-steering-loader.md.
+
+  - id: task-305
+    title: "steering/resolver.ts — precedência determinística (RF-07/A-6)"
+    depends_on: [task-304]
+    complexity: MED
+    spec_file: EXECUTION/task-305-steering-resolver.md
+    subtask_prompt: |
+      Criar packages/cli/src/steering/resolver.ts (BLUEPRINT §4.4, A-6/RF-07/O-07).
+      resolveSteeringForFile(files, relFile): SteeringResolution. Algoritmo determinístico:
+      1) assertRelativeSafe(relFile) ⇒ PathEscapeError se ../absoluto. 2) selecionar base(isBase) + scope:project +
+      scope:glob cujo glob casa relFile. 3) ordenar base(0)<project<glob; mesmo bucket por priority asc; empate ⇒ path lexicográfico.
+      4) blocks[0].isBase===true quando há PROJECT-DNA; resolvedAt ISO. PROIBIDO precedência por mtime/ordem de leitura (§11).
+      Testes steering/__tests__/resolver.test.ts (precedência + empate O-07) e resolver.security.test.ts (assertRelativeSafe, RS-03).
+      Gates: tsc --noEmit; vitest run resolver. Leia: DARE/EXECUTION/task-305-steering-resolver.md.
+
+  - id: task-306
+    title: "commands/steering.ts — dare steering list|show (RF-06)"
+    depends_on: [task-305]
+    complexity: LOW
+    spec_file: EXECUTION/task-306-steering-command.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/steering.ts (BLUEPRINT §5.2, RF-06).
+      dare steering list [--json]: lista steering files descobertos (incl. base PROJECT-DNA), scope/glob e ordem de precedência.
+      dare steering show <file> [--json]: resolveSteeringForFile, imprime blocos em ordem; path inválido ⇒ exit 1
+      'Error: path must be relative and stay within the project' (alinhado a path-safety.ts:5).
+      Saída determinística (resolvedAt à parte do snapshot). PROIBIDO show que ignora base PROJECT-DNA ou serve todo o steering (§11).
+      Registrar o comando no CLI principal (index/registrar comandos).
+      Teste commands/__tests__ ou steering show contra fixture. Gates: tsc --noEmit; vitest run steering.
+      Leia: DARE/EXECUTION/task-306-steering-command.md.
+
+  # ─── Fase 3: Hooks — dispatcher + idempotência + telemetria + comandos ──────
+  - id: task-307
+    title: "hooks/idempotency.ts — guard por hash de estado (RNF-02)"
+    depends_on: [task-301]
+    complexity: LOW
+    spec_file: EXECUTION/task-307-idempotency.md
+    subtask_prompt: |
+      Criar packages/cli/src/hooks/idempotency.ts (BLUEPRINT A-9/RNF-02).
+      Guard por hash do estado: on-file-create registra nó uma única vez; on-task-complete não re-revisa estado inalterado
+      (hash do conjunto de arquivos tocados). API: shouldSkip(event, payload, ctx) e markSeen(...). Persistência local determinística.
+      PROIBIDO idempotência hardcoded (skipped:false sempre) ou ausente (§11). Evita loop save→review→save (DESIGN:162).
+      Teste hooks/__tests__/idempotency.test.ts: re-disparo mesmo estado ⇒ skip; estado novo ⇒ não skip.
+      Gates: tsc --noEmit; vitest run idempotency. Leia: DARE/EXECUTION/task-307-idempotency.md.
+
+  - id: task-308
+    title: "hooks/telemetry.ts — addNode/addEdge via graph-ingest (RF-12)"
+    depends_on: [task-301]
+    complexity: LOW
+    spec_file: EXECUTION/task-308-hooks-telemetry.md
+    subtask_prompt: |
+      Criar packages/cli/src/hooks/telemetry.ts (BLUEPRINT A-12/RF-12).
+      REUSAR dag-runner/graph-ingest.ts addNode/addEdge (graph-ingest.ts:38,54) — sem novo backend (evitar Neo4j).
+      Registrar disparo: 'hook --triggered_by--> event' e 'hook --produced--> verdict'. Backend JSON seguro.
+      Logs estruturados pino (RNF-04), zero console.log (§11). PROIBIDO tabela/log próprio paralelo ao grafo.
+      Teste hooks/__tests__/telemetry.test.ts: disparo cria arestas esperadas.
+      Gates: tsc --noEmit; vitest run telemetry. Leia: DARE/EXECUTION/task-308-hooks-telemetry.md.
+
+  - id: task-309
+    title: "hooks/dispatcher.ts — valida → spawn(shell:false) → telemetria (A-3/A-8)"
+    depends_on: [task-302, task-303, task-307, task-308]
+    complexity: HIGH
+    spec_file: EXECUTION/task-309-dispatcher.md
+    subtask_prompt: |
+      Criar packages/cli/src/hooks/dispatcher.ts (BLUEPRINT §5.4, A-3/A-8/RF-10/RNF-01).
+      dispatchHook(config, payload, ctx:{projectRoot, trustOverride?}): Promise<HookResult[]>.
+      Pré: trusted===true || trustOverride (senão TrustRequiredError 'hooks are untrusted for this project', RS-05/A-4);
+      event ∈ HOOK_EVENTS; payload.file passa assertRelativeSafe. Para cada ação: resolveAction → spawn(cmd, argv, {shell:false}).
+      NUNCA shell:true, NUNCA interpolar payload em string (RS-02, §11). Idempotência via idempotency.ts (skipped:true se cortado).
+      Registrar telemetria; log pino por disparo. Ação LLM (dare-review) é só 'fire': emite gatilho e retorna (A-8); CLI não chama LLM (RF-10).
+      Pós: 1 HookResult por ação; durationMs do dispatch síncrono p95<300ms (O-06).
+      Teste hooks/__tests__/dispatcher.test.ts: spawn argv, on-task-complete→dare-review, idempotência.
+      Gates: tsc --noEmit; vitest run dispatcher. Leia: DARE/EXECUTION/task-309-dispatcher.md.
+
+  - id: task-310
+    title: "commands/hooks.ts — dare hooks list|run|validate + trust gate (RF-01/RF-11)"
+    depends_on: [task-309]
+    complexity: MED
+    spec_file: EXECUTION/task-310-hooks-command.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/hooks.ts (BLUEPRINT §5.1, RF-01/RF-11).
+      dare hooks list [--json]: enumera hooks de dare.config.json#hooks.on; ausente ⇒ lista vazia (opt-in). exit 0.
+      dare hooks run <event> [--file --task --trust --json]: valida payload → dispatchHook. exit 0 ok / 1 ação falhou / 2 config inválida.
+      <event> fora de HOOK_EVENTS ⇒ exit 2 'Error: unknown hook event '<event>'. Allowed: on-save, on-file-create, on-task-complete, pre-commit'.
+      Trust gate (RS-05): trusted!==true && sem --trust ⇒ exit 2 'Error: hooks are untrusted for this project. Review dare.config.json#hooks and re-run with --trust or set hooks.trusted: true'.
+      dare hooks validate [--json]: schema + allowlist; ação fora ⇒ mensagem acionável. exit 0/1.
+      Registrar comando no CLI principal. Teste commands/__tests__/hooks.test.ts exit-codes da §5.1.
+      Gates: tsc --noEmit; vitest run hooks. Leia: DARE/EXECUTION/task-310-hooks-command.md.
+
+  # ─── Fase 4: MCP + adapters IDE (steering nas 3 via MCP; hooks Claude+pre-commit) ──
+  - id: task-311
+    title: "mcp-server — GET /steering?file=<rel> + entrada /tools (RF-09/A-10)"
+    depends_on: [task-305]
+    complexity: MED
+    spec_file: EXECUTION/task-311-mcp-steering-route.md
+    subtask_prompt: |
+      Modificar packages/cli/src/mcp-server/server.ts (BLUEPRINT §5.3, RF-09/A-10).
+      GET /steering?file=<rel> — herda bind loopback + auth middleware do hardening v3.4.0 (server.ts:135).
+      Resolve via resolveSteeringForFile e responde 200 {success,file,blocks:[{source,scope,priority,isBase,body,glob?}]}.
+      Erros: 400 {error:'file is required'} (ausente/vazio); 400 {error:'file too long'} (>200 chars, espelha server.ts:388);
+      403 {error:'Forbidden'} para PathEscapeError (runSafe/sendPathEscape, server.ts:80,114).
+      Servir SÓ o steering aplicável ao file (não tudo — risco de estourar contexto). Adicionar {name:'get_steering',description:'Get resolved steering for a file'} ao array /tools (server.ts:161).
+      Esta rota é o canal de steering para as 3 IDEs (Claude/Cursor/Antigravity) — escopo travado §0.
+      Teste mcp-server/__tests__/mcp-steering.test.ts (supertest): 200/400/403 + regress auth/loopback.
+      Gates: tsc --noEmit; vitest run mcp-steering. Leia: DARE/EXECUTION/task-311-mcp-steering-route.md.
+
+  - id: task-312
+    title: "Adapters IDE — Claude settings.json (on-save) + pre-commit; Cursor/Antigravity adiados"
+    depends_on: [task-310]
+    complexity: MED
+    spec_file: EXECUTION/task-312-ide-adapters.md
+    subtask_prompt: |
+      Atualizar templates de IDE e hooks (BLUEPRINT §3 templates, A-11, ESCOPO TRAVADO §0).
+      Claude: packages/cli/templates/ide/claude/.claude/settings.example.json — matcher Write (PostToolUse) →
+      'dare hooks run on-save --file ...' (substituir o echo hardcoded de exemplo). DENTRO do escopo.
+      git: confirmar/mapear templates/hooks/pre-commit-dare-validate ao evento pre-commit (gancho universal). DENTRO do escopo.
+      Criar templates/hooks/dare.config.hooks.example.json: bloco hooks+steering comentado (trusted:false opt-in).
+      Cursor/Antigravity: hooks NATIVOS por evento FORA da v3.6.0 — documentar como adiado/futuro nos templates,
+      apontando fallback pre-commit + 'dare hooks run <event>' manual; steering vem pela rota MCP /steering. NÃO implementar gatilho nativo.
+      Provar fallback pre-commit (teste/fixture). Gates: vitest run (templates/fixture) se aplicável.
+      Leia: DARE/EXECUTION/task-312-ide-adapters.md.
+
+  # ─── Fase 5: Auditoria de segurança / deps (N-1) ───────────────────────────
+  - id: task-313
+    title: "Auditoria de segurança N-1 — injeção, shell:false, trust gate, deps (RS-01..06)"
+    depends_on: [task-309, task-310, task-311, task-312, task-306]
+    complexity: HIGH
+    spec_file: EXECUTION/task-313-security-audit.md
+    subtask_prompt: |
+      Auditoria de segurança (BLUEPRINT §8, RISCO CRÍTICO: hook executando código de repo malicioso).
+      Criar hooks/__tests__/dispatcher.security.test.ts: payload malicioso ('; rm -rf', '$(...)', '../') NÃO escapa;
+      grep zero 'shell:\s*true' e zero concat de payload em string de comando (RS-02). Repo não confiável:
+      trusted:false default ⇒ TrustRequiredError sem --trust (RS-05/A-4). Defesa em profundidade independente:
+      allowlist fechada (RS-01) + shell:false/argv (RS-02) + trust gate (RS-05).
+      steering/__tests__/resolver.security.test.ts: ../absoluto ⇒ PathEscapeError; .env* bloqueado (RS-03/RS-04).
+      pnpm audit --prod sem HIGH/CRITICAL novos; dare review sem achados HIGH; cobertura núcleo (dispatcher+resolver) ≥80% (RNF-05).
+      Verificar nenhum padrão proibido §11. Gates: vitest run security; pnpm audit --prod.
+      Leia: DARE/EXECUTION/task-313-security-audit.md.
+
+  # ─── Fase 6: Release ───────────────────────────────────────────────────────
+  - id: task-314
+    title: "Release v3.6.0 — CHANGELOG [3.6.0] + bump + project-generator/README"
+    depends_on: [task-313]
+    complexity: LOW
+    spec_file: EXECUTION/task-314-release.md
+    subtask_prompt: |
+      Release v3.6.0 (BLUEPRINT §10). CHANGELOG [3.6.0] (formato CHANGELOG.md:12): Agent Hooks (eventos + allowlist +
+      dispatcher shell:false + trust gate), Steering files (reuso PROJECT-DNA + precedência determinística),
+      rota MCP GET /steering (3 IDEs), adapters Claude settings.json + pre-commit; nota: hooks nativos Cursor/Antigravity adiados (§0).
+      seedHooksDefaultsIfAbsent em dare init/upgrade (bloco inerte trusted:false, O-05). README seções dare hooks / dare steering.
+      Bump packages/cli/package.json 3.5.0 → 3.6.0. Retrocompat 100% (ausência de config = v3.5.0).
+      Gates: pnpm test; npm run build. Leia: DARE/EXECUTION/task-314-release.md.

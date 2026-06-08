@@ -19,6 +19,6 @@ if git diff --cached --name-only | grep -qE '^(DARE/dare-dag\.yaml|DARE/EXECUTIO
     echo "⚠  dare CLI not found in PATH. Install with: npm i -g @dewtech/dare-cli"
     exit 0
   fi
-  echo "→ Running: dare validate --strict"
-  dare validate --strict
+  echo "→ Running: dare hooks run pre-commit"
+  dare hooks run pre-commit
 fi

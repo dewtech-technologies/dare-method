@@ -1,106 +1,76 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-07T23:49:21.118Z",
+  "updatedAt": "2026-06-08T01:54:19.173Z",
   "tasks": {
-    "task-201": {
+    "task-301": {
       "status": "DONE",
-      "output": "types.ts dual-graph unions + CodeSymbol/Requirement/Traverse/Locate; emptyNodesByType/emptyEdgesByType; graph-rag/json/neo4j getStatistics RNF-05.",
-      "duration": 64715
+      "output": "hooks/types.ts + steering/types.ts — closed HookEvent and steering contracts (BLUEPRINT §4.1/§4.3)",
+      "duration": 90175
     },
-    "task-202": {
+    "task-302": {
       "status": "DONE",
-      "output": "SUPPORTED_EXTENSIONS + inString exported; static-analyzer-exports.test.ts (3 tests).",
-      "duration": 66338
+      "output": "hooks/allowlist.ts — closed AllowedActionKey + resolveAction + tests",
+      "duration": 96124
     },
-    "task-203": {
+    "task-303": {
       "status": "DONE",
-      "output": "code-index.ts: extractSymbolsFromFile/Paths, toQualifiedName; multi-lang fixtures; 9 tests O-01 >=90%.",
-      "duration": 71279
+      "output": "hooks/config.ts: parseHookConfig (opt-in inerte), HookConfigError, seedHooksDefaultsIfAbsent, assertRelativeSafe em args path-like. Testes hooks/__tests__/config.test.ts (6 pass).",
+      "duration": 101330
     },
-    "task-204": {
+    "task-304": {
       "status": "DONE",
-      "output": "requirement-ingest.ts: parseRequirementsFromMarkdown + ingestRequirements; derives_from hierarchy; 6 tests.",
-      "duration": 66740
+      "output": "steering/loader.ts — PROJECT-DNA base + discovery + RS-04 blocklist",
+      "duration": 86471
     },
-    "task-205": {
+    "task-305": {
       "status": "DONE",
-      "output": "graph-ingest: code_symbol nodes via extractSymbolsFromPaths, contains+implements edges, qualifiedName mentions. 6 tests.",
-      "duration": 65993
+      "output": "steering/resolver.ts: resolveSteeringForFile com precedência base<project<glob, priority asc, path lex. PathEscapeError via assertRelativeSafe. Testes resolver.test.ts + resolver.security.test.ts (5 pass).",
+      "duration": 99539
     },
-    "task-206": {
+    "task-306": {
       "status": "DONE",
-      "output": "Wire dare graph ingest: ingestRequirements + --requirements-only + KNOWN_NODE_TYPES dual types",
-      "duration": 64967
+      "output": "commands/steering.ts: dare steering list|show (--json). sortSteeringByPrecedence em resolver.ts. bin/dare.ts + index.ts. IDE parity dare-steering. Testes steering.test.ts (4 pass).",
+      "duration": 122712
     },
-    "task-207": {
+    "task-307": {
       "status": "DONE",
-      "output": "traverse.ts BFS + locate scoring. Tests pass.",
-      "duration": 68417
+      "output": "hooks/idempotency.ts — state hash guard",
+      "duration": 139917
     },
-    "task-208": {
+    "task-308": {
       "status": "DONE",
-      "output": "KnowledgeGraph traverse/locate/findByQualifiedName on JsonGraph + GraphRAG",
-      "duration": 69953
+      "output": "hooks/telemetry.ts — recordHookTrigger via KnowledgeGraph",
+      "duration": 107529
     },
-    "task-209": {
+    "task-309": {
       "status": "DONE",
-      "output": "RNF-05 satisfies + empty graph stats tests",
-      "duration": 70214
+      "output": "hooks/dispatcher.ts: dispatchHook com trust gate, safeSpawn(shell:false), idempotência, telemetria graph-register interno. Testes dispatcher.test.ts (5 pass).",
+      "duration": 97037
     },
-    "task-210": {
+    "task-310": {
       "status": "DONE",
-      "output": "dare graph owners + impact subcommands with BFS and tests",
-      "duration": 73577
+      "output": "commands/hooks.ts: list|run|validate com trust gate e exit 0/1/2. bin/dare.ts + index.ts + IDE dare-hooks. Testes hooks.test.ts (5 pass).",
+      "duration": 69275
     },
-    "task-211": {
+    "task-311": {
       "status": "DONE",
-      "output": "dare graph trace + locate subcommands",
-      "duration": 76607
+      "output": "mcp-server/server.ts: GET /steering?file= (400/403), tool get_steering em /tools. Testes mcp-steering.test.ts (6 pass) incl. regress auth loopback.",
+      "duration": 95314
     },
-    "task-212": {
+    "task-312": {
       "status": "DONE",
-      "output": "Dual-graph fixtures + buildGraphFromFixture helper + shape tests",
-      "duration": 68606
+      "output": "Claude settings.example.json → dare hooks run on-save. pre-commit → dare hooks run pre-commit. dare.config.hooks.example.json + HOOKS-ADAPTER.md (cursor/antigravity). ide-adapters.test.ts (4 pass).",
+      "duration": 68748
     },
-    "task-213": {
+    "task-313": {
       "status": "DONE",
-      "output": "Neo4jQueryError, runRead, init hydration, parseNode/EdgeFromRecord. neo4j-graph.test.ts.",
-      "duration": 74578
+      "output": "dispatcher.security.test.ts (injeção/trust/allowlist/shell:false grep). resolver.security.test.ts estendido (.env RS-04). PathEscapeError no dispatcher para payload.file.",
+      "duration": 70925
     },
-    "task-214": {
+    "task-314": {
       "status": "DONE",
-      "output": "Neo4j write-behind queue, flush(), async close(), zero void runMany",
-      "duration": 67539
-    },
-    "task-215": {
-      "status": "DONE",
-      "output": "Neo4j experimental gate + traverse/locate contract suite",
-      "duration": 75223
-    },
-    "task-216": {
-      "status": "DONE",
-      "output": "buildLocateContext pre-patch wire in execute --next",
-      "duration": 78495
-    },
-    "task-217": {
-      "status": "DONE",
-      "output": "MCP graph_locate, graph_map_requirement, graph_traverse routes + tests",
-      "duration": 84207
-    },
-    "task-218": {
-      "status": "DONE",
-      "output": "Mermaid/DOT layer subgraphs. graph-viz-layers tests.",
-      "duration": 69022
-    },
-    "task-219": {
-      "status": "DONE",
-      "output": "dual-graph.test.ts O-01..O-07 + section 11 guards",
-      "duration": 84661
-    },
-    "task-220": {
-      "status": "DONE",
-      "output": "v3.5.0 CHANGELOG README dare-graph.yml template bump",
-      "duration": 93049
+      "output": "CHANGELOG [3.6.0], bump 3.6.0 raiz+CLI, project-generator hooks inerte, UpdateApplier seedHooksDefaultsIfAbsent, README hooks+steering.",
+      "duration": 72253
     }
   }
 }

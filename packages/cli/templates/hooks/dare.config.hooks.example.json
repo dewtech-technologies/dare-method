@@ -1,0 +1,12 @@
+{
+  "_comment": "Opt-in: set hooks.trusted to true or use 'dare hooks run --trust'. Without trust, hooks do not auto-execute (RS-05).",
+  "hooks": {
+    "trusted": false,
+    "on": {
+      "on-save": [{ "action": "lint" }],
+      "on-task-complete": [{ "action": "dare-review" }],
+      "pre-commit": [{ "action": "dare-validate" }]
+    }
+  },
+  "steering": {}
+}

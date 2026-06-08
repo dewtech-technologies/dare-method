@@ -11,6 +11,8 @@ import type { EdgeType, NodeType } from '../graphrag/types.js';
 import { createAuthMiddleware } from './middleware/auth.js';
 import { createCorsMiddleware } from './middleware/cors.js';
 import { createErrorHandler } from './middleware/error-handler.js';
+import { loadSteeringFiles } from '../steering/loader.js';
+import { resolveSteeringForFile } from '../steering/resolver.js';
 
 const require = createRequire(import.meta.url);
 const { version: pkgVersion } = require('../../package.json') as { version: string };
@@ -169,6 +171,7 @@ export function createMcpServer(
         { name: 'graph_locate', description: 'Locate code symbols from a seed query' },
         { name: 'graph_map_requirement', description: 'Map a requirement/task to symbols and tasks' },
         { name: 'graph_traverse', description: 'Traverse the knowledge graph from seed nodes' },
+        { name: 'get_steering', description: 'Get resolved steering for a file' },
       ],
     });
   });
@@ -472,6 +475,35 @@ export function createMcpServer(
       }
       const config = await fs.readJSON(configPath);
       res.json(config);
+    });
+  });
+
+  app.get('/steering', (req: Request, res: Response, next: NextFunction) => {
+    runSafe(res, next, async () => {
+      const file = typeof req.query.file === 'string' ? req.query.file : '';
+      if (!file || file.trim() === '') {
+        res.status(400).json({ error: 'file is required' });
+        return;
+      }
+      if (file.length > 200) {
+        res.status(400).json({ error: 'file too long' });
+        return;
+      }
+
+      const files = loadSteeringFiles(projectRoot);
+      const resolution = resolveSteeringForFile(files, file);
+      res.json({
+        success: true,
+        file: resolution.file,
+        blocks: resolution.blocks.map((b) => ({
+          source: b.path,
+          scope: b.frontMatter.scope,
+          priority: b.frontMatter.priority ?? 0,
+          isBase: b.isBase,
+          ...(b.frontMatter.glob ? { glob: b.frontMatter.glob } : {}),
+          body: b.body,
+        })),
+      });
     });
   });
 

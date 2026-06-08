@@ -36,6 +36,8 @@ const CLI_COMMANDS: Record<string, string> = {
   review: 'dare-review',
   refine: 'dare-refine',
   bench: 'dare-bench',
+  steering: 'dare-steering',
+  hooks: 'dare-hooks',
   skill: 'dare-skill',
   welcome: 'dare-welcome',
 };
