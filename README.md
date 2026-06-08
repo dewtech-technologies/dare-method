@@ -14,7 +14,7 @@
 [![Cursor IDE](https://img.shields.io/badge/Cursor-IDE-000000?logo=cursor)](implementations/cursor)
 [![Antigravity](https://img.shields.io/badge/Antigravity-supported-7928ca)](implementations/antigravity)
 
-> 🚀 **v3.3.0** — **Reliable Verification Core**: mutation testing, fail-to-pass, anti-tamper, decay policy, best-of-N e `dare bench` (opt-in via `dare.config.json#verification`). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.8.0** — **Formal Verification Gate**: gate opt-in que PROVA (não só testa) módulos críticos marcados contra spec Dafny/Verus/Lean. Sobre o Reliable Verification Core (v3.3), Security Hardening (v3.4), Dual Graph (v3.5), Agent Hooks + Steering (v3.6) e Brownfield Discovery (v3.7). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
@@ -180,6 +180,43 @@ Porque a IA, igual ao Ralph Wiggum, **persiste confiante** mesmo errando. Não d
 
 ---
 
+## 🔒 Formal Verification Gate (v3.8)
+
+Gate **opt-in estrito** que prova módulos críticos marcados — o solver externo decide; o CLI só orquestra e valida anti-bypass (sem LLM).
+
+| Controle | O que faz |
+|---|---|
+| **Marcação** | `@dare-formal` no código ou `verification.formal.modules` em `dare.config.json` |
+| **Dafny default** | Backend recomendado (Verus/Lean opcionais via `--formal-backend`) |
+| **Anti-bypass** | Rejeita `assume(false)`/`ensures true`/vazamento mesmo com exit 0 do solver |
+| **Exit 5** | Toolchain ausente em módulo marcado — nunca pula em silêncio |
+| **Telemetria** | Aresta `task --proven_by--> formal-gate` no GraphRAG |
+
+```json
+{
+  "verification": {
+    "formal": {
+      "enabled": true,
+      "backend": "dafny",
+      "modules": ["src/math.ts::add"],
+      "maxRepairIterations": 3,
+      "proofTimeoutSeconds": 120,
+      "antiBypass": true
+    }
+  }
+}
+```
+
+```bash
+dare execute --complete task-042 --verify --formal --output "..."
+dare execute --complete task-042 --verify --no-formal
+dare execute --complete task-042 --verify --formal --formal-backend verus
+```
+
+> **Toolchain externa:** Dafny/Z3/Verus/Lean instalados no projeto-alvo — **não** são deps npm do CLI.
+
+---
+
 ## 🛡️ Reliable Verification Core (v3.3)
 
 Núcleo **determinístico** que roda **após** o Ralph Loop quando `verification.enabled: true` em `dare.config.json` (opt-in — novos projetos nascem com `enabled: false`).
@@ -310,7 +347,7 @@ Cada implementação tem README próprio com setup detalhado.
 
 ---
 
-## 🔌 Skills & comandos (v3.3.0)
+## 🔌 Skills & comandos (v3.8.0)
 
 **Paridade total CLI ↔ IDE:** os **18 comandos** do `dare` CLI (`init`, `bootstrap`, `discover`, `reverse`, `dna`, `migrate`, `design`, `blueprint`, `execute`, `graph`, `dag`, `validate`, `info`, `update`, `review`, `refine`, `skill`, `welcome`) são invocáveis como `/dare-<comando>` nas 3 IDEs, mais as skills transversais e de stack. Cada uma existe em formato nativo de cada IDE:
 
@@ -323,6 +360,8 @@ Cada implementação tem README próprio com setup detalhado.
 > Um teste de consistência (`ide-command-parity.test.ts`) garante o 1:1: adicionar um comando ao CLI sem o `/dare-*` correspondente nas 3 IDEs quebra o build.
 
 Veja o **[índice completo de skills](docs/skills/INDEX.md)** com tabela cruzada IDE × skill.
+
+> **v3.8.0 — verificação formal:** `dare execute --complete` aceita `--formal`, `--no-formal` e `--formal-backend <dafny|verus|lean>` junto com `--verify`.
 
 ### Por categoria
 
@@ -788,9 +827,9 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 
 Veja o [**ROADMAP.md**](ROADMAP.md) na raiz do repositório com:
 
-- **Shipped** — tudo que está em produção na v3.3.0 (**Reliable Verification Core** opt-in: mutation testing, fail-to-pass, anti-tamper, decay policy, best-of-N e `dare bench`) + v3.2.0 (paridade total CLI ↔ IDE `/dare-*` nas 3 IDEs, 11 stacks com gerador completo, suíte brownfield `reverse`/`dna`/`migrate` com coleta determinística, CLI/GraphRAG/MCP/DAG)
-- **Planejado (v3.3.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
-- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.3.0 atual
+- **Shipped** — em produção na **v3.8.0**: Formal Verification Gate (Dafny default, opt-in estrito, anti-bypass, exit 5), Brownfield Discovery (v3.7), Agent Hooks + Steering (v3.6), Dual Graph + fix Neo4j (v3.5), Security Hardening (v3.4), Reliable Verification Core (v3.3); + paridade CLI↔IDE `/dare-*` nas 3 IDEs, 11 stacks com gerador completo, suíte brownfield `reverse`/`dna`/`migrate`, CLI/GraphRAG/MCP/DAG
+- **Planejado (v3.9.x+)** — VS Code + Continue, JetBrains AI Assistant, Zed Editor, site institucional, DARE Cloud
+- **Histórico de releases** — resumo de cada versão da v1.0.0 até a v3.8.0 atual
 
 Detalhes técnicos de cada release ficam no [**CHANGELOG.md**](CHANGELOG.md).
 

@@ -1,0 +1,332 @@
+title: "Formal Verification Gate — Gate opt-in que PROVA módulos críticos (Dafny default)"
+version: "3.8.0"
+generated: "2026-06-08T00:00:00Z"
+
+# Feature: formal-verification-gate
+# Branch:  feat/formal-verification-gate
+# Design:  DARE/DESIGN-Feature-formal-verification-gate.md
+# Blueprint: DARE/BLUEPRINT-Feature-formal-verification-gate.md
+#
+# ⚠️ EMBRIONÁRIO / EXPERIMENTAL (idea-10). Gate OPT-IN ESTRITO em DOIS níveis
+#   (config verification.formal.enabled + marcação por módulo), escopo single-function
+#   <100 LOC, com DEGRADAÇÃO GRACIOSA quando a toolchain está ausente. O único MUST é o
+#   comportamento não-invasivo (RNF-01/02); a maioria dos RF é SHOULD/COULD. As taxas
+#   fim-a-fim de CLEVER (~0,62%) PROÍBEM qualquer obrigatoriedade.
+#
+# Regra de ouro (BLUEPRINT §1.1, A-7, RS-06): o CLI é 100% DETERMINÍSTICO — orquestra o
+#   verificador externo (processo filho via safeSpawn) e LÊ o veredito; NUNCA chama LLM nem
+#   decide a prova. Toda inferência por LLM (formalizar spec em Dafny, devolver tradução NL,
+#   gerar impl+prova, prompt-repair PREFACE) vive nas SKILLS das IDEs. O solver/toolchain
+#   (Dafny/Z3/Verus/Lean) é EXTERNO — NÃO entra no package.json do CLI (RS-05).
+#
+# EXTENSÃO, não fork: é um ASPECTO adicional do verification-core (v3.3.0). Pluga no mesmo
+#   mecanismo de aspectos do runner.ts, reusa AspectResult/VerificationResult, o registry de
+#   adapters como modelo (registry.ts), safeSpawn (exec/safe-spawn.ts) e a política
+#   decay-aware (decay/policy.ts). NÃO reespecifica mutation/TDD/best-of-N/decay.
+#
+# Pré-requisitos JÁ ENTREGUES (NÃO reimplementar — reusar/estender):
+#   - verification/runner.ts (orquestrador de aspectos, ~runner.ts:140-256; computePassed:69; finish:75).
+#   - verification/types.ts (Aspect:49, AspectResult:59, VerificationResult:67, VerificationConfig:36).
+#   - verification/config.ts (verificationConfigSchema:33; DEFAULTS:174 com .strict()).
+#   - verification/registry.ts (backendForConfig lazy-load por import(), :5/:18/:50) — MODELO p/ gates/formal/registry.ts.
+#   - verification/gates/mutation/adapter.ts (MutationAdapter:21 isAvailable/run + erros tipados) — MOLDE do FormalBackend.
+#   - verification/gates/mutation/stryker.ts (parse de JSON nativo do Stryker, :39) — MODELO de parse de veredito.
+#   - exec/safe-spawn.ts (safeSpawn:72 argv shell:false; sanitizeEnv:52) — única porta para o solver (RS-03/04/06).
+#   - utils/path-safety.ts (assertRelativeSafe) — valida CriticalModuleMarker.file (RS-01).
+#   - verification/decay/policy.ts (CONTINUE/FRESH_START/REPLAN/ESCALATE) — abortar/escalar (skill itera o reparo).
+#   - verification/telemetry.ts (recordVerification → aresta verified_by) — MODELO de recordFormalProof (RF-09).
+#   - commands/execute-verification.ts (tabela de exit codes 0/1/3/4; mensagens :25) — estendida com exit 5.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: Foundation — contratos, config e marcação (SEM solver) ──────────
+  - id: task-501
+    title: "verification/types.ts — FormalGateConfig/FormalBackend/FormalVerdict/CriticalModuleMarker + Aspect += 'formal' (FUNDAÇÃO)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION/task-501-formal-types.md
+    subtask_prompt: |
+      Estender packages/cli/src/verification/types.ts com os contratos do gate formal (BLUEPRINT §4.1, A-1/A-2/A-9).
+      Esta é a task de FUNDAÇÃO — raiz de config, marker, backend, runner e telemetria; um tipo mal encaixado
+      propaga em todo o aspecto. Copiar os contratos EXATOS do BLUEPRINT §4.1:
+        - type FormalBackend = 'dafny' | 'verus' | 'lean';
+        - type FormalStage = 'spec' | 'impl' | 'both' | 'none';   (diagnóstico granular spec×impl, RF-07/CLEVER)
+        - interface FormalGateConfig { enabled, backend, modules[], maxRepairIterations, proofTimeoutSeconds, antiBypass } (readonly);
+        - interface CriticalModuleMarker { file (path relativo, validado por assertRelativeSafe — RS-01), symbol?, source:'tag'|'config' };
+        - interface FormalVerdict { backend, verified, stage, bypassDetected, repairIterations, solverExitCode, reason, durationMs } (readonly).
+      Encaixe RETROCOMPATÍVEL (BLUEPRINT §4.1 "Encaixe"): adicionar `readonly formal: FormalGateConfig` em
+      VerificationConfig (types.ts:36); somar 'formal' ao union Aspect (types.ts:49) SEM mudar a forma de
+      AspectResult (types.ts:59) nem VerificationResult (types.ts:67) — o detalhe rico vive em FormalVerdict.
+      Invariante de tipo (§4.2): FormalVerdict.verified deve SEMPRE ser solverPassed && !bypassDetected — documentar no JSDoc.
+      PROIBIDO union como string livre; PROIBIDO campo mutável. Reusar/estender o que já existe — NÃO duplicar Aspect.
+      Gates: pnpm --filter @dewtech/dare-cli build (tsc --noEmit limpo); auditar consumidores de Aspect/VerificationConfig
+      (runner.ts, config.ts, telemetry.ts) que precisem do membro novo.
+      Leia: DARE/EXECUTION/task-501-formal-types.md.
+
+  - id: task-502
+    title: "verification/config.ts — bloco zod `formal` + FORMAL_DEFAULTS (ausente ⇒ enabled:false)"
+    depends_on: [task-501]
+    complexity: MED
+    spec_file: EXECUTION/task-502-formal-config.md
+    subtask_prompt: |
+      Estender packages/cli/src/verification/config.ts com o bloco `formal` da config (BLUEPRINT §5.1, A-2, RNF-01).
+      Adicionar um sub-schema zod `formalGateSchema` (.strict()) que estende verificationConfigSchema (config.ts:33) com:
+      enabled(boolean, default false), backend(enum 'dafny'|'verus'|'lean', default 'dafny' — A-4), modules(array string,
+      default []), maxRepairIterations(int positivo, default 5), proofTimeoutSeconds(int positivo, default 120),
+      antiBypass(boolean, default true). Exportar FORMAL_DEFAULTS = { enabled:false, backend:'dafny', modules:[],
+      maxRepairIterations:5, proofTimeoutSeconds:120, antiBypass:true } (BLUEPRINT §5.1) e aplicá-lo ANTES do safeParse,
+      no MESMO padrão de DEFAULTS já usado (config.ts:174). REGRA-CHAVE (RNF-01): bloco `formal` AUSENTE ⇒ enabled:false
+      ⇒ aspecto no-op; config existente sem o bloco continua válida (retrocompat). Erro zod deve trazer o path do campo.
+      Reusar o schema/merge existente — NÃO criar um parser novo. PROIBIDO default enabled:true; PROIBIDO toolchain
+      formal como dep do package.json (a config só descreve, não instala — §11/RS-05).
+      Teste verification/__tests__/config.formal.test.ts: bloco ausente ⇒ enabled:false; merge com defaults; backend fora
+      do enum ⇒ erro zod com path; .strict() rejeita chave desconhecida.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run config.
+      Leia: DARE/EXECUTION/task-502-formal-config.md.
+
+  - id: task-503
+    title: "gates/formal/marker.ts — resolveFormalTargets (tag @dare-formal + config.modules; assertRelativeSafe)"
+    depends_on: [task-501]
+    complexity: MED
+    spec_file: EXECUTION/task-503-formal-marker.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/formal/marker.ts (BLUEPRINT §5.3.3, A-11, RF-01/RS-01/O-03).
+      Implementar resolveFormalTargets({ cwd, changedFiles, config }): Promise<ReadonlyArray<CriticalModuleMarker>>
+      — função PURA/determinística (sem LLM, sem rede). Une DUAS fontes de marcação (A-11):
+        (1) tag `@dare-formal` descoberta por regex nos changedFiles (source:'tag'; captura symbol quando próximo da função);
+        (2) lista config.formal.modules no formato "path::symbol" (source:'config').
+      Validar CADA marker.file com assertRelativeSafe (utils/path-safety.ts, RS-01): '../' ou path absoluto ⇒ rejeita.
+      Pós-condição (O-03): lista VAZIA quando nenhum módulo marcado ⇒ o aspecto formal vira SKIP ANTES de qualquer
+      safeSpawn (função não-marcada NUNCA aciona o solver — invariante §4.2). Deduplicar por (file,symbol).
+      PROIBIDO LLM/rede; PROIBIDO ler/marcar arquivo fora do projeto; readFile READ-ONLY.
+      Teste verification/gates/formal/__tests__/marker.test.ts: tag + config unidas e deduplicadas; lista vazia ⇒ []
+      (origem do SKIP); file com '../'/absoluto ⇒ reprova com erro de path.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run marker.
+      Leia: DARE/EXECUTION/task-503-formal-marker.md.
+
+  # ─── Fase 2: Backend Dafny (default) + registry + anti-bypass ────────────────
+  - id: task-504
+    title: "gates/formal/backend.ts + registry.ts — interface FormalBackend + erros tipados + backendForConfig lazy-load"
+    depends_on: [task-501]
+    complexity: MED
+    spec_file: EXECUTION/task-504-formal-backend-registry.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/formal/backend.ts e registry.ts (BLUEPRINT §5.3.1/§5.3.2, A-3/A-5).
+      backend.ts — espelhar o MOLDE de MutationAdapter (verification/gates/mutation/adapter.ts:21):
+        - interface FormalRunInput { cwd, target:CriticalModuleMarker, specPath, implPath, proofTimeoutSeconds } (readonly);
+        - interface FormalBackend { backend, minVersion (contrato de compat, NÃO dep npm),
+          isAvailable(cwd):Promise<boolean> (checa binário no PATH SEM rodar prova — degradação graciosa A-5),
+          run(input):Promise<FormalVerdict> (executa via safeSpawn, parseia veredito NATIVO, NUNCA chama LLM) };
+        - class FormalToolNotFoundError extends Error { backend } — lançada por run() se !isAvailable();
+        - class FormalBackendError extends Error { stderr } — falha de config do solver (≠ prova rejeitada);
+        - class UnknownFormalBackendError extends Error.
+      registry.ts — espelhar verification/registry.ts (:18/:50): backendForConfig(cfg:FormalGateConfig):Promise<FormalBackend>
+      com LAZY-LOAD por import() (dafny/verus/lean); listFormalBackends():Promise<ReadonlyArray<FormalBackend>>;
+      backend desconhecido ⇒ throw UnknownFormalBackendError com a string EXATA de BLUEPRINT §5.2
+      ("Error: unknown formal backend '<backend>'. Supported: dafny, verus, lean.").
+      Reusar o padrão de registry/erros do núcleo — NÃO criar switch monolítico (A-3). PROIBIDO chamada LLM no backend.
+      Teste verification/gates/formal/__tests__/registry.test.ts: backendForConfig lazy-load p/ cada backend; desconhecido ⇒ erro tipado com string exata.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run registry.
+      Leia: DARE/EXECUTION/task-504-formal-backend-registry.md.
+
+  - id: task-505
+    title: "gates/formal/dafny.ts — backend DEFAULT (isAvailable + run via safeSpawn, parse de veredito real)"
+    depends_on: [task-504]
+    complexity: HIGH
+    spec_file: EXECUTION/task-505-dafny-backend.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/formal/dafny.ts — backend formal DEFAULT (BLUEPRINT §2/§7.2, A-4/A-5, RF-02).
+      Justificativa do default (Vericoding arXiv:2509.22908): Dafny 82,2% vs. Verus 44,3% vs. Lean 26,8% (~3× mais tratável).
+      Implementar a interface FormalBackend (task-504) espelhando o parse de veredito de mutation/stryker.ts:39
+      (que lê o JSON nativo do Stryker — aqui lemos a saída/exit-code NATIVO do Dafny):
+        - backend='dafny'; minVersion declarado (contrato de compat — NÃO dep npm, RS-05).
+        - isAvailable(cwd): checa o binário `dafny` no PATH via safeSpawn (ex.: `dafny --version`) SEM rodar prova (A-5).
+        - run(input): invoca `dafny verify <spec.dfy> --solver-path z3 --verification-time-limit <proofTimeoutSeconds>`
+          (BLUEPRINT §7.2) via safeSpawn (exec/safe-spawn.ts:72 — argv, shell:false, env saneado, timeout). Parseia:
+          exit 0 + "verified" na saída ⇒ verified; "n errors"/"assertion might not hold" ⇒ rejeitado. Normaliza para
+          FormalVerdict { backend, verified, stage, bypassDetected:false (preenchido depois pelo runner/anti-bypass),
+          repairIterations:0, solverExitCode, reason (string ESTÁVEL/testável), durationMs }.
+          Se !isAvailable() ⇒ throw FormalToolNotFoundError; falha de config do solver ⇒ FormalBackendError com .stderr.
+      ANTI-STUB (§11): PROIBIDO `verified:true` hardcoded ou exit/score fixo — o veredito vem do PARSE da saída real.
+      Único caminho de execução é safeSpawn; PROIBIDO shell:true; PROIBIDO chamada LLM.
+      Testes verification/gates/formal/__tests__/dafny-parse.test.ts com fixtures REAIS de saída do Dafny
+      (criar fixtures/dafny.verified.txt e dafny.failed.txt): parse de "verified" ⇒ verified=true; "n errors" ⇒ verified=false.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run dafny.
+      Leia: DARE/EXECUTION/task-505-dafny-backend.md.
+
+  - id: task-506
+    title: "gates/formal/anti-bypass.ts — detectBypass (assume(false)/ensures true/vazamento); reprova mesmo com exit 0"
+    depends_on: [task-501]
+    complexity: MED
+    spec_file: EXECUTION/task-506-anti-bypass.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/formal/anti-bypass.ts (BLUEPRINT §5.3.4, A-6, RF-06/RS-02).
+      Fundamentação (Vericoding §detecção-de-trapaça): o solver "aceita" provas triviais/vazadas — o CLI deve REJEITAR
+      o veredito MESMO COM exit 0 do Dafny. Implementar:
+        detectBypass({ specSource, implSource }): { bypassDetected:boolean; pattern?:string } — DETERMINÍSTICO
+        (regex + AST-lite), sem IO de rede, sem LLM. Detecta no mínimo:
+          - assume(false) / assume false (precondição vacuamente verdadeira);
+          - ensures true (postcondição trivial);
+          - vazamento: spec (corpo das ensures/requires) copiada na implementação para "satisfazer" a prova.
+      Invariante (§4.2): este sub-gate é OBRIGATÓRIO quando config.formal.antiBypass — bypassDetected=true força
+      FormalVerdict.verified=false no runner (task-507), e a mensagem de erro EXATA de BLUEPRINT §5.2
+      ("Error: formal proof rejected — bypass pattern '<pattern>' detected in spec/impl for '<target>'.").
+      ANTI-STUB (§11): PROIBIDO anti-bypass que sempre passa ou que ignora o conteúdo da spec.
+      Documentar como RECOMENDAÇÃO anti-trapaça o uso de specs NÃO-COMPUTÁVEIS (Prop/quantificadores — CLEVER/RS-01)
+      em comentário/doc (a verificação dura de não-computabilidade fica para a auditoria, task-510).
+      Teste verification/gates/formal/__tests__/anti-bypass.test.ts com fixture bypass.spec.dfy (assume(false)):
+      reprovado mesmo com solver aceitando; spec honesta ⇒ bypassDetected=false.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run anti-bypass.
+      Leia: DARE/EXECUTION/task-506-anti-bypass.md.
+
+  # ─── Fase 3: Aspecto no runner + CLI + degradação graciosa ───────────────────
+  - id: task-507
+    title: "gates/formal/runner.ts — checkFormal (marker→isAvailable→run→anti-bypass→AspectResult)"
+    depends_on: [task-503, task-505, task-506]
+    complexity: HIGH
+    spec_file: EXECUTION/task-507-formal-runner.md
+    subtask_prompt: |
+      Criar packages/cli/src/verification/gates/formal/runner.ts — o aspecto plugado no núcleo (BLUEPRINT §5.3.5, A-1/A-5/A-8, RF-05/O-03).
+      checkFormal({ taskId, stack, cwd, config:FormalGateConfig, changedFiles }): Promise<AspectResult> — ordem interna EXATA:
+        1. resolveFormalTargets() (marker.ts, task-503) — VAZIO ⇒ AspectResult{ aspect:'formal', verdict:'SKIP',
+           reason:'no marked module' } ANTES de qualquer safeSpawn (O-03 — não toca não-marcado).
+        2. backendForConfig() (registry.ts) → backend.isAvailable(cwd): false + módulo MARCADO ⇒ throw
+           FormalToolNotFoundError (vira exit 5 no comando, task-508). (não-marcado já saiu em SKIP no passo 1).
+        3. backend.run() (dafny.ts, task-505) — prova REAL via safeSpawn; FormalVerdict do verificador externo.
+        4. se config.antiBypass: detectBypass(spec,impl) (anti-bypass.ts, task-506) ⇒ bypassDetected force
+           verdict.verified=false (RF-06). FormalVerdict.verified = solverPassed && !bypassDetected (invariante §4.2).
+        5. mapeia para AspectResult comum { aspect:'formal', verdict:'PASS'|'FAIL'|'SKIP', reason, durationMs };
+           persistir o FormalVerdict rico como bloco formalProof no artefato .dare/verification/<id>.json.
+      O loop de reparo PREFACE NÃO roda aqui (A-8) — a SKILL itera fora do CLI, reusando decay/policy.ts para
+      abortar/escalar. REGRA DE OURO: NUNCA chama LLM; veredito só de backend.run() (RS-06).
+      ANTI-STUB (§11): PROIBIDO retornar PASS sem rodar o solver; PROIBIDO verified derivado de auto-avaliação.
+      Teste verification/gates/formal/__tests__/runner-formal.test.ts: não-marcado ⇒ SKIP (zero safeSpawn);
+      marcado sem toolchain ⇒ FormalToolNotFoundError; prova aceita ⇒ PASS; bypass ⇒ FAIL apesar de exit 0.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run runner-formal.
+      Leia: DARE/EXECUTION/task-507-formal-runner.md.
+
+  - id: task-508
+    title: "runner.ts + execute-verification.ts — plug do aspecto após mutation, flags --formal/--no-formal/--formal-backend, exit 5"
+    depends_on: [task-502, task-507]
+    complexity: MED
+    spec_file: EXECUTION/task-508-runner-cli-wire.md
+    subtask_prompt: |
+      Plugar o aspecto formal no núcleo e expor o CLI surface (BLUEPRINT §5.3.6/§5.2, A-1/A-5, RF-05/RNF-05).
+      (1) packages/cli/src/verification/runner.ts: APÓS o bloco mutation (~runner.ts:238-252), adicionar o bloco do
+          BLUEPRINT §5.3.6: `if (config.formal.enabled) { notify('formal','start'); const fm = await checkFormal({...});
+          aspects.push(fm); logAspect(fm); notify('formal', fm.verdict==='PASS'?'pass':fm.verdict==='SKIP'?'skip':'fail'); }`.
+          computePassed (runner.ts:69) e finish (runner.ts:75) NÃO mudam — formal entra como mais um AspectResult que
+          precisa ser PASS ou SKIP. Curto-circuita por ÚLTIMO (roda depois de build/test/lint/mutation, §7.2).
+      (2) packages/cli/src/commands/execute-verification.ts: adicionar flags --formal (herda verification.formal.enabled),
+          --no-formal (desliga mesmo com config on), --formal-backend <dafny|verus|lean> (herda formal.backend). Validação:
+          backend fora do enum ⇒ exit 1 com a string EXATA de BLUEPRINT §5.2
+          ("Error: --formal-backend must be 'dafny', 'verus' or 'lean' (got '<b>')"). Estender a tabela de exit codes
+          (manter 0/1/3/4 do núcleo): NOVO exit 5 = toolchain formal ausente em módulo MARCADO — capturar
+          FormalToolNotFoundError e emitir no padrão de execute-verification.ts:25 a string EXATA de §5.2
+          ("Error: formal backend '<backend>' not found for marked module '<target>'. Install the toolchain or unmark the module.").
+          Exit 5 NUNCA pula o gate em silêncio (A-5/RNF-05); módulo não-marcado sem toolchain ⇒ SKIP (não exit 5).
+      Reusar o orquestrador/handler de erro existentes — NÃO forkar o runner. PROIBIDO shell:true; zero LLM.
+      Teste verification/__tests__/runner.formal.test.ts + commands/__tests__/execute.formal.spec.ts: formal entra no
+      VerificationResult; não-marcado ⇒ SKIP; marcado sem toolchain ⇒ exit 5 string exata; backend inválido ⇒ exit 1; PASS.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run runner execute.
+      Leia: DARE/EXECUTION/task-508-runner-cli-wire.md.
+
+  - id: task-509
+    title: "gates/formal/verus.ts + lean.ts (backends opcionais SHOULD) + telemetria recordFormalProof (proven_by) + fixtures/verified-rate"
+    depends_on: [task-505, task-507]
+    complexity: MED
+    spec_file: EXECUTION/task-509-verus-lean-telemetry-fixtures.md
+    subtask_prompt: |
+      Backends opcionais + telemetria + harness de verified-rate (BLUEPRINT §2/§5.3.7/§9.3, A-3/A-10/A-12, RF-08/RF-09/O-02/O-06).
+      (1) verus.ts e lean.ts (COULD/SHOULD) — mesma interface FormalBackend (task-504), lazy-load pelo registry:
+          Verus `verus <spec.rs> --time-limit <t>` (exit 0 + "verification results: N verified, 0 errors");
+          Lean `lake env lean <spec.lean>` (exit 0 sem `sorry`/`error`). NÃO default (Verus 44%, Lean 27% — Vericoding A-4).
+          Mesmo parse-de-veredito-real e degradação graciosa (isAvailable) do dafny.ts; NUNCA LLM.
+      (2) telemetry.ts: recordFormalProof(graph, taskId, verdict:FormalVerdict) — grava aresta task --proven_by--> formal-gate
+          espelhando recordVerification (verified_by); EdgeType += 'proven_by', NodeType += 'formal-gate'; fallback em
+          task.metadata.formalProof (RF-09). Wire no runner/aspecto.
+      (3) fixtures/formal/ (≥6 fixtures Dafny single-function <100 LOC): cada {spec.dfy, spec.nl.md (fluxo NL-opaco, A-7),
+          impl.<ext>, expected.json}, incl. casos de BYPASS que DEVEM reprovar (O-06) e suite.json. Harness mede verified-rate
+          ≥70% (O-02, alinhado a Dafny 82% + reparo) e 100% dos bypass rejeitados (O-06). Roda só onde a toolchain existe (RNF-06).
+      (4) RF-08 (COULD): testes derivados das `ensures` registrados como artefato e consumidos pelo fail-to-pass.ts existente
+          (NÃO criar pipeline novo).
+      Reusar telemetria/fail-to-pass do núcleo — NÃO duplicar backend de grafo. ANTI-STUB: verified-rate medido sobre saída real.
+      Testes: telemetry-formal.test.ts (aresta proven_by + fallback metadata); verified-rate sobre fixtures.
+      Gates: pnpm --filter @dewtech/dare-cli build; vitest run verus lean telemetry-formal.
+      Leia: DARE/EXECUTION/task-509-verus-lean-telemetry-fixtures.md.
+
+  # ─── Fase 5: Auditoria de segurança / deps (Fase N-1) ────────────────────────
+  - id: task-510
+    title: "Auditoria N-1 — anti-bypass (rejeita exit 0), specs não-computáveis, sandbox toolchain, sem-segredos, sem-dep-formal"
+    depends_on: [task-508, task-509]
+    complexity: HIGH
+    spec_file: EXECUTION/task-510-security-audit.md
+    subtask_prompt: |
+      Auditoria de segurança e suíte integrada do gate formal (BLUEPRINT §6 Fase 5, §8, §9, §11; RS-01..RS-06; O-02/O-06).
+      Garantir que o aspecto não introduz vulnerabilidade, não vaza segredo e NUNCA confia cegamente na toolchain externa.
+      Criar packages/cli/src/verification/gates/formal/__tests__/security-formal.test.ts cobrindo:
+      - ANTI-BYPASS (RS-02/RF-06): spec com assume(false)/ensures true/vazamento ⇒ FormalVerdict.verified=false MESMO com
+        exit 0 do solver (prova REJEITADA apesar do exit 0). 100% dos padrões de bypass rejeitados (O-06).
+      - SPECS NÃO-COMPUTÁVEIS (RS-01/CLEVER): documentar e testar a recomendação de Prop/quantificadores como defesa
+        anti-trapaça; verificar que o doc/lint sinaliza spec computável trivial.
+      - VEREDITO NÃO-FALSIFICÁVEL (RS-06): teste prova que FormalVerdict.verified vem SÓ de backend.run() — NUNCA de
+        auto-avaliação do LLM; nenhum caminho do CLI chama LLM (grep zero anthropic|openai|fetch\(|https?:// no gates/formal/**).
+      - SANDBOX da toolchain (RS-04): grep/lint custom confirma ZERO shell:true no caminho formal — safeSpawn é a única
+        porta (herda no-shell-true do núcleo); solver roda no worktree, sem rede por default.
+      - SEM SEGREDOS (RS-03): injeta SECRET/TOKEN no env e prova ausência em spec/prova/logs/veredito/stderr (sanitizeEnv, safe-spawn.ts:52).
+      - PATHS SEGUROS (RS-01): assertRelativeSafe em todo CriticalModuleMarker.file — '../'/absoluto reprova.
+      - SEM DEP FORMAL (RS-05): grep no package.json do CLI confirma que Dafny/Z3/Verus/Lean NÃO são deps;
+        pnpm --filter @dewtech/dare-cli audit --audit-level=high ⇒ 0 HIGH/CRITICAL.
+      - Cobertura gates/formal/** ≥80% (RNF-04); dare review sem achados HIGH. Verificar nenhum anti-padrão §11.2.
+      Gates: vitest run security-formal; pnpm --filter @dewtech/dare-cli audit --audit-level=high.
+      Leia: DARE/EXECUTION/task-510-security-audit.md.
+
+  # ─── Fase 6: Release v3.8.0 (docs + bump + BANNER README-aware) ──────────────
+  - id: task-511
+    title: "Release v3.8.0 — CHANGELOG [3.8.0] + bump raiz+CLI 3.7.0→3.8.0 + BANNER/seções/roadmap README + nota CLI README"
+    depends_on: [task-510]
+    complexity: LOW
+    spec_file: EXECUTION/task-511-release.md
+    subtask_prompt: |
+      Release v3.8.0 — Formal Verification Gate (BLUEPRINT §6 Fase 6, §10). ⚠️ OBRIGATÓRIO: releases anteriores
+      ESQUECERAM de atualizar o BANNER do README — ele ficou travado em v3.3.0 por 4 versões. NÃO repetir o erro:
+      atualizar TODOS os pontos do README abaixo. Cada item (a)-(e) é checkbox no critério de aceite.
+
+      (a) CHANGELOG.md: nova seção `[3.8.0]` descrevendo o Formal Verification Gate (gate OPT-IN ESTRITO em dois níveis,
+          Dafny default — 82% vs. Verus 44% vs. Lean 27%, degradação graciosa/isAvailable + exit 5 em módulo marcado sem
+          toolchain, anti-bypass, fluxo NL-opaco Dafny-as-IL, telemetria proven_by; toolchain externa NÃO-dep do CLI).
+      (b) Bump de versão: package.json RAIZ 3.7.0 → 3.8.0 (package.json:3) E packages/cli/package.json 3.7.0 → 3.8.0
+          (packages/cli/package.json:3). Confirmar com grep "\"version\"" nos DOIS arquivos após editar.
+      (c) README.md RAIZ — atualizar os TRÊS pontos (hoje em v3.7.0):
+          - BANNER (linha `> 🚀 **v3.7.0** — ...`, ~README.md:17): trocar para
+            `> 🚀 **v3.8.0** — Formal Verification Gate: gate opt-in que PROVA (não só testa) módulos críticos marcados
+            contra spec Dafny/Verus/Lean ...` mantendo a referência às versões anteriores (v3.3–v3.7).
+          - TÍTULO `## 🔌 Skills & comandos (v3.7.0)` (README.md:313): trocar para `(v3.8.0)` e listar as flags
+            `--formal` / `--no-formal` / `--formal-backend`.
+          - Roadmap "Shipped"/"Histórico ... até a v3.7.0": atualizar para v3.8.0 (Formal Verification Gate) e adicionar
+            uma nova seção de feature no corpo (padrão das seções existentes, ex.: `## 🔒 Formal Verification Gate (v3.8)`).
+      (d) packages/cli/README.md: adicionar a nota `> **v3.8.0:** ...` NO TOPO da lista de notas de versão
+          (antes da nota v3.7.0, ~README.md:167) com o bloco `verification.formal` e as flags.
+      (e) project-generator/README conforme couber (se existir referência de features/skills, refletir v3.8.0; caso não se
+          aplique, registrar explicitamente "N/A — sem referência de versão" no relatório da task).
+      Retrocompat 100% / opt-in ESTRITO: ausência do bloco verification.formal OU de marcação ⇒ comportamento IDÊNTICO a
+      v3.7.0 (RNF-01/02). Publish por tag v3.8.0 (mesmo fluxo das releases anteriores; npm publish --provenance no CI).
+
+      CRITÉRIO DE DONE (checkboxes OBRIGATÓRIOS):
+      - [ ] (a) CHANGELOG.md tem nova seção `[3.8.0]`.
+      - [ ] (b) package.json RAIZ E packages/cli/package.json ambos em 3.8.0 (verificado por grep).
+      - [ ] (c) README.md raiz: BANNER (~linha 17) em v3.8.0 + título "## 🔌 Skills & comandos (v3.8.0)" + Roadmap "Shipped"/seção de feature atualizados.
+      - [ ] (d) packages/cli/README.md tem a nota `> **v3.8.0:** ...` no TOPO da lista de notas.
+      - [ ] (e) project-generator/README atualizado conforme couber (ou "N/A" justificado).
+      - [ ] CI release roda os gates do CLI verdes; tag v3.8.0.
+      Gates: pnpm --recursive build; pnpm test.
+      Leia: DARE/EXECUTION/task-511-release.md.

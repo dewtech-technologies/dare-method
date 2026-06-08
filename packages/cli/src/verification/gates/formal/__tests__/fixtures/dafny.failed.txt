@@ -1,0 +1,7 @@
+Error: a postcondition could not be proved on this return path
+  | 
+  |   ensures result == a + b;
+  |   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Dafny program verifier finished with 1 verified, 2 errors
+assertion might not hold

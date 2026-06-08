@@ -164,6 +164,16 @@ Pick **one** of the two paths per stack:
 | `mcp-rust` (beta) | Rust 1.78+ (rustup) | `rust:1.83` |
 | `mcp-go` (beta) | Go 1.23+ — https://go.dev/dl/ | `golang:1.25` |
 
+> **v3.8.0:** **Formal Verification Gate** — opt-in strict aspect `verification.formal` (enabled/backend/modules/maxRepairIterations/proofTimeoutSeconds/antiBypass) plus flags `--formal` / `--no-formal` / `--formal-backend <dafny|verus|lean>`. Proves marked critical modules against external Dafny/Verus/Lean toolchain (not an npm dep); exit 5 when toolchain missing on a marked module; anti-bypass rejects `assume(false)`/`ensures true`/leaks even on solver exit 0; telemetry edge `proven_by` → `formal-gate`.
+
+> **v3.7.0:** **Brownfield Discovery** — deterministic auto-discovery of codebase patterns/conventions (`dare patterns`, read-only) fed into the dual graph + steering, plus lightweight planning personas (Analyst/PM/Architect) at planning time only (no runtime swarm). Extends `dare reverse`/`dna`.
+
+> **v3.6.0:** **Agent Hooks + Steering Files** — event-triggered automation (Claude Code hooks + git pre-commit) over a closed action allowlist (`spawn`, no shell), and steering files (project standards reusing PROJECT-DNA) injected to all three IDEs via the MCP server.
+
+> **v3.5.0:** **Dual Graph (Requirement↔Code)** — links spec/task nodes to code symbols in the GraphRAG; adds `dare graph owners|impact|trace|locate` and graph-guided localization; fixes the Neo4j backend (real Cypher reads, gated experimental).
+
+> **v3.4.0:** **Security Hardening** — MCP server bound to 127.0.0.1 with auth + CORS allowlist + helmet; `dare init` path validation; CI publish with provenance, real eslint + coverage gates.
+
 > **v3.3.0:** **Reliable Verification Core** (opt-in via `dare.config.json#verification`) — turns the Ralph Loop's "tests pass" gate into "correct & robust": mutation testing, fail-to-pass specs, anti-tamper, a decay-aware loop policy, best-of-N candidate selection over git worktrees, and a `dare bench` regression harness (solve-rate + Fix·Rate). Absent the `verification` block, behavior is unchanged.
 
 > **v3.2.0:** full **CLI ↔ IDE parity** — every one of the 18 CLI commands is invocable as `/dare-<cmd>` across all three IDEs (Cursor, Claude Code, Antigravity); a parity test fails the build if a command is missing a skill. Brownfield commands now **collect real data by default**: `dare reverse`/`dna` extract endpoints + entities and render them into `IDEIA.md` and the module specs (no more skeleton-only artifacts).

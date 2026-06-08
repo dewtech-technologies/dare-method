@@ -13,6 +13,7 @@ import { checkTypes } from './gates/type-check.js';
 import { adapterForStack } from './registry.js';
 import type { MutationAdapter } from './gates/mutation/adapter.js';
 import { MutationToolNotFoundError } from './gates/mutation/adapter.js';
+import { checkFormal } from './gates/formal/runner.js';
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('verification');
@@ -248,6 +249,24 @@ export function createRunVerification(
           : mut.verdict === 'SKIP'
             ? 'skip'
             : 'fail',
+      );
+    }
+
+    if (config.formal.enabled) {
+      notify(opts.onProgress, 'formal', 'start');
+      const fm = await checkFormal({
+        taskId,
+        stack: opts.stack,
+        cwd,
+        config: config.formal,
+        changedFiles: opts.changedFiles,
+      });
+      aspects.push(fm);
+      logAspect(fm);
+      notify(
+        opts.onProgress,
+        'formal',
+        fm.verdict === 'PASS' ? 'pass' : fm.verdict === 'SKIP' ? 'skip' : 'fail',
       );
     }
 

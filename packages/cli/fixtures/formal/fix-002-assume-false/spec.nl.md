@@ -1,0 +1,1 @@
+Bad method with trivial postcondition.

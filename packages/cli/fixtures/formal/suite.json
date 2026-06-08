@@ -1,0 +1,12 @@
+{
+  "verifiedRateTarget": 0.7,
+  "bypassMustReject": true,
+  "fixtures": [
+    "fix-001-add-honest",
+    "fix-002-assume-false",
+    "fix-003-ensures-true",
+    "fix-004-spec-leak",
+    "fix-005-max-honest",
+    "fix-006-sub-honest"
+  ]
+}

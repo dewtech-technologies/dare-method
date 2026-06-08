@@ -34,3 +34,6 @@ Thumbs.db
 DARE/EXECUTION/*.md
 DARE/TELEMETRY.md
 !DARE/EXECUTION/.gitkeep
+
+# MkDocs build output
+site/

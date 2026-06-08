@@ -1,0 +1,80 @@
+site_name: DARE Method
+site_description: Design. Architect. Review. Execute. — metodologia + CLI para desenvolvimento de software assistido por IA.
+site_url: https://dewtech-technologies.github.io/dare-method/
+repo_url: https://github.com/dewtech-technologies/dare-method
+repo_name: dewtech-technologies/dare-method
+edit_uri: edit/main/docs-site/
+docs_dir: docs-site
+copyright: Copyright &copy; Dewtech Technologies — MIT
+
+theme:
+  name: material
+  language: pt-BR
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle: { icon: material/weather-night, name: Modo escuro }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle: { icon: material/weather-sunny, name: Modo claro }
+  features:
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang: pt
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Início: index.md
+  - Começando: getting-started.md
+  - Greenfield (projeto novo): greenfield.md
+  - Brownfield (projeto legado): brownfield.md
+  - Execução & Validação: execution.md
+  - Knowledge Graph: knowledge-graph.md
+  - Configuração: configuration.md
+  - Stacks & DNA: stacks.md
+  - Integração de Agentes: agents.md
+  - Referência CLI: cli-reference.md
+  - Utilitários: utilities.md

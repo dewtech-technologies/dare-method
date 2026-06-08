@@ -1,0 +1,1 @@
+Trivial ensures true.

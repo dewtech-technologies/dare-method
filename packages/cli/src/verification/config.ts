@@ -1,5 +1,15 @@
 import { z } from 'zod';
-import type { VerificationConfig } from './types.js';
+import type { VerificationConfig, FormalGateConfig } from './types.js';
+
+/** DEFAULTS.formal — ausência do bloco ⇒ enabled:false (RNF-01). */
+export const FORMAL_DEFAULTS: FormalGateConfig = {
+  enabled: false,
+  backend: 'dafny',
+  modules: [],
+  maxRepairIterations: 5,
+  proofTimeoutSeconds: 120,
+  antiBypass: true,
+};
 
 export const DEFAULTS: VerificationConfig = {
   enabled: false,
@@ -25,10 +35,32 @@ export const DEFAULTS: VerificationConfig = {
     budgetTokens: null,
   },
   prerank: { enabled: false },
+  formal: FORMAL_DEFAULTS,
 };
 
 const loopPolicySchema = z.enum(['decay', 'fixed']);
 const saturationActionSchema = z.enum(['fresh-start', 'replan', 'escalate']);
+const formalBackendSchema = z.enum(['dafny', 'verus', 'lean']);
+
+const formalGateSchema = z
+  .object({
+    enabled: z.boolean().default(DEFAULTS.formal.enabled),
+    backend: formalBackendSchema.default(DEFAULTS.formal.backend),
+    modules: z.array(z.string()).default([...DEFAULTS.formal.modules]),
+    maxRepairIterations: z
+      .number()
+      .int()
+      .positive('maxRepairIterations must be a positive integer')
+      .default(DEFAULTS.formal.maxRepairIterations),
+    proofTimeoutSeconds: z
+      .number()
+      .int()
+      .positive('proofTimeoutSeconds must be a positive integer')
+      .default(DEFAULTS.formal.proofTimeoutSeconds),
+    antiBypass: z.boolean().default(DEFAULTS.formal.antiBypass),
+  })
+  .strict()
+  .default({ ...DEFAULTS.formal, modules: [...DEFAULTS.formal.modules] });
 
 const verificationConfigSchema = z
   .object({
@@ -120,6 +152,7 @@ const verificationConfigSchema = z
         enabled: z.boolean().default(DEFAULTS.prerank.enabled),
       })
       .default({ ...DEFAULTS.prerank }),
+    formal: formalGateSchema,
   })
   .strict();
 

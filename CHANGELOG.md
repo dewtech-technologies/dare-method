@@ -9,6 +9,27 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.8.0] — 2026-06
+
+Release **Formal Verification Gate** — gate opt-in que PROVA (não só testa) módulos críticos marcados (sem LLM no CLI).
+
+### ✨ Adicionado
+
+- Aspecto **`formal`** no `runner.ts` (extensão do verification-core v3.3.0) — gate **OPT-IN ESTRITO em dois níveis**
+  (`verification.formal.enabled` + marcação por módulo `@dare-formal`/`config.modules`).
+- **Dafny default** (82,2% vs. Verus 44,3% vs. Lean 26,8% — Vericoding); Verus/Lean como backends opcionais (SHOULD).
+- Flags **`--formal`** / **`--no-formal`** / **`--formal-backend <dafny|verus|lean>`**.
+- **Degradação graciosa** via `isAvailable()`; **exit 5** quando a toolchain está ausente em módulo MARCADO
+  (nunca pula gate em silêncio).
+- **Anti-bypass** — rejeita `assume(false)`/`ensures true`/vazamento MESMO com exit 0 do solver.
+- Fluxo **NL-opaco** (Dafny-as-IL: humano valida só a tradução NL); telemetria `task --proven_by--> formal-gate`.
+
+### 📝 Notas
+
+- Opt-in ESTRITO: ausência do bloco `verification.formal` OU de marcação ⇒ comportamento idêntico a v3.7.0 (RNF-01/02).
+- **Toolchain externa NÃO é dep do CLI** (Dafny/Z3/Verus/Lean instalados no projeto-alvo — zero CVE herdado, RS-05).
+- Nenhum LLM no CLI: o solver externo decide a prova; a IDE/skill formaliza/itera o reparo (PREFACE).
+
 ## [3.7.0] — 2026-06
 
 Release **Brownfield Discovery** — auto-discovery determinístico de padrões + planejadores leves (sem LLM no CLI).

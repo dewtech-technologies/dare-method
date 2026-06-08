@@ -1,0 +1,4 @@
+# Dependências da documentação MkDocs (DARE Method)
+# Uso: pip install -r requirements-docs.txt
+mkdocs-material>=9.5
+pymdown-extensions>=10.7

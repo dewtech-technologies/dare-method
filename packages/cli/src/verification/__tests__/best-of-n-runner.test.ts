@@ -9,6 +9,7 @@ import {
 } from '../best-of-n/runner.js';
 import { createWorktree, type Worktree } from '../best-of-n/worktree.js';
 import type { VerificationResult } from '../types.js';
+import { DEFAULTS } from '../config.js';
 
 function runGit(cwd: string, args: string): void {
   execSync(`git ${args}`, { cwd, stdio: 'pipe' });
@@ -66,25 +67,11 @@ describe('runBestOfN', () => {
       n: 2,
       stack: 'node-nestjs',
       config: {
+        ...DEFAULTS,
         enabled: false,
-        mutation: {
-          enabled: true,
-          minScore: 0.7,
-          incremental: true,
-          maxMutants: 200,
-          timeoutSeconds: 900,
-        },
         failToPass: { required: false },
         antiTamper: { enabled: false },
         typeCheck: { enabled: false },
-        loop: {
-          policy: 'decay',
-          maxAttempts: 5,
-          saturationWindow: 3,
-          onSaturation: 'fresh-start',
-        },
-        bestOfN: { default: 1, max: 5, budgetTokens: null },
-        prerank: { enabled: false },
       },
       fillCandidate,
     });

@@ -9,7 +9,8 @@ export type NodeType =
   | 'gate'
   | 'code_symbol'
   | 'requirement'
-  | 'pattern';
+  | 'pattern'
+  | 'formal-gate';
 
 export type EdgeType =
   | 'depends_on'
@@ -23,7 +24,8 @@ export type EdgeType =
   | 'affects' // symbol → requirement/task (impacto inverso)
   | 'derives_from' // requirement-filho → requirement-pai
   | 'evidenced_by' // pattern → file
-  | 'exhibits'; // module → pattern
+  | 'exhibits'
+  | 'proven_by'; // module → pattern
 
 /** All members of {@link NodeType} — use for zero-initialized statistics (RNF-05). */
 export const ALL_NODE_TYPES = [
@@ -38,6 +40,7 @@ export const ALL_NODE_TYPES = [
   'code_symbol',
   'requirement',
   'pattern',
+  'formal-gate',
 ] as const satisfies readonly NodeType[];
 
 /** All members of {@link EdgeType} — use for zero-initialized statistics (RNF-05). */
@@ -54,6 +57,7 @@ export const ALL_EDGE_TYPES = [
   'derives_from',
   'evidenced_by',
   'exhibits',
+  'proven_by',
 ] as const satisfies readonly EdgeType[];
 
 /** Zero-filled `nodesByType` — absent types stay `0`, never `NaN` (RNF-05). */

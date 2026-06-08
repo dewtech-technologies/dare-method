@@ -1,0 +1,1 @@
+Max returns the greater of two values.

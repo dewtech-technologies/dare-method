@@ -1,53 +1,50 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-08T02:48:11.889Z",
+  "updatedAt": "2026-06-08T04:04:53.527Z",
   "tasks": {
-    "task-401": {
+    "task-501": {
       "status": "DONE",
-      "output": "graphrag/types.ts: NodeType+=pattern, EdgeType+=evidenced_by|exhibits, PatternNode, ALL_* arrays. graph.ts KNOWN_NODE_TYPES+=pattern. types.test.ts estendido. Stats sem NaN.",
-      "duration": 78230
+      "duration": 84915
     },
-    "task-402": {
+    "task-502": {
       "status": "DONE",
-      "output": "utils/pattern-detector.ts: 5 PATTERN_RULES (naming/inferred-layer/structural/call/implicit), detectPatterns determinístico. Testes pattern-detector.test.ts (4 pass).",
-      "duration": 76359
+      "duration": 82157
     },
-    "task-403": {
+    "task-503": {
       "status": "DONE",
-      "output": "utils/pattern-facts.ts: renderPatternsSkeleton determinístico com seções por PatternKind, claims 🟢, <!-- AGENT -->, ## ⚠️ Incertezas. Testes pattern-facts.test.ts (4 pass + snapshot).",
-      "duration": 77556
+      "duration": 134109
     },
-    "task-404": {
+    "task-504": {
       "status": "DONE",
-      "duration": 77570
+      "duration": 84494
     },
-    "task-405": {
+    "task-505": {
       "status": "DONE",
-      "duration": 71706
+      "duration": 77059
     },
-    "task-406": {
+    "task-506": {
       "status": "DONE",
-      "duration": 71900
+      "duration": 75755
     },
-    "task-407": {
+    "task-507": {
       "status": "DONE",
-      "duration": 66057
+      "duration": 69820
     },
-    "task-408": {
+    "task-508": {
       "status": "DONE",
-      "duration": 63027
+      "duration": 64946
     },
-    "task-409": {
+    "task-509": {
       "status": "DONE",
-      "duration": 65861
+      "duration": 70717
     },
-    "task-410": {
+    "task-510": {
       "status": "DONE",
-      "duration": 67926
+      "duration": 77737
     },
-    "task-411": {
+    "task-511": {
       "status": "DONE",
-      "duration": 65551
+      "duration": 76687
     }
   }
 }

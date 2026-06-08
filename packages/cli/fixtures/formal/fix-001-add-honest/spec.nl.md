@@ -1,0 +1,1 @@
+Add returns the sum of two integers.

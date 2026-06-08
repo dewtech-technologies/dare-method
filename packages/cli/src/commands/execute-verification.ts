@@ -12,6 +12,7 @@ import { decideNextAction } from '../verification/decay/policy.js';
 import { failureSignature } from '../verification/decay/signature.js';
 import { FailToPassMissingError } from '../verification/gates/fail-to-pass.js';
 import { MutationToolNotFoundError } from '../verification/gates/mutation/adapter.js';
+import { FormalToolNotFoundError } from '../verification/gates/formal/backend.js';
 import {
   createRunVerification,
   type RunVerificationOptions,
@@ -24,6 +25,10 @@ export const VERIFICATION_ARTIFACT_DIR = '.dare/verification';
 
 export function mutationToolErrorMessage(tool: string, stack: string): string {
   return `Error: mutation tool '${tool}' not found on PATH for stack '${stack}'. Install it or set verification.mutation.enabled=false.`;
+}
+
+export function formalToolErrorMessage(backend: string, target: string): string {
+  return `Error: formal backend '${backend}' not found for marked module '${target}'. Install the toolchain or unmark the module.`;
 }
 
 export function failToPassMissingMessage(taskId: string): string {
@@ -65,6 +70,33 @@ export function validatePolicy(policy: string): string | undefined {
   return undefined;
 }
 
+export function validateFormalBackend(backend: string): string | undefined {
+  if (backend !== 'dafny' && backend !== 'verus' && backend !== 'lean') {
+    return `Error: --formal-backend must be 'dafny', 'verus' or 'lean' (got '${backend}')`;
+  }
+  return undefined;
+}
+
+export function applyFormalFlags(
+  config: VerificationConfig,
+  flags: {
+    readonly formal?: boolean;
+    readonly noFormal?: boolean;
+    readonly formalBackend?: string;
+  },
+): VerificationConfig {
+  let formal = config.formal;
+  if (flags.noFormal) formal = { ...formal, enabled: false };
+  else if (flags.formal) formal = { ...formal, enabled: true };
+  if (flags.formalBackend) {
+    formal = {
+      ...formal,
+      backend: flags.formalBackend as VerificationConfig['formal']['backend'],
+    };
+  }
+  return { ...config, formal };
+}
+
 export function applyPolicyOverride(
   config: VerificationConfig,
   policy?: string,
@@ -86,10 +118,17 @@ export function resolveBestOfCount(
 export async function loadVerificationConfig(
   cwd: string,
   fullMutation?: boolean,
+  formalFlags?: {
+    readonly formal?: boolean;
+    readonly noFormal?: boolean;
+    readonly formalBackend?: string;
+  },
 ): Promise<VerificationConfig> {
   const raw = await readProjectConfig(cwd);
-  const config = parseVerificationConfig(raw);
-  return applyFullMutationFlag(config, fullMutation);
+  let config = parseVerificationConfig(raw);
+  config = applyFullMutationFlag(config, fullMutation);
+  if (formalFlags) config = applyFormalFlags(config, formalFlags);
+  return config;
 }
 
 /** List changed files via git (argv, no shell). */
@@ -184,6 +223,9 @@ export interface PostRalphVerificationArgs {
   readonly noVerify?: boolean;
   readonly fullMutation?: boolean;
   readonly verdictJson?: boolean;
+  readonly formal?: boolean;
+  readonly noFormal?: boolean;
+  readonly formalBackend?: string;
 }
 
 export interface PostRalphVerificationResult {
@@ -199,7 +241,11 @@ export async function runPostRalphVerification(
   args: PostRalphVerificationArgs,
   runVerification = createRunVerification(),
 ): Promise<PostRalphVerificationResult> {
-  const config = await loadVerificationConfig(args.cwd, args.fullMutation);
+  const config = await loadVerificationConfig(args.cwd, args.fullMutation, {
+    formal: args.formal,
+    noFormal: args.noFormal,
+    formalBackend: args.formalBackend,
+  });
   if (!shouldRunVerification({
     verify: args.verify,
     noVerify: args.noVerify,
@@ -277,6 +323,14 @@ export async function runPostRalphVerification(
         passed: false,
         exitCode: 3,
         errorMessage: mutationToolErrorMessage(err.tool, args.stack),
+      };
+    }
+    if (err instanceof FormalToolNotFoundError) {
+      return {
+        ran: true,
+        passed: false,
+        exitCode: 5,
+        errorMessage: formalToolErrorMessage(err.backend, err.target),
       };
     }
     throw err;

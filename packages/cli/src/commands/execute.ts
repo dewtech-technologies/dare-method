@@ -39,10 +39,12 @@ import {
   shouldRunVerification,
   validateBestOf,
   validatePolicy,
+  validateFormalBackend,
   applyPolicyOverride,
   resolveBestOfCount,
 } from './execute-verification.js';
-import { recordVerification } from '../verification/telemetry.js';
+import { recordVerification, recordFormalProof } from '../verification/telemetry.js';
+import type { FormalVerdict } from '../verification/types.js';
 import { runBestOfN } from '../verification/best-of-n/runner.js';
 import { createLogger } from '../utils/logger.js';
 
@@ -85,6 +87,9 @@ interface ExecuteOptions {
   bestOf?: string;
   policy?: string;
   prerank?: boolean;
+  formal?: boolean;
+  noFormal?: boolean;
+  formalBackend?: string;
 }
 
 export const executeCommand = new Command('execute')
@@ -109,6 +114,9 @@ export const executeCommand = new Command('execute')
   .option('--best-of <n>', 'Run N verification candidates (best-of-N)')
   .option('--policy <p>', 'Override loop policy (decay|fixed)')
   .option('--prerank', 'Enable exec-free prerank ordering (never authorizes DONE)', false)
+  .option('--formal', 'Enable formal verification gate for this completion', false)
+  .option('--no-formal', 'Skip formal verification even when enabled in config', false)
+  .option('--formal-backend <backend>', 'Formal backend override (dafny|verus|lean)')
   .action(async (options: ExecuteOptions) => {
     const cwd = process.cwd();
     const dagPath = path.resolve(cwd, options.dag);
@@ -311,7 +319,11 @@ async function handleComplete(
     process.exit(1);
   }
 
-  let verificationConfig = await loadVerificationConfig(cwd, options.fullMutation);
+  let verificationConfig = await loadVerificationConfig(cwd, options.fullMutation, {
+    formal: options.formal,
+    noFormal: options.noFormal,
+    formalBackend: options.formalBackend,
+  });
   if (options.policy) {
     const policyErr = validatePolicy(options.policy);
     if (policyErr) {
@@ -328,6 +340,14 @@ async function handleComplete(
   if (bestOfErr) {
     console.error(chalk.red(bestOfErr));
     process.exit(1);
+  }
+
+  if (options.formalBackend) {
+    const formalErr = validateFormalBackend(options.formalBackend);
+    if (formalErr) {
+      console.error(chalk.red(formalErr));
+      process.exit(1);
+    }
   }
 
   if (options.prerank) {
@@ -380,6 +400,9 @@ async function handleComplete(
       noVerify: options.noVerify,
       fullMutation: options.fullMutation,
       verdictJson: options.verdictJson,
+      formal: options.formal,
+      noFormal: options.noFormal,
+      formalBackend: options.formalBackend,
     });
   }
 
@@ -420,6 +443,15 @@ async function handleComplete(
   ) {
     try {
       recordVerification(graph, verification.verificationResult);
+      const artifactFile = path.join(cwd, '.dare/verification', `${taskId}.json`);
+      if (await fs.pathExists(artifactFile)) {
+        const artifact = (await fs.readJson(artifactFile)) as {
+          formalProof?: FormalVerdict;
+        };
+        if (artifact.formalProof) {
+          recordFormalProof(graph, taskId, artifact.formalProof);
+        }
+      }
     } catch (err) {
       execLog.warn(
         { err: err instanceof Error ? err.message : String(err), taskId },

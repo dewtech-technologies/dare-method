@@ -69,6 +69,7 @@ const KNOWN_NODE_TYPES = [
   'code_symbol',
   'requirement',
   'pattern',
+  'formal-gate',
 ] as const;
 type KnownNodeType = (typeof KNOWN_NODE_TYPES)[number];
 
