@@ -23,6 +23,10 @@ Leia o arquivo `DARE/DESIGN.md` que foi aprovado. Extraia:
 - Requisitos não-funcionais
 - Restrições
 
+### Passo 1b: Trade-offs (Architect)
+
+Antes do scaffold, leia `DARE/PATTERNS.md` e `DARE/patterns-facts.json`. Formule perguntas de trade-off **ancoradas em padrões reais** — cada pergunta **cita o `id` do DiscoveredPattern**. **1 passagem sequencial**; **sem runtime multi-agente**. Não invente padrões: só referencie os 🟢 do CLI; conclusões 🟡.
+
 ### Passo 2: Analisar Contexto
 Leia os arquivos de contexto:
 - `.agents/rules/dare-workflow.md` (ou `.cursorrules` se Cursor)

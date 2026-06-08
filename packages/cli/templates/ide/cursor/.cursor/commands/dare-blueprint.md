@@ -9,9 +9,11 @@ Avança o DARE para a fase Architect: lê `DARE/DESIGN.md` aprovado e gera **som
 
 1. **Leia `DARE/DESIGN.md`** — obrigatório. Se não existir, peça `/generate-design` primeiro. Extraia: stack, RF-*, RNF-*, RS-*, integrações, restrições, escopo.
 
-2. **Leia o template:** `templates/BLUEPRINT-template.md` — siga a estrutura fielmente.
+2. **Trade-offs (Architect)** — antes do scaffold, leia `DARE/PATTERNS.md` e `DARE/patterns-facts.json`. Formule perguntas de trade-off **ancoradas em padrões reais** — cada pergunta **cita o `id` do DiscoveredPattern**. **1 passagem sequencial**; **sem runtime multi-agente**. Não invente padrões: só referencie os 🟢 do CLI; suas conclusões são 🟡.
 
-3. **Gere `DARE/BLUEPRINT.md`** com seções obrigatórias:
+3. **Leia o template:** `templates/BLUEPRINT-template.md` — siga a estrutura fielmente.
+
+4. **Gere `DARE/BLUEPRINT.md`** com seções obrigatórias:
 
    - **Visão Geral da Arquitetura** — diagrama Mermaid + tabela de decisões com justificativa
    - **Stack Técnica Definida** — versões fixas (não ranges)

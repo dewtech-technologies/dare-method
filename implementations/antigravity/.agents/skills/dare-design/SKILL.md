@@ -23,6 +23,17 @@ Leia cuidadosamente o que o usuário solicitou. Identifique:
 - Contexto do projeto
 - Restrições implícitas
 
+Se `dare design --interactive` emitiu a seção `## Perguntas de Planejamento (Analyst/PM)` no `DESIGN.md`, leia esse bloco.
+
+### Passo 1b: Planejamento leve (Analyst → PM)
+
+Se o bloco de questionário existir, conduza **1 passagem sequencial** (**sem runtime multi-agente**):
+
+- **Analyst** — uma rodada sobre escopo, ambiguidades e lacunas.
+- **PM** — uma rodada sobre requisitos e critérios de aceite.
+
+Ordem **sequencial**; sem message pool, sem loop de troca. Inferências 🟡; lacunas 🔴; fatos do CLI 🟢.
+
 ### Passo 2: Fazer Perguntas (se necessário)
 Se algo não estiver claro, pergunte ao usuário:
 - Qual é o escopo exato?

@@ -8,7 +8,8 @@ export type NodeType =
   | 'concept'
   | 'gate'
   | 'code_symbol'
-  | 'requirement';
+  | 'requirement'
+  | 'pattern';
 
 export type EdgeType =
   | 'depends_on'
@@ -20,7 +21,9 @@ export type EdgeType =
   | 'extends'
   | 'verified_by'
   | 'affects' // symbol → requirement/task (impacto inverso)
-  | 'derives_from'; // requirement-filho → requirement-pai
+  | 'derives_from' // requirement-filho → requirement-pai
+  | 'evidenced_by' // pattern → file
+  | 'exhibits'; // module → pattern
 
 /** All members of {@link NodeType} — use for zero-initialized statistics (RNF-05). */
 export const ALL_NODE_TYPES = [
@@ -34,6 +37,7 @@ export const ALL_NODE_TYPES = [
   'gate',
   'code_symbol',
   'requirement',
+  'pattern',
 ] as const satisfies readonly NodeType[];
 
 /** All members of {@link EdgeType} — use for zero-initialized statistics (RNF-05). */
@@ -48,6 +52,8 @@ export const ALL_EDGE_TYPES = [
   'verified_by',
   'affects',
   'derives_from',
+  'evidenced_by',
+  'exhibits',
 ] as const satisfies readonly EdgeType[];
 
 /** Zero-filled `nodesByType` — absent types stay `0`, never `NaN` (RNF-05). */
@@ -136,6 +142,18 @@ export interface RequirementNode extends GraphNode {
   source: 'design' | 'blueprint' | 'tasks' | 'dag';
   title: string;
   priority?: 'MUST' | 'SHOULD' | 'COULD';
+}
+
+/**
+ * Canonical id: `pattern:{DiscoveredPattern.id}` — e.g. `pattern:naming-idiom:service-suffix`
+ * Arestas: `evidenced_by:{patternId}->{file}` (pattern→file),
+ *          `exhibits:{moduleId}->{patternId}` (module→pattern).
+ */
+export interface PatternNode extends GraphNode {
+  type: 'pattern';
+  kind: string;
+  frequency: number;
+  coverage: number;
 }
 
 export interface TraverseOptions {

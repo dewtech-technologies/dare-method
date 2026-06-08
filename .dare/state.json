@@ -1,76 +1,53 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-08T01:54:19.173Z",
+  "updatedAt": "2026-06-08T02:48:11.889Z",
   "tasks": {
-    "task-301": {
+    "task-401": {
       "status": "DONE",
-      "output": "hooks/types.ts + steering/types.ts — closed HookEvent and steering contracts (BLUEPRINT §4.1/§4.3)",
-      "duration": 90175
+      "output": "graphrag/types.ts: NodeType+=pattern, EdgeType+=evidenced_by|exhibits, PatternNode, ALL_* arrays. graph.ts KNOWN_NODE_TYPES+=pattern. types.test.ts estendido. Stats sem NaN.",
+      "duration": 78230
     },
-    "task-302": {
+    "task-402": {
       "status": "DONE",
-      "output": "hooks/allowlist.ts — closed AllowedActionKey + resolveAction + tests",
-      "duration": 96124
+      "output": "utils/pattern-detector.ts: 5 PATTERN_RULES (naming/inferred-layer/structural/call/implicit), detectPatterns determinístico. Testes pattern-detector.test.ts (4 pass).",
+      "duration": 76359
     },
-    "task-303": {
+    "task-403": {
       "status": "DONE",
-      "output": "hooks/config.ts: parseHookConfig (opt-in inerte), HookConfigError, seedHooksDefaultsIfAbsent, assertRelativeSafe em args path-like. Testes hooks/__tests__/config.test.ts (6 pass).",
-      "duration": 101330
+      "output": "utils/pattern-facts.ts: renderPatternsSkeleton determinístico com seções por PatternKind, claims 🟢, <!-- AGENT -->, ## ⚠️ Incertezas. Testes pattern-facts.test.ts (4 pass + snapshot).",
+      "duration": 77556
     },
-    "task-304": {
+    "task-404": {
       "status": "DONE",
-      "output": "steering/loader.ts — PROJECT-DNA base + discovery + RS-04 blocklist",
-      "duration": 86471
+      "duration": 77570
     },
-    "task-305": {
+    "task-405": {
       "status": "DONE",
-      "output": "steering/resolver.ts: resolveSteeringForFile com precedência base<project<glob, priority asc, path lex. PathEscapeError via assertRelativeSafe. Testes resolver.test.ts + resolver.security.test.ts (5 pass).",
-      "duration": 99539
+      "duration": 71706
     },
-    "task-306": {
+    "task-406": {
       "status": "DONE",
-      "output": "commands/steering.ts: dare steering list|show (--json). sortSteeringByPrecedence em resolver.ts. bin/dare.ts + index.ts. IDE parity dare-steering. Testes steering.test.ts (4 pass).",
-      "duration": 122712
+      "duration": 71900
     },
-    "task-307": {
+    "task-407": {
       "status": "DONE",
-      "output": "hooks/idempotency.ts — state hash guard",
-      "duration": 139917
+      "duration": 66057
     },
-    "task-308": {
+    "task-408": {
       "status": "DONE",
-      "output": "hooks/telemetry.ts — recordHookTrigger via KnowledgeGraph",
-      "duration": 107529
+      "duration": 63027
     },
-    "task-309": {
+    "task-409": {
       "status": "DONE",
-      "output": "hooks/dispatcher.ts: dispatchHook com trust gate, safeSpawn(shell:false), idempotência, telemetria graph-register interno. Testes dispatcher.test.ts (5 pass).",
-      "duration": 97037
+      "duration": 65861
     },
-    "task-310": {
+    "task-410": {
       "status": "DONE",
-      "output": "commands/hooks.ts: list|run|validate com trust gate e exit 0/1/2. bin/dare.ts + index.ts + IDE dare-hooks. Testes hooks.test.ts (5 pass).",
-      "duration": 69275
+      "duration": 67926
     },
-    "task-311": {
+    "task-411": {
       "status": "DONE",
-      "output": "mcp-server/server.ts: GET /steering?file= (400/403), tool get_steering em /tools. Testes mcp-steering.test.ts (6 pass) incl. regress auth loopback.",
-      "duration": 95314
-    },
-    "task-312": {
-      "status": "DONE",
-      "output": "Claude settings.example.json → dare hooks run on-save. pre-commit → dare hooks run pre-commit. dare.config.hooks.example.json + HOOKS-ADAPTER.md (cursor/antigravity). ide-adapters.test.ts (4 pass).",
-      "duration": 68748
-    },
-    "task-313": {
-      "status": "DONE",
-      "output": "dispatcher.security.test.ts (injeção/trust/allowlist/shell:false grep). resolver.security.test.ts estendido (.env RS-04). PathEscapeError no dispatcher para payload.file.",
-      "duration": 70925
-    },
-    "task-314": {
-      "status": "DONE",
-      "output": "CHANGELOG [3.6.0], bump 3.6.0 raiz+CLI, project-generator hooks inerte, UpdateApplier seedHooksDefaultsIfAbsent, README hooks+steering.",
-      "duration": 72253
+      "duration": 65551
     }
   }
 }

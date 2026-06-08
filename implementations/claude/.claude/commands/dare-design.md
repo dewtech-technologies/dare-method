@@ -16,6 +16,16 @@ Gera ou atualiza o `DARE/DESIGN.md` a partir de uma descrição do projeto ou fe
 - `package.json` / `composer.json` / `Cargo.toml` / `go.mod` / `requirements.txt` — stack atual
 - Estrutura de pastas existente
 - `DARE/DESIGN.md` se já existir — não sobrescreva sem aprovação explícita do usuário
+- Se `dare design --interactive` emitiu a seção `## Perguntas de Planejamento (Analyst/PM)`, leia esse bloco antes de prosseguir
+
+### 1b. Planejamento leve (Analyst → PM)
+
+Se o bloco de questionário existir no `DESIGN.md`, conduza **1 passagem sequencial** (**sem runtime multi-agente**):
+
+- **Analyst** — uma rodada sobre escopo, ambiguidades e lacunas (`kind:'scope'|'ambiguity'|'gap'`).
+- **PM** — uma rodada sobre requisitos e critérios de aceite.
+
+Ordem **sequencial**: Analyst antes de PM; sem voltar, sem message pool, sem loop de troca. Marque inferências como 🟡 e lacunas não resolvidas como 🔴; fatos do CLI permanecem 🟢.
 
 ### 2. Gere `DARE/DESIGN.md` com as seguintes seções obrigatórias
 

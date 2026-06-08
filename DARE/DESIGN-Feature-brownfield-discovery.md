@@ -10,7 +10,7 @@
 > Analyst / PM / Architect — **só na fase de planejamento**, à la BMAD, **sem** o enxame caro de
 > multi-agente em runtime; cautela de custo: MetaGPT arXiv:2308.00352 e survey arXiv:2508.00083).
 > Tese única das duas ideias: **tornar o entendimento de legado e o planejamento mais ricos**, sem
-> abandonar a regra de ouro "LLM fora do CLI". **Target: v3.3.0** (repo em v3.2.0).
+> abandonar a regra de ouro "LLM fora do CLI". **Target: v3.7.0** (repo em v3.6.0; v3.3.0→v3.6.0 já entregues).
 
 ## Contexto no Projeto Existente
 
@@ -186,4 +186,4 @@ Esta feature **estende** `reverse`/`dna` (não os reescreve) e enriquece `design
 > **Próximo passo:** após aprovação deste DESIGN, rodar `/dare-blueprint` para a Fase Architect
 > (decisões arquiteturais, estrutura de pastas, contratos, lista de tasks). Fundamentação por paper
 > em `pesquisas-estrategicas/papers-dare/cards/` (grep por `idea-7`, `idea-8`).
-> Target **v3.3.0**.
+> Target **v3.7.0**.

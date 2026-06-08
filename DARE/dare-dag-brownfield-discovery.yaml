@@ -1,0 +1,251 @@
+title: "Brownfield Discovery — Auto-Discovery de Padrões + Planejadores Leves"
+version: "3.7.0"
+generated: "2026-06-07T21:00:00Z"
+
+# Feature: brownfield-discovery
+# Branch:  feat/brownfield-discovery
+# Design:  DARE/DESIGN-Feature-brownfield-discovery.md
+# Blueprint: DARE/BLUEPRINT-Feature-brownfield-discovery.md
+#
+# Regra de ouro (BLUEPRINT §1.1): o CLI é 100% DETERMINÍSTICO — minera FATOS por
+#   frequência/co-ocorrência sobre o inventário existente, emite patterns-facts.json +
+#   PATTERNS.md (skeleton <!-- AGENT -->). NENHUM LLM no CLI. A inferência semântica
+#   (nomear/explicar padrão) e as personas Analyst/PM/Architect vivem nas SKILLS das IDEs.
+#   Personas = 1 passagem, sequenciais, só no planejamento — zero runtime swarm
+#   (cautela de custo MetaGPT 31k vs 19k tokens, 2308.00352; "High Operational Costs", 2508.00083).
+#
+# ESCOPO: a feature ESTENDE, não reescreve. dna/reverse ficam byte-a-byte inalterados (RNF-06).
+#
+# Pré-requisitos JÁ ENTREGUES (NÃO reimplementar — reusar):
+#   - v3.5.0 dual-graph: graphrag/types.ts union fechado, KnowledgeGraph 3 backends,
+#     graph-ingest.ts addNode/addEdge, commands/graph.ts KNOWN_NODE_TYPES.
+#   - v3.6.0 steering: steering/loader.ts lê DARE/PROJECT-DNA.md como base (loader.ts:63).
+#   - utils/dna-detector.ts (loadFileInventory:371, DnaFacts:36, KNOWN_LAYERS:197).
+#   - utils/static-analyzer.ts (isTestFile:69, SUPPORTED_EXTENSIONS:88, inString:117).
+#   - utils/module-detector.ts (ModuleInfo:24, IGNORE_DIRS:52, detectModules:79).
+#   - utils/confidence.ts (Marker:16 🟢/🟡/🔴).
+#   - utils/path-safety.ts (assertRelativeSafe:23, resolveSafePath:79).
+#   - commands/dna.ts (--check:20, fs.writeJSON:47), commands/reverse.ts (--modules:47).
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: Foundation — tipos + contratos + detector determinístico ───────
+  - id: task-401
+    title: "graphrag/types.ts — union += pattern/evidenced_by/exhibits (FUNDAÇÃO)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION/task-401-graph-types-pattern.md
+    subtask_prompt: |
+      Estender o union FECHADO de tipos do grafo em packages/cli/src/graphrag/types.ts (BLUEPRINT §4.3).
+      Esta é a task de FUNDAÇÃO ARRISCADA — raiz de pattern-ingest, steering e graph query; um union
+      mal estendido propaga NaN nas estatísticas dos 3 backends. Mudanças:
+      - NodeType += 'pattern' (RF-03); manter todos os membros v3.5.0 (code_symbol|requirement|gate|...).
+      - EdgeType += 'evidenced_by' (pattern→file) e 'exhibits' (module→pattern) (RF-03).
+      - Atualizar ALL_NODE_TYPES (types.ts:26) e ALL_EDGE_TYPES (types.ts:40) para incluir os novos membros,
+        garantindo que getStatistics inicialize pattern/evidenced_by/exhibits em 0, NUNCA NaN (RNF-05, espelha
+        task-209 do dual-graph). IDs canônicos (BLUEPRINT §4.4): pattern:{DiscoveredPattern.id};
+        evidenced_by:{patternId}->{file}; exhibits:{moduleId}->{patternId}.
+      Auditar todo Record<NodeType,number>/Record<EdgeType,number> consumer (graph-rag.ts, json-graph.ts,
+      neo4j-graph.ts getStatistics) para inicializar os 3 membros novos em 0. PROIBIDO union como string livre.
+      Gates: tsc --noEmit; vitest run graph-rag json-graph (stats sem NaN/undefined).
+      Leia: DARE/EXECUTION/task-401-graph-types-pattern.md.
+
+  - id: task-402
+    title: "utils/pattern-detector.ts — contratos + PATTERN_RULES plugáveis + detectPatterns"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION/task-402-pattern-detector.md
+    subtask_prompt: |
+      Criar packages/cli/src/utils/pattern-detector.ts (BLUEPRINT §4.1, A-2/A-3/A-4/A-5, RF-01/O-01).
+      Copiar os contratos EXATOS do blueprint: PatternKind (união FECHADA: inferred-layer | naming-idiom |
+      structural-idiom | call-idiom | implicit-decision), PatternEvidence (file posix + line?), DiscoveredPattern
+      (id kebab '${kind}:${slug}', kind, description FACTUAL, frequency, coverage 0..1, evidence>=1, modules[], marker),
+      PatternsFacts, PatternRule (kind, minFrequency, detect(input)), PatternRuleInput (files, modules, dna, readFile).
+      Implementar PATTERN_RULES (≥5 regras, uma PatternKind cada, A-2 sem god-file) e
+      detectPatterns(root, dna): Promise<PatternsFacts> determinístico (RNF-02 — mesma entrada ⇒ saída byte-a-byte;
+      ordenar por (kind, id)). REUSAR (não duplicar): loadFileInventory (dna-detector.ts:371) p/ inventário,
+      isTestFile (static-analyzer.ts:69), SUPPORTED_EXTENSIONS (:88), inString (:117) ao casar idioms,
+      ModuleInfo (module-detector.ts:24), Marker (confidence.ts:16 → 'confirmed' no CLI, A-5).
+      inferred-layer agrupa por co-ocorrência (A-3) — NÃO recopiar KNOWN_LAYERS (dna-detector.ts:197).
+      A-4: só emitir padrão com frequency>=minFrequency E evidence.length>=1. PROIBIDO LLM/rede/fetch/import anthropic,
+      lista hardcoded, ou padrão sem evidência (§11). readFile é READ-ONLY (RS-01).
+      Gates: tsc --noEmit; vitest run pattern-detector; cobertura ≥80% (RNF-04).
+      Leia: DARE/EXECUTION/task-402-pattern-detector.md.
+
+  - id: task-403
+    title: "utils/pattern-facts.ts — patterns-facts.json + renderPatternsSkeleton (<!-- AGENT -->)"
+    depends_on: [task-402]
+    complexity: MED
+    spec_file: EXECUTION/task-403-pattern-facts.md
+    subtask_prompt: |
+      Criar packages/cli/src/utils/pattern-facts.ts (BLUEPRINT §5.2, RF-02/RF-07/O-07).
+      renderPatternsSkeleton(facts: PatternsFacts): string — Markdown DETERMINÍSTICO espelhando renderDnaSkeleton
+      (utils/dna-facts.ts / dna-detector.ts). Pré-preenche FATOS (categoria, frequência, evidência arquivo:linha) e
+      deixa marcadores <!-- AGENT --> para a skill /dare-dna nomear/explicar o padrão e rebaixar confiança.
+      Seção obrigatória "## ⚠️ Incertezas" lista gaps (🔴) — NUNCA silenciados (RF-07/O-07). Herdar 🟢/🟡/🔴 via
+      confidence.ts (Marker). Pós: mesma entrada ⇒ mesma string (snapshot test). PROIBIDO LLM ou texto interpretativo
+      no skeleton (a interpretação é da skill); descrição factual apenas.
+      Teste utils/__tests__/pattern-facts.test.ts: snapshot determinístico + gaps presentes em ⚠️ Incertezas.
+      Gates: tsc --noEmit; vitest run pattern-facts. Leia: DARE/EXECUTION/task-403-pattern-facts.md.
+
+  # ─── Fase 2: Comando dare patterns (CLI determinístico) ─────────────────────
+  - id: task-404
+    title: "commands/patterns.ts — dare patterns --check/--dir/--modules + path-safety read-only"
+    depends_on: [task-403]
+    complexity: MED
+    spec_file: EXECUTION/task-404-patterns-command.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/patterns.ts e registrar no bin/CLI principal (BLUEPRINT §5.1, A-1/A-11,
+      RF-08/RS-01/RS-03). Fluxo determinístico §5.1: 1) targetDir = path.resolve(opts.dir ?? cwd), validar com
+      assertRelativeSafe/resolveSafePath (utils/path-safety.ts) — exit 1 string EXATA
+      "Error: --dir must stay within the project (no '..' or absolute escape)". 2) carregar DARE/dna-facts.json se
+      existir (entrada opcional, senão null). 3) facts = await detectPatterns(targetDir, dna). 4) --check (espelha
+      dna.ts:20/28): só resumo (categoria × frequência) no stdout, "--check: detection only, no files written.",
+      NÃO escreve nem chama ensureDareSkills (RF-08/RS-01). 5) escrever DARE/patterns-facts.json (fs.writeJSON {spaces:2},
+      igual dna.ts:47) + DARE/PATTERNS.md (renderPatternsSkeleton de task-403). 6) ingestPatterns no grafo best-effort
+      (vem em task-405; aqui só wire condicional/no-op até existir). Flags: -d/--dir (default cwd), --check,
+      --modules <csv> (igual reverse.ts:47), --inject (opt-in, wire em task-406). Ignorar IGNORE_DIRS (module-detector.ts:52)
+      e .env* (RS-02). PROIBIDO escrever fora de DARE/ ou modificar código-alvo (RS-01); zero LLM/rede.
+      Teste commands/__tests__/patterns.test.ts: escreve artefatos; --check não escreve; --dir inválido ⇒ exit 1 string exata.
+      Gates: tsc --noEmit; vitest run patterns. Leia: DARE/EXECUTION/task-404-patterns-command.md.
+
+  # ─── Fase 3: Grafo + steering (consumidores existentes estendidos) ──────────
+  - id: task-405
+    title: "graphrag/pattern-ingest.ts — pattern/evidenced_by/exhibits no grafo"
+    depends_on: [task-401, task-403]
+    complexity: MED
+    spec_file: EXECUTION/task-405-pattern-ingest.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/pattern-ingest.ts (BLUEPRINT §5.3, A-6, RF-03/O-03).
+      ingestPatterns(graph: KnowledgeGraph, facts: PatternsFacts, projectRoot): { nodes; edges } — determinístico,
+      idempotente (upsert por id). REUSAR addNode/addEdge do KnowledgeGraph (espelha dag-runner/graph-ingest.ts:29
+      ingestTask e extractSymbolsFromPaths:19 — não criar novo backend). Para cada padrão: nó pattern:{id}
+      (label = description); aresta evidenced_by pattern→file por evidência (id evidenced_by:{patternId}->{file},
+      §4.4); aresta exhibits module→pattern por módulo em pattern.modules (id exhibits:{moduleId}->{patternId}).
+      NUNCA chama LLM/rede; erros de grafo NÃO derrubam dare patterns (best-effort, try/catch). Wire o ingest no
+      commands/patterns.ts (substituir o no-op de task-404). PROIBIDO reusar related_to genérico (A-6) ou criar
+      padrão sem evidência (A-4).
+      Teste graphrag/__tests__/pattern-ingest.test.ts: nós/arestas nos backends json+sqlite (neo4j skip);
+      dare graph query --type pattern lista os padrões (O-03). Gates: tsc --noEmit; vitest run pattern-ingest.
+      Leia: DARE/EXECUTION/task-405-pattern-ingest.md.
+
+  - id: task-406
+    title: "steering/loader.ts + graph KNOWN_NODE_TYPES — PATTERNS.md como 2ª fonte-base"
+    depends_on: [task-401, task-403]
+    complexity: MED
+    spec_file: EXECUTION/task-406-steering-graph-wire.md
+    subtask_prompt: |
+      Estender DUAS integrações existentes (BLUEPRINT §5.5, A-7, RF-09/COULD + O-03).
+      (1) steering/loader.ts: após o bloco de DARE/PROJECT-DNA.md (loader.ts:63-74), adicionar DARE/PATTERNS.md
+      de forma ANÁLOGA como 2ª fonte-base elegível: assertRelativeSafe(patternsRel); se fs.pathExistsSync ⇒
+      files.push({ path:'DARE/PATTERNS.md', frontMatter:{scope:'project',priority:0}, body:..., isBase:true }).
+      Ausência de PATTERNS.md ⇒ steering IDÊNTICO a v3.6.0 (RNF-06). .env* continua bloqueado (RS-02). NÃO criar novo
+      loader (A-7 reusa o concat por precedência do v3.6.0).
+      (2) commands/graph.ts: atualizar KNOWN_NODE_TYPES (graph.ts:60) para incluir 'pattern' para que
+      dare graph query --type pattern funcione (O-03).
+      (3) --inject de dare patterns (commands/patterns.ts): wire opt-in que adiciona DARE/PATTERNS.md como fonte de
+      steering PRESERVANDO conteúdo do usuário (RS-04 — manifesto/idempotente, nunca sobrescreve sem confirmar).
+      Testes: steering/__tests__/loader.test.ts precedência com PATTERNS.md presente/ausente; teste de injeção idempotente (RS-04).
+      Gates: tsc --noEmit; vitest run loader graph. Leia: DARE/EXECUTION/task-406-steering-graph-wire.md.
+
+  # ─── Fase 4: Questionário determinístico + personas leves (idea-8) ──────────
+  - id: task-407
+    title: "utils/design-questionnaire.ts — fatos+gaps → PlanningQuestion[] (determinístico)"
+    depends_on: [task-403]
+    complexity: MED
+    spec_file: EXECUTION/task-407-design-questionnaire.md
+    subtask_prompt: |
+      Criar packages/cli/src/utils/design-questionnaire.ts (BLUEPRINT §4.2, A-8/A-9/A-10, RF-04/RF-05/RS-05).
+      Copiar contratos EXATOS: PlanningPersona ('analyst'|'pm'|'architect' — rótulo, NÃO executa nada),
+      PlanningQuestion (id, persona, phase:'design'|'blueprint', prompt factual+lacuna, anchoredOn:string[] ids de
+      DiscoveredPattern/DnaFacts citados, kind:'gap'|'ambiguity'|'tradeoff'|'scope'), PlanningArtifact.
+      buildDesignQuestionnaire(dna, patterns): PlanningArtifact — Analyst+PM; DETERMINÍSTICO (lê fatos, NÃO infere);
+      gaps (🔴) viram kind:'gap' NUNCA silenciados (RF-07/O-07). buildBlueprintQuestionnaire(patterns): Architect —
+      perguntas de trade-off ANCORADAS em padrões reais (anchoredOn cita ids de DiscoveredPattern, RF-05).
+      O CLI só MONTA o questionário a partir de fatos+gaps — não responde, não infere, não orquestra (A-8/A-9/RS-05).
+      PROIBIDO exec/spawn/eval, LLM/rede, persona instanciada em runtime, loop de troca/message pool, pergunta genérica
+      estática desancorada (§11 — custo MetaGPT).
+      Teste utils/__tests__/design-questionnaire.test.ts: gaps→kind:'gap'; ancoragem em ids reais; determinismo.
+      Gates: tsc --noEmit; vitest run design-questionnaire. Leia: DARE/EXECUTION/task-407-design-questionnaire.md.
+
+  - id: task-408
+    title: "commands/design.ts — flag --interactive emite questionário (sem flag = intocado)"
+    depends_on: [task-407]
+    complexity: LOW
+    spec_file: EXECUTION/task-408-design-interactive.md
+    subtask_prompt: |
+      Estender packages/cli/src/commands/design.ts (BLUEPRINT §5.4, A-10, RF-04/RNF-06).
+      Adicionar flag --interactive (default false). COM --interactive: em vez do esqueleto estático (design.ts:15),
+      carregar DARE/dna-facts.json + DARE/patterns-facts.json se existirem, chamar buildDesignQuestionnaire(dna,patterns)
+      (task-407) e emitir o bloco no DESIGN.md sob a seção "## Perguntas de Planejamento (Analyst/PM)" + no stdout.
+      SEM a flag: comportamento ATUAL byte-a-byte intocado (RNF-06). O CLI NÃO chama LLM nem responde — a skill
+      /dare-design lê o bloco e conduz UMA passagem sequencial (A-9). PROIBIDO o CLI executar raciocínio/inferência (RS-05).
+      Teste commands/__tests__/design-interactive.test.ts: --interactive injeta seção de perguntas; sem flag = saída atual.
+      Gates: tsc --noEmit; vitest run design. Leia: DARE/EXECUTION/task-408-design-interactive.md.
+
+  - id: task-409
+    title: "skills /dare-design (Analyst+PM) + /dare-blueprint (Architect) — 1 passagem sequencial"
+    depends_on: [task-407]
+    complexity: MED
+    spec_file: EXECUTION/task-409-skill-personas.md
+    subtask_prompt: |
+      Atualizar templates de skill instalados via ensureDareSkills (BLUEPRINT §3 skills, A-8/A-9, RF-04/RF-05/RF-06/O-04/O-05/O-06).
+      skills/dare-design/: personas Analyst + PM CONSOMEM o bloco de questionário emitido por dare design --interactive
+      (task-408) e conduzem UMA passagem sequencial (Analyst→PM) — interrogam o humano sobre gaps/ambiguidades/escopo
+      antes do DESIGN.md. skills/dare-blueprint/: persona Architect faz perguntas de trade-off CITANDO padrões reais do
+      PATTERNS.md/patterns-facts.json (RF-05) antes do scaffold (blueprint.ts:43). REGRA DE OURO: personas são prompts/
+      templates ESTRUTURADOS, 1 passagem, sequenciais, SÓ no planejamento — a skill marca inferência 🟡 / gap 🔴, o CLI
+      marca fato 🟢. PROIBIDO (§11): persona/planejador instanciado em runtime, orquestrador multi-agente, loop de troca/
+      message pool, persona apresentada como fato. Revisão deve confirmar ZERO orquestração multi-agente no CLI (O-06).
+      Verificação: grep nos templates confirma 1 passagem/persona; nenhuma topologia swarm.
+      Gates: vitest run (templates/fixture se aplicável); revisão O-06. Leia: DARE/EXECUTION/task-409-skill-personas.md.
+
+  # ─── Fase 5: Auditoria de segurança / deps (N-1) ────────────────────────────
+  - id: task-410
+    title: "Auditoria N-1 — read-only, path-confinement, sem-LLM, .env, deps (RS-01..05)"
+    depends_on: [task-404, task-405, task-406, task-408, task-409]
+    complexity: HIGH
+    spec_file: EXECUTION/task-410-security-audit.md
+    subtask_prompt: |
+      Auditoria de segurança e suíte integrada (BLUEPRINT §6 Fase 5, §7, §8, §9, §11; RS-01..RS-05; O-01..O-07).
+      Criar packages/cli/src/__tests__/patterns.test.ts integrando O-01…O-07 (reusa pattern-detector, pattern-facts,
+      patterns command, pattern-ingest, design-questionnaire). Testes de segurança:
+      - patterns-path-confinement.test.ts: --dir/--modules com ../absoluto ⇒ exit 1 string exata (RS-03);
+        IGNORE_DIRS respeitados (module-detector.ts:52).
+      - teste de exclusão .env*: patterns-facts.json/questionário NÃO capturam .env/tokens (RS-02/RS-04).
+      - teste --check read-only: nada escrito fora de DARE/, código-alvo intocado (RS-01).
+      - teste de injeção --inject idempotente preservando conteúdo do usuário (RS-04).
+      Verificações estáticas (grep): zero anthropic|openai|fetch\(|https?:// em pattern-detector.ts/pattern-facts.ts/
+      design-questionnaire.ts/pattern-ingest.ts (RNF-02/RS-02, §11 Gate Sem-LLM); zero exec/spawn/eval em
+      design-questionnaire.ts (RS-05); nenhuma persona instanciada em runtime / message pool (O-06). Determinismo:
+      rodar detector 2× sobre fixture ⇒ saída byte-a-byte idêntica (RNF-02); fixtures CRLF+LF verdes (RNF-05).
+      pnpm audit --prod sem HIGH/CRITICAL novos (RS-02); dare review sem achados HIGH; cobertura detector ≥80% (RNF-04).
+      Verificar nenhum padrão PROIBIDO §11. Gates: vitest run patterns security; pnpm audit --prod.
+      Leia: DARE/EXECUTION/task-410-security-audit.md.
+
+  # ─── Fase 6: Release ────────────────────────────────────────────────────────
+  - id: task-411
+    title: "Release v3.7.0 — CHANGELOG [3.7.0] + bump 3.6.0 → 3.7.0 + README"
+    depends_on: [task-410]
+    complexity: LOW
+    spec_file: EXECUTION/task-411-release.md
+    subtask_prompt: |
+      Release v3.7.0 — Brownfield Discovery (BLUEPRINT §10). CHANGELOG [3.7.0] (formato CHANGELOG.md): dare patterns
+      (auto-discovery determinístico de padrões + --check/--dir/--modules/--inject), PATTERNS.md (skeleton AGENT
+      reusável/injetável), nós pattern + arestas evidenced_by/exhibits no grafo, PATTERNS.md como fonte de steering
+      (A-7), dare design --interactive (questionário determinístico), personas leves Analyst/PM/Architect
+      (planejamento, 1 passagem sequencial, SEM runtime multi-agente — cautela de custo MetaGPT).
+      Bump package.json RAIZ e packages/cli/package.json de 3.6.0 → 3.7.0 (hoje ambos 3.6.0). README: seções dare patterns
+      e dare design --interactive. Retrocompat 100% / opt-in puro: ausência de patterns-facts.json/PATTERNS.md ⇒
+      comportamento IDÊNTICO a v3.6.0 (RNF-06). Publish por tag v3.7.0 (mesmo fluxo das releases 3.5.0/3.6.0;
+      npm publish --provenance no CI).
+      Gates: pnpm --recursive build; pnpm test. Leia: DARE/EXECUTION/task-411-release.md.

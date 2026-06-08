@@ -1,0 +1,44 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderPatternsSkeleton > is deterministic for fixed input 1`] = `
+"# PATTERNS — Padrões descobertos (brownfield)
+
+> ⚠️ **Fatos gerados por \`dare patterns\`.** O CLI lista frequência e evidência;
+> seções \`<!-- AGENT -->\` são preenchidas por \`/dare-dna\` (nomear/explicar/rebaixar confiança).
+
+*Gerado: 2026-06-07T12:00:00.000Z · inventário via module-detector*
+
+## Camadas inferidas (co-ocorrência)
+
+- _(nenhum detectado)_
+
+## Idiomas de nomenclatura
+
+- 🟢 3 arquivos usam sufixo .service.ts (frequência 3, cobertura 75%) — evidência: \`src/auth/auth.service.ts\`, \`src/users/users.service.ts:1\`
+<!-- AGENT: nomeie/explique este padrão; rebaixe para 🟡 se for inferência ou 🔴 se for gap. -->
+
+## Idiomas estruturais
+
+- _(nenhum detectado)_
+
+## Idiomas de chamada
+
+- 🟢 2 arquivos usam validação z./schema.parse (frequência 2, cobertura 25%) — evidência: \`src/validate.ts:2\`
+<!-- AGENT: nomeie/explique este padrão; rebaixe para 🟡 se for inferência ou 🔴 se for gap. -->
+
+## Decisões implícitas
+
+- _(nenhum detectado)_
+
+## ⚠️ Incertezas
+
+- 🔴 Categoria \`inferred-layer\`: nenhum padrão acima do limiar de frequência.
+- 🔴 Categoria \`structural-idiom\`: nenhum padrão acima do limiar de frequência.
+- 🔴 Categoria \`implicit-decision\`: nenhum padrão acima do limiar de frequência.
+- 🔴 \`call-idiom:schema-validation\`: cobertura baixa (25%) — requer decisão humana.
+<!-- AGENT: complemente gaps e rebaixe confiança onde necessário. -->
+
+---
+*DARE Method — padrões do projeto (brownfield). Gerado por \`dare patterns\`. License: MIT.*
+"
+`;

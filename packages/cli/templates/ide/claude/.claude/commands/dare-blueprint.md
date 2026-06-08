@@ -24,6 +24,10 @@ Extraia e use durante todo o comando:
 - Integrações externas confirmadas
 - Restrições e escopo
 
+### 1b. Trade-offs (Architect)
+
+Antes do scaffold, leia `DARE/PATTERNS.md` e `DARE/patterns-facts.json`. Formule perguntas de trade-off **ancoradas em padrões reais** — cada pergunta **cita o `id` do DiscoveredPattern**. **1 passagem sequencial**; **sem runtime multi-agente**. Não invente padrões: só referencie os 🟢 do CLI; suas conclusões são 🟡.
+
 ### 2. Gerar `DARE/BLUEPRINT.md`
 
 Siga o template `templates/BLUEPRINT-template.md`. Seções obrigatórias:
