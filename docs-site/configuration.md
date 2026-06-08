@@ -91,6 +91,29 @@ Campos de `ProjectConfig` (`packages/cli/src/core/types/project.ts`).
 | `rustWorkspaceLayout` | `'single' \| 'multi'` | — (opcional) | `single`: `crates/server` + `crates/web`. `multi`: `{prefix}-core`/`-server`/`-web`/`-cli`. |
 | `cratePrefix` | `string` | — (opcional) | Prefixo curto p/ nomes multi-crate (ex.: `ars` → `ars-core`, `ars-server`…). |
 
+### `review`
+
+Gate anti-stub disparado ao concluir uma task (`packages/cli/src/commands/review.ts`).
+Em projetos novos vem ligado; em upgrades é opt-in (default desligado) para não
+mudar comportamento.
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `onComplete` | `boolean` | `true` (projetos novos) | Roda `dare review` automaticamente ao marcar a task como DONE. |
+| `strict` | `boolean` | `false` | Trata achados (stubs/mocks/TODO) como bloqueio em vez de aviso. |
+
+### `refine`
+
+Thresholds que mapeiam o score heurístico de complexidade para
+LOW/MED/HIGH/CRITICAL (`packages/cli/src/utils/complexity-analyzer.ts`). Use para
+calibrar quando uma task deve ser dividida via `dare refine`.
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `thresholds.low` | `number` | `5` | Limite superior da faixa LOW. |
+| `thresholds.med` | `number` | `12` | Limite superior da faixa MED. |
+| `thresholds.high` | `number` | `20` | Limite superior da faixa HIGH; acima disso é CRITICAL. |
+
 ### `verification`
 
 Bloco inteiro validado em `verification/config.ts` (Zod `.strict()` — campos

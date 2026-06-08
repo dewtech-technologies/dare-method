@@ -157,6 +157,11 @@ dare execute --complete task-001 --output "OK" --tokens 1200
 | `--best-of <n>` | string | — | Corre N candidatos de verificación (best-of-N). |
 | `--policy <p>` | string | — | Sobrescribe la policy del loop (`decay`\|`fixed`). |
 | `--prerank` | boolean | `false` | Habilita el ordenamiento prerank sin ejecución (nunca autoriza DONE). |
+| `--formal` | boolean | `false` | Habilita el gate de verificación formal en esta finalización (hereda `verification.formal.enabled`). |
+| `--no-formal` | boolean | (config) | Omite la verificación formal aunque esté habilitada en la config. |
+| `--formal-backend <backend>` | string | (`formal.backend`) | Sobrescribe el backend formal (`dafny`\|`verus`\|`lean`). |
+
+> **Opt-in / experimental.** El gate formal está desactivado por defecto y exige opt-in en dos niveles: `verification.formal.enabled` en la config **y** marcación por módulo (`@dare-formal` o `verification.formal.modules`). Sin eso, el comportamiento es idéntico al anterior.
 
 ## `dare graph`
 

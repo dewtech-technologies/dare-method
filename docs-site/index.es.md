@@ -47,6 +47,7 @@ dare design "Quero uma API de autenticação JWT"
 
 ## Novedades
 
+- **v3.8.0 — Formal Verification Gate:** gate opt-in que PRUEBA (no solo testea) módulos críticos marcados contra una spec Dafny (anti-bypass, exit 5).
 - **v3.7.0 — Brownfield Discovery:** auto-discovery determinista de patrones (`dare patterns`) + planificadores ligeros.
 - **v3.6.0 — Agent Hooks + Steering:** automatizaciones por evento + inyección de patrones vía MCP.
 - **v3.5.0 — Dual Graph:** grafo Requisito↔Código + `dare graph owners/impact/trace/locate`.

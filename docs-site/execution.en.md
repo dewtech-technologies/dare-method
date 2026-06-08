@@ -145,7 +145,7 @@ A verification **passes** when all evaluated aspects have a `PASS` or `SKIP` ver
 | **mutation** | `mutation.enabled` (default `true`) | runs the stack's mutation tool; `score < minScore` ⇒ `FAIL`; zero mutants ⇒ `SKIP`. |
 | **formal** | `formal.enabled` (default `false`) | formal proof (Dafny/Verus/Lean) over flagged modules; deterministic solver verdict + anti-bypass sub-gate. |
 
-Effective order in `runVerification`: **fail-to-pass → anti-tamper → type-check → mutation**. A `FAIL` in fail-to-pass, anti-tamper or type-check ends the verification immediately.
+Effective order in `runVerification`: **fail-to-pass → anti-tamper → type-check → mutation → formal**. A `FAIL` in fail-to-pass, anti-tamper or type-check ends the verification immediately.
 
 #### Mutation with `minScore`
 
@@ -181,6 +181,29 @@ The winning patch is promoted via `git diff HEAD <branch>` applied at the root (
 !!! danger "RS-07 — prerank NEVER authorizes DONE/PASS"
     Prerank only **reorders** candidates before verification. It never turns a verdict into `PASS`. The constant `PRERANK_NEVER_AUTHORIZES_DONE = true` documents the invariant for the safety tests.
 
+#### Formal Verification Gate (v3.8, experimental)
+
+The **formal gate** is one more **aspect** of the Verification Core: `runner.ts` runs it **after** mutation, and only when `verification.formal.enabled` is `true`. It is **strict two-level opt-in** — beyond the config flag, it only runs on **marked** modules (a `@dare-formal` tag in the code, discovered in the diff, or `verification.formal.modules` in `path::symbol` form). With no marked target the aspect returns `SKIP` before any execution. It can be toggled per call with `--formal` / `--no-formal` and have its backend overridden with `--formal-backend <dafny|verus|lean>`.
+
+```jsonc
+"verification": {
+  "enabled": true,
+  "formal": {
+    "enabled": true,                // second gate (default false)
+    "backend": "dafny",             // 'dafny' (default) | 'verus' | 'lean'
+    "modules": ["src/crypto/sign.ts::verifySignature"],
+    "maxRepairIterations": 5,
+    "proofTimeoutSeconds": 120,
+    "antiBypass": true
+  }
+}
+```
+
+- **Dafny is the default backend** (82.2% vs. Verus 44.3% vs. Lean 26.8% — Vericoding); Verus/Lean are optional.
+- **External toolchain, not a CLI dependency.** Dafny/Z3/Verus/Lean are installed in the target project; each backend checks the binary via `isAvailable()` (without running a proof). Missing toolchain on an **unmarked** module ⇒ `SKIP`; on a **marked** module ⇒ `FormalToolNotFoundError` (**exit 5**) — never silently skips the gate.
+- **Anti-bypass.** When `antiBypass: true`, the sub-gate rejects cheating patterns (`assume(false)`, `ensures true`, spec leaked into the impl) **even with a solver exit 0**: `verified = solverPassed && !bypassDetected`.
+- **Deterministic verdict, no LLM in the CLI.** The CLI orchestrates the external verifier via `safeSpawn` and reads the verdict. The **spec/proof is generated in the IDE skill** (LLM outside the CLI): the skill formalizes the Dafny spec, returns the NL translation (the human validates only the NL — Dafny-as-IL) and iterates the repair (PREFACE). The `FormalVerdict` is persisted in `.dare/verification/<id>.json` and recorded in the graph as `task --proven_by--> formal-gate`.
+
 ### Exit codes
 
 | Exit code | Meaning |
@@ -189,6 +212,7 @@ The winning patch is promoted via `git diff HEAD <branch>` applied at the root (
 | `1` | Ralph Loop, review or verification failed (DONE blocked) |
 | `3` | `MutationToolNotFound` — install the tool or set `mutation.enabled: false` |
 | `4` | `FailToPassMissing` — generate `EXECUTION/<id>.tests.*` / the baseline first |
+| `5` | `FormalToolNotFound` — formal toolchain missing on a MARKED module (install it or unmark) |
 
 ### `dare bench`
 

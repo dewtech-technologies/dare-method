@@ -164,6 +164,8 @@ Pick **one** of the two paths per stack:
 | `mcp-rust` (beta) | Rust 1.78+ (rustup) | `rust:1.83` |
 | `mcp-go` (beta) | Go 1.23+ — https://go.dev/dl/ | `golang:1.25` |
 
+> **v3.8.1–3.8.2 (manutenção):** `dare update` passa a entregar os skills/comandos/config das v3.4→v3.8 a projetos existentes (backfill do `UPDATE-MANIFEST`, 3.8.1). O CI ganha um **gate de cobertura de docs** + **redeploy automático da documentação** a cada release (3.8.2).
+
 > **v3.8.0:** **Formal Verification Gate** — opt-in strict aspect `verification.formal` (enabled/backend/modules/maxRepairIterations/proofTimeoutSeconds/antiBypass) plus flags `--formal` / `--no-formal` / `--formal-backend <dafny|verus|lean>`. Proves marked critical modules against external Dafny/Verus/Lean toolchain (not an npm dep); exit 5 when toolchain missing on a marked module; anti-bypass rejects `assume(false)`/`ensures true`/leaks even on solver exit 0; telemetry edge `proven_by` → `formal-gate`.
 
 > **v3.7.0:** **Brownfield Discovery** — deterministic auto-discovery of codebase patterns/conventions (`dare patterns`, read-only) fed into the dual graph + steering, plus lightweight planning personas (Analyst/PM/Architect) at planning time only (no runtime swarm). Extends `dare reverse`/`dna`.

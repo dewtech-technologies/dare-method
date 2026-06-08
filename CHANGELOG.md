@@ -9,6 +9,18 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.8.2] — 2026-06
+
+Patch de **processo/documentação**. Padroniza a regeneração da doc no release e fecha os "esquecimentos" recorrentes (banner do README, `UPDATE-MANIFEST`) com gates determinísticos.
+
+### ✨ Processo
+- **Gate de cobertura de docs** (`scripts/verify-docs-coverage.mjs`, no CI/job `lint`): **falha** se um comando do CLI ou bloco de config do `dare.config.json` novo **não estiver documentado** em `docs-site/` — impossível mergear feature sem doc.
+- **Redeploy automático da documentação no release**: `docs.yml` agora dispara via `workflow_run` ao concluir o **"Publish to npm"** — toda tag `v*` republica o site MkDocs.
+- **Playbook + template de release-docs** (`DARE/RELEASE-DOCS-PLAYBOOK.md`, `DARE/templates/task-release-docs.template.md`): toda release inclui uma task `docs-regen` que regenera `docs-site/` (pt/en/es) + README raiz + README do CLI a partir do código.
+
+### 🐛 Corrigido
+- Blocos de config `review` e `refine` (emitidos pelo `project-generator`) estavam ausentes de `docs-site/configuration.md` — documentados (achado pelo novo gate de cobertura).
+
 ## [3.8.1] — 2026-06
 
 Patch de manutenção do **`dare update`**. O `UPDATE-MANIFEST.json` parava na v3.3.0 — então projetos existentes que rodavam `dare update` para v3.4.0→v3.8.0 **não recebiam** os comandos/skills nem os blocos de config novos (o `dare update` é 100% manifest-driven). Esta release faz o **backfill** do manifesto.

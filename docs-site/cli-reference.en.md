@@ -157,6 +157,11 @@ dare execute --complete task-001 --output "OK" --tokens 1200
 | `--best-of <n>` | string | — | Runs N verification candidates (best-of-N). |
 | `--policy <p>` | string | — | Overrides the loop policy (`decay`\|`fixed`). |
 | `--prerank` | boolean | `false` | Enables prerank ordering without execution (never authorizes DONE). |
+| `--formal` | boolean | `false` | Enables the formal verification gate for this completion (inherits `verification.formal.enabled`). |
+| `--no-formal` | boolean | (config) | Skips formal verification even when enabled in config. |
+| `--formal-backend <backend>` | string | (`formal.backend`) | Overrides the formal backend (`dafny`\|`verus`\|`lean`). |
+
+> **Opt-in / experimental.** The formal gate is off by default and requires two-level opt-in: `verification.formal.enabled` in config **and** per-module marking (`@dare-formal` or `verification.formal.modules`). Without it, behavior is identical to before.
 
 ## `dare graph`
 

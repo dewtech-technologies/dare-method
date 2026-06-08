@@ -342,6 +342,13 @@
       "changelog": "Correcao de manutencao do `dare update`. O UPDATE-MANIFEST.json parava na v3.3.0, entao projetos existentes nao recebiam os artefatos das v3.4-v3.8. Esta release faz o backfill do manifesto (ver entradas 3.4.0-3.8.0). Sem artefato novo de projeto nesta 3.8.1.",
       "changes": [],
       "migrations": []
+    },
+    "3.8.2": {
+      "releasedAt": "2026-06",
+      "summary": "Patch de processo/docs — gate de cobertura de docs + redeploy automatico no release + playbook de regeneracao",
+      "changelog": "Patch interno do repo (CI/docs). Sem artefato novo de projeto: gate verify-docs-coverage, redeploy da doc via workflow_run, e o RELEASE-DOCS-PLAYBOOK. Nada a aplicar via dare update.",
+      "changes": [],
+      "migrations": []
     }
   }
 }

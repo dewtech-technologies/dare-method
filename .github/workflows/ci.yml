@@ -71,6 +71,9 @@ jobs:
       - name: Verify GitHub Actions pinned by SHA
         run: node scripts/verify-actions-pinned.mjs
 
+      - name: Verify docs coverage
+        run: node scripts/verify-docs-coverage.mjs
+
   audit:
     name: Audit dependencies
     runs-on: ubuntu-latest
