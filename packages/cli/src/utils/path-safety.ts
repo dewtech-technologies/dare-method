@@ -21,7 +21,12 @@ export class PathEscapeError extends Error {
  * Ensures a path is relative and does not escape via '..' (RS-01).
  */
 export function assertRelativeSafe(targetPath: string): void {
-  if (path.isAbsolute(targetPath)) {
+  // Rejeita absoluto em QUALQUER plataforma: POSIX (path.isAbsolute), drive-letter
+  // do Windows (C:\ ou C:/) e UNC (\\server / //server). path.isAbsolute é dependente
+  // do SO — na CI Linux ele não pega 'C:\...', então validamos explicitamente (RS-01).
+  const isWindowsDriveAbsolute = /^[a-zA-Z]:[\\/]/.test(targetPath);
+  const isUncAbsolute = /^[\\/]{2}/.test(targetPath);
+  if (path.isAbsolute(targetPath) || isWindowsDriveAbsolute || isUncAbsolute) {
     throw new Error(`targetPath must be relative, got absolute: ${targetPath}`);
   }
   const norm = path.posix.normalize(targetPath.replace(/\\/g, '/'));
