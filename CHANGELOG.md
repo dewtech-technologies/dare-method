@@ -9,6 +9,30 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.7.0] — 2026-06
+
+Release **Brownfield Discovery** — auto-discovery determinístico de padrões + planejadores leves (sem LLM no CLI).
+
+### ✨ Adicionado
+
+- Comando **`dare patterns`** — auto-discovery determinístico de padrões implícitos do legado
+  (`inferred-layer`, `naming-idiom`, `structural-idiom`, `call-idiom`, `implicit-decision`) com evidência
+  `arquivo:linha`; flags `--check` / `--dir` / `--modules` / `--inject`.
+- **`PATTERNS.md`** — skeleton com marcadores `<!-- AGENT -->` (reusável/injetável), seção `## ⚠️ Incertezas`
+  para gaps 🔴; `patterns-facts.json` (fatos serializados).
+- Grafo: nós `pattern` + arestas `evidenced_by` (pattern→file) e `exhibits` (module→pattern);
+  `dare graph query --type pattern`.
+- **`PATTERNS.md`** como 2ª fonte-base de steering ao lado de `PROJECT-DNA.md` (A-7).
+- **`dare design --interactive`** — questionário de planejamento **determinístico** (fatos+gaps).
+- Personas leves Analyst/PM (`/dare-design`) + Architect (`/dare-blueprint`) — planejamento, **1 passagem
+  sequencial, SEM runtime multi-agente** (cautela de custo MetaGPT 31k vs 19k tokens).
+
+### 📝 Notas
+
+- Opt-in puro: ausência de `patterns-facts.json` / `PATTERNS.md` ⇒ comportamento idêntico a v3.6.0.
+- `dna` / `reverse` permanecem byte-a-byte inalterados — `patterns` **estende**, não reescreve.
+- Nenhum LLM no CLI: detector determinístico extrai fatos; inferência/personas vivem nas skills das IDEs.
+
 ## [3.6.0] — 2026-06
 
 Release **Agent Hooks + Steering Files** — hooks determinísticos com trust gate + steering por precedência via MCP.

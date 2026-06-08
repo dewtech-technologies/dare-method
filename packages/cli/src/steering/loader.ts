@@ -73,6 +73,18 @@ export function loadSteeringFiles(projectRoot: string): SteeringFile[] {
     });
   }
 
+  const patternsRel = path.posix.join('DARE', 'PATTERNS.md');
+  assertRelativeSafe(patternsRel);
+  const patternsAbs = path.join(projectRoot, patternsRel);
+  if (fs.pathExistsSync(patternsAbs)) {
+    files.push({
+      path: patternsRel,
+      frontMatter: { scope: 'project', priority: 0 },
+      body: fs.readFileSync(patternsAbs, 'utf-8'),
+      isBase: true,
+    });
+  }
+
   const steeringDirRel = path.posix.join('.dare', 'steering');
   assertRelativeSafe(steeringDirRel);
   const steeringDirAbs = path.join(projectRoot, steeringDirRel);

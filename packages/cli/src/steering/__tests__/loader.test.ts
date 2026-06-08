@@ -31,6 +31,23 @@ describe('steering loader', () => {
     });
   });
 
+  it('loads PATTERNS.md as second base block when present', async () => {
+    await fs.ensureDir(path.join(projectRoot, 'DARE'));
+    await fs.writeFile(path.join(projectRoot, 'DARE', 'PROJECT-DNA.md'), '# DNA');
+    await fs.writeFile(path.join(projectRoot, 'DARE', 'PATTERNS.md'), '# Patterns');
+    const files = loadSteeringFiles(projectRoot);
+    expect(files.map((f) => f.path)).toEqual(['DARE/PROJECT-DNA.md', 'DARE/PATTERNS.md']);
+    expect(files.every((f) => f.isBase)).toBe(true);
+  });
+
+  it('without PATTERNS.md matches DNA-only baseline', async () => {
+    await fs.ensureDir(path.join(projectRoot, 'DARE'));
+    await fs.writeFile(path.join(projectRoot, 'DARE', 'PROJECT-DNA.md'), '# DNA only');
+    const files = loadSteeringFiles(projectRoot);
+    expect(files).toHaveLength(1);
+    expect(files[0]?.path).toBe('DARE/PROJECT-DNA.md');
+  });
+
   it('discovers .dare/steering/*.md with front-matter', async () => {
     const dir = path.join(projectRoot, '.dare', 'steering');
     await fs.ensureDir(dir);

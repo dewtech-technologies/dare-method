@@ -19,6 +19,7 @@ export { executeCommand } from './commands/execute.js';
 export { graphCommand } from './commands/graph.js';
 export { steeringCommand } from './commands/steering.js';
 export { hooksCommand } from './commands/hooks.js';
+export { patternsCommand } from './commands/patterns.js';
 export { dagCommand, renderDagMermaid, renderDagDot } from './commands/dag.js';
 export { validateCommand } from './commands/validate.js';
 export { infoCommand } from './commands/info.js';

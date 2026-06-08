@@ -428,7 +428,7 @@ SQLAlchemy). Rotas cobrem múltiplos dialetos por linguagem: Express/Nest/Fastif
 FastAPI/Flask/Django, Rails/Sinatra, Gin/stdlib, Axum. Onde um framework existe, ele enriquece; onde
 não, o baseline da linguagem ainda extrai.
 
-> Fluxo brownfield: `dare reverse` → `/dare-reverse` (marca 🟢🟡🔴) → `dare reverse --report` → revisão humana do `IDEIA.md` → `dare design` → `dare blueprint` → `dare execute`.
+> Fluxo brownfield: `dare reverse` → `/dare-reverse` → `dare dna` → `dare patterns` → `dare design --interactive` → `/dare-design` → `dare blueprint` → `dare execute`.
 
 ---
 
@@ -494,6 +494,53 @@ estilo de teste). Se você já rodou `dare reverse`, o `dna` reaproveita o `reve
 dare dna --check          # só mostra as convenções detectadas, sem escrever
 dare dna --dir ./outro-projeto
 ```
+
+---
+
+## 🔍 dare patterns — padrões recorrentes do legado
+
+Enquanto `dare dna` captura **convenções explícitas**, `dare patterns` descobre **padrões implícitos**
+por frequência e co-ocorrência — camadas inferidas, idiomas de nomenclatura, chamadas recorrentes e
+decisões arquiteturais não documentadas. Tudo **determinístico, sem LLM no CLI**; a interpretação
+semântica fica na skill **`/dare-dna`**.
+
+```bash
+cd meu-projeto-legado
+dare patterns
+dare patterns --check                    # só resumo, não escreve arquivos
+dare patterns --dir ./packages/api       # escaneia subdiretório
+dare patterns --modules api,auth         # limita a módulos
+dare patterns --inject                   # registra PATTERNS.md como fonte de steering (idempotente)
+```
+
+Gera:
+
+```
+DARE/
+├── PATTERNS.md            ← skeleton com <!-- AGENT --> + seção ⚠️ Incertezas (gaps 🔴)
+└── patterns-facts.json    ← fatos serializados (5 PatternKind)
+```
+
+Os padrões também entram no grafo (`pattern` / `evidenced_by` / `exhibits`) e o `PATTERNS.md` vira
+2ª fonte-base de steering (ao lado de `PROJECT-DNA.md`). Sem `patterns-facts.json` / `PATTERNS.md`,
+o comportamento permanece idêntico ao v3.6.0.
+
+---
+
+## 📐 dare design --interactive — questionário de planejamento
+
+A flag **`--interactive`** estende `dare design` para emitir um bloco de perguntas determinísticas
+(Analyst/PM) derivado de `dna-facts.json` + `patterns-facts.json` — gaps, ambiguidades e escopo.
+O CLI **só monta** o questionário; a skill **`/dare-design`** conduz **1 passagem sequencial**
+(Analyst → PM), sem runtime multi-agente.
+
+```bash
+dare dna          # opcional, enriquece o questionário
+dare patterns     # opcional, ancoragem em padrões reais
+dare design "Nova feature de pagamentos" --interactive
+```
+
+Sem `--interactive`, o `dare design` mantém o comportamento anterior (esqueleto estático).
 
 ---
 

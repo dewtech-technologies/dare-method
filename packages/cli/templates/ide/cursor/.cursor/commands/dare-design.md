@@ -5,11 +5,17 @@ Inicia o Método DARE (fase Design) gerando `DARE/DESIGN.md` a partir de uma ide
 
 ## Instruções para o Cursor Composer
 
-1. **Leia o contexto:** `package.json` / `Cargo.toml` / `composer.json` / `go.mod` / `requirements.txt` para identificar a stack atual. Leia `.cursorrules` para entender padrões do projeto. Se `DARE/DESIGN.md` já existir, não sobrescreva sem aprovação explícita.
+1. **Leia o contexto:** `package.json` / `Cargo.toml` / `composer.json` / `go.mod` / `requirements.txt` para identificar a stack atual. Leia `.cursorrules` para entender padrões do projeto. Se `DARE/DESIGN.md` já existir, não sobrescreva sem aprovação explícita. Se `dare design --interactive` emitiu a seção `## Perguntas de Planejamento (Analyst/PM)`, leia esse bloco antes de prosseguir.
 
-2. **Leia o template:** `templates/DESIGN-template.md` — siga a estrutura fielmente.
+2. **Planejamento leve (Analyst → PM)** — se o bloco de questionário existir no `DESIGN.md`, conduza **1 passagem sequencial** (**sem runtime multi-agente**):
+   - **Analyst** — uma rodada sobre escopo, ambiguidades e lacunas (`kind:'scope'|'ambiguity'|'gap'`).
+   - **PM** — uma rodada sobre requisitos e critérios de aceite.
+   - Ordem **sequencial**: Analyst antes de PM; sem voltar, sem message pool, sem loop de troca.
+   - Marque inferências como 🟡 e lacunas não resolvidas como 🔴; fatos do CLI permanecem 🟢.
 
-3. **Gere `DARE/DESIGN.md` com as seções obrigatórias:**
+3. **Leia o template:** `templates/DESIGN-template.md` — siga a estrutura fielmente.
+
+4. **Gere `DARE/DESIGN.md` com as seções obrigatórias:**
 
    - **Descrição** — 3 a 5 frases: o que é, qual problema resolve, quem usa
    - **Objetivos e Métricas de Sucesso** — tabela numerada (O-01, O-02…) com métrica verificável e meta numérica

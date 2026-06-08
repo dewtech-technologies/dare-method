@@ -10,16 +10,19 @@ import {
 } from '../types.js';
 
 describe('dual-graph types', () => {
-  it('NodeType union includes code_symbol and requirement', () => {
+  it('NodeType union includes code_symbol, requirement and pattern', () => {
     expect(ALL_NODE_TYPES).toContain('code_symbol');
     expect(ALL_NODE_TYPES).toContain('requirement');
     expect(ALL_NODE_TYPES).toContain('gate');
+    expect(ALL_NODE_TYPES).toContain('pattern');
   });
 
-  it('EdgeType union includes affects and derives_from', () => {
+  it('EdgeType union includes affects, derives_from, evidenced_by and exhibits', () => {
     expect(ALL_EDGE_TYPES).toContain('affects');
     expect(ALL_EDGE_TYPES).toContain('derives_from');
     expect(ALL_EDGE_TYPES).toContain('verified_by');
+    expect(ALL_EDGE_TYPES).toContain('evidenced_by');
+    expect(ALL_EDGE_TYPES).toContain('exhibits');
   });
 
   it('emptyNodesByType initializes every NodeType to 0 without NaN', () => {
