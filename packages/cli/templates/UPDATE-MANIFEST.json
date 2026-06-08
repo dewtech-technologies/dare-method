@@ -54,12 +54,228 @@
           "path": "dare.config.json#verification",
           "description": "Adiciona objeto `verification` (enabled:false + defaults) — gate opt-in pós-Ralph Loop",
           "appliesTo": ["*"]
+        },
+        {
+          "type": "added",
+          "path": ".claude/commands/dare-bench.md",
+          "templateSource": "ide/claude/.claude/commands/dare-bench.md",
+          "description": "Comando `/dare-bench` (Claude Code) — harness determinístico de fixtures (Fix·Rate, solve-rate, regressão)",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "added",
+          "path": ".cursor/commands/dare-bench.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-bench.md",
+          "description": "Comando `/dare-bench` (Cursor) — harness determinístico de fixtures (Fix·Rate, solve-rate, regressão)",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "added",
+          "path": ".agents/skills/dare-bench/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-bench/SKILL.md",
+          "description": "Skill `dare-bench` (Antigravity) — harness determinístico de fixtures (Fix·Rate, solve-rate, regressão)",
+          "appliesTo": ["antigravity"]
         }
       ],
       "migrations": [
         {
           "id": "add-verification-defaults",
           "description": "Adiciona `verification` com defaults (enabled:false) em projetos pré-3.3 — opt-in, não ativa verificação automaticamente",
+          "optional": false
+        }
+      ]
+    },
+    "3.4.0": {
+      "releasedAt": "2026-06",
+      "summary": "Security Hardening — superfície MCP endurecida, validação de `dare init` e supply-chain no CI",
+      "changelog": "Endurece a superfície MCP (auth Bearer fora de loopback, bind 127.0.0.1, erros 5xx sanitizados), valida estritamente o nome em `dare init` e adiciona gates de supply-chain no CI (ESLint bloqueante, cobertura Vitest, `npm publish --provenance`, GitHub Actions pinadas por SHA). Não introduz skill/comando/config de projeto novo — as mudanças vivem no runtime do CLI e no CI; `dare update` não precisa entregar artefato ao projeto-alvo.",
+      "changes": [],
+      "migrations": []
+    },
+    "3.5.0": {
+      "releasedAt": "2026-06",
+      "summary": "Dual Graph — grafo dual requisito↔código determinístico",
+      "changelog": "Grafo dual (nós `code_symbol`+`requirement`, arestas `affects`+`derives_from`) com extração determinística de símbolos/requisitos e travessia tipada BFS. Os subcomandos `dare graph owners|impact|trace|locate` entram via skill `dare-graph` atualizada nas 3 IDEs. Localização opcional pré-patch no Ralph Loop (`graph.locateBeforePatch`) e MCP tools `graph_locate`/`graph_map_requirement`/`graph_traverse`.",
+      "changes": [
+        {
+          "type": "modified",
+          "path": ".claude/commands/dare-graph.md",
+          "templateSource": "ide/claude/.claude/commands/dare-graph.md",
+          "description": "Skill `dare-graph` (Claude Code) atualizada com subcomandos owners/impact/trace/locate",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "modified",
+          "path": ".cursor/commands/dare-graph.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-graph.md",
+          "description": "Skill `dare-graph` (Cursor) atualizada com subcomandos owners/impact/trace/locate",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "modified",
+          "path": ".agents/skills/dare-graph/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-graph/SKILL.md",
+          "description": "Skill `dare-graph` (Antigravity) atualizada com subcomandos owners/impact/trace/locate",
+          "appliesTo": ["antigravity"]
+        }
+      ],
+      "migrations": []
+    },
+    "3.6.0": {
+      "releasedAt": "2026-06",
+      "summary": "Agent Hooks + Steering Files — hooks determinísticos com trust gate + steering por precedência",
+      "changelog": "Agent Hooks (eventos fechados on-save/on-file-create/on-task-complete/pre-commit, allowlist canônica, trust gate opt-in) e Steering files (reuso de PROJECT-DNA.md como base + precedência determinística), servidos às 3 IDEs via MCP. Adiciona comandos `dare hooks` e `dare steering` (skills nas 3 IDEs) e os blocos `hooks`/`steering` em dare.config.json. Opt-in: ausência dos blocos mantém comportamento idêntico a v3.5.0.",
+      "changes": [
+        {
+          "type": "added",
+          "path": ".claude/commands/dare-hooks.md",
+          "templateSource": "ide/claude/.claude/commands/dare-hooks.md",
+          "description": "Comando `/dare-hooks` (Claude Code) — hooks determinísticos com trust gate",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "added",
+          "path": ".cursor/commands/dare-hooks.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-hooks.md",
+          "description": "Comando `/dare-hooks` (Cursor) — hooks determinísticos com trust gate",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "added",
+          "path": ".agents/skills/dare-hooks/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-hooks/SKILL.md",
+          "description": "Skill `dare-hooks` (Antigravity) — hooks determinísticos com trust gate",
+          "appliesTo": ["antigravity"]
+        },
+        {
+          "type": "added",
+          "path": ".claude/commands/dare-steering.md",
+          "templateSource": "ide/claude/.claude/commands/dare-steering.md",
+          "description": "Comando `/dare-steering` (Claude Code) — steering por precedência via MCP",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "added",
+          "path": ".cursor/commands/dare-steering.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-steering.md",
+          "description": "Comando `/dare-steering` (Cursor) — steering por precedência via MCP",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "added",
+          "path": ".agents/skills/dare-steering/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-steering/SKILL.md",
+          "description": "Skill `dare-steering` (Antigravity) — steering por precedência via MCP",
+          "appliesTo": ["antigravity"]
+        },
+        {
+          "type": "added",
+          "path": "dare.config.json#hooks",
+          "description": "Adiciona objeto `hooks` (trusted:false + defaults opt-in) em dare.config.json",
+          "appliesTo": ["*"]
+        },
+        {
+          "type": "added",
+          "path": "dare.config.json#steering",
+          "description": "Adiciona objeto `steering` (defaults opt-in) em dare.config.json",
+          "appliesTo": ["*"]
+        }
+      ],
+      "migrations": [
+        {
+          "id": "add-hooks-steering-defaults",
+          "description": "Adiciona os blocos `hooks` e `steering` com defaults opt-in (trusted:false) em projetos pré-3.6 — não habilita hooks automaticamente",
+          "optional": false
+        }
+      ]
+    },
+    "3.7.0": {
+      "releasedAt": "2026-06",
+      "summary": "Brownfield Discovery — auto-discovery determinístico de padrões + planejadores leves",
+      "changelog": "Comando `dare patterns` (auto-discovery determinístico de padrões implícitos do legado, com evidência arquivo:linha) gerando `PATTERNS.md` + `patterns-facts.json`, e nós `pattern` no grafo. Adiciona skill `dare-patterns` nas 3 IDEs. `dare design --interactive` e personas leves (Analyst/PM em `/dare-design`, Architect em `/dare-blueprint`) atualizam as skills design/blueprint nas 3 IDEs. Opt-in puro: ausência de patterns-facts.json/PATTERNS.md mantém comportamento idêntico a v3.6.0.",
+      "changes": [
+        {
+          "type": "added",
+          "path": ".claude/commands/dare-patterns.md",
+          "templateSource": "ide/claude/.claude/commands/dare-patterns.md",
+          "description": "Comando `/dare-patterns` (Claude Code) — auto-discovery determinístico de padrões do legado",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "added",
+          "path": ".cursor/commands/dare-patterns.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-patterns.md",
+          "description": "Comando `/dare-patterns` (Cursor) — auto-discovery determinístico de padrões do legado",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "added",
+          "path": ".agents/skills/dare-patterns/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-patterns/SKILL.md",
+          "description": "Skill `dare-patterns` (Antigravity) — auto-discovery determinístico de padrões do legado",
+          "appliesTo": ["antigravity"]
+        },
+        {
+          "type": "modified",
+          "path": ".claude/commands/dare-design.md",
+          "templateSource": "ide/claude/.claude/commands/dare-design.md",
+          "description": "Skill `dare-design` (Claude Code) com `--interactive` + personas Analyst/PM",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "modified",
+          "path": ".cursor/commands/dare-design.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-design.md",
+          "description": "Skill `dare-design` (Cursor) com `--interactive` + personas Analyst/PM",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "modified",
+          "path": ".agents/skills/dare-design/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-design/SKILL.md",
+          "description": "Skill `dare-design` (Antigravity) com `--interactive` + personas Analyst/PM",
+          "appliesTo": ["antigravity"]
+        },
+        {
+          "type": "modified",
+          "path": ".claude/commands/dare-blueprint.md",
+          "templateSource": "ide/claude/.claude/commands/dare-blueprint.md",
+          "description": "Skill `dare-blueprint` (Claude Code) com persona Architect",
+          "appliesTo": ["claude-code"]
+        },
+        {
+          "type": "modified",
+          "path": ".cursor/commands/dare-blueprint.md",
+          "templateSource": "ide/cursor/.cursor/commands/dare-blueprint.md",
+          "description": "Skill `dare-blueprint` (Cursor) com persona Architect",
+          "appliesTo": ["cursor"]
+        },
+        {
+          "type": "modified",
+          "path": ".agents/skills/dare-blueprint/SKILL.md",
+          "templateSource": "ide/antigravity/.agents/skills/dare-blueprint/SKILL.md",
+          "description": "Skill `dare-blueprint` (Antigravity) com persona Architect",
+          "appliesTo": ["antigravity"]
+        }
+      ],
+      "migrations": []
+    },
+    "3.8.0": {
+      "releasedAt": "2026-06",
+      "summary": "Formal Verification Gate — gate opt-in que prova (não só testa) módulos críticos marcados",
+      "changelog": "Aspecto `formal` no runner de verificação (extensão do verification-core v3.3.0) — gate opt-in estrito em dois níveis (`verification.formal.enabled` + marcação por módulo). Dafny default, Verus/Lean opcionais; flags `--formal`/`--no-formal`/`--formal-backend`. Toolchain externa não é dep do CLI. Opt-in estrito: ausência do bloco `verification.formal` ou de marcação mantém comportamento idêntico a v3.7.0.",
+      "changes": [
+        {
+          "type": "added",
+          "path": "dare.config.json#verification.formal",
+          "description": "Adiciona bloco `verification.formal` (enabled:false + defaults) — gate de prova formal opt-in por módulo marcado",
+          "appliesTo": ["*"]
+        }
+      ],
+      "migrations": [
+        {
+          "id": "add-formal-defaults",
+          "description": "Adiciona `verification.formal` com defaults opt-in (enabled:false) em projetos pré-3.8 — não ativa prova formal automaticamente",
           "optional": false
         }
       ]
