@@ -1,0 +1,38 @@
+%% DARE DAG — Drift Gate (spec ↔ código) — Development Tasks
+%% Generated: 2026-06-10T00:00:00Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_701["task-701\ngraphrag/drift.ts — detectDrift + tipos\n⏳ PENDING"]
+    task_702["task-702\nrequirement-ingest — contentHash + ingestedAt\n⏳ PENDING"]
+    task_703["task-703\nconfig — bloco drift (zod)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_704["task-704\ndare graph drift — subcomando + exit 7\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_705["task-705\nauditoria N-1 — drift-regression\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_706["task-706\nCHANGELOG + docs (graph drift)\n⏳ PENDING"]
+  end
+  task_701 --> task_704
+  task_703 --> task_704
+  task_701 --> task_705
+  task_702 --> task_705
+  task_704 --> task_705
+  task_705 --> task_706
+  class task_701 st_pending;
+  class task_702 st_pending;
+  class task_703 st_pending;
+  class task_704 st_pending;
+  class task_705 st_pending;
+  class task_706 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

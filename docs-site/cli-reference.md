@@ -289,6 +289,24 @@ dare graph locate "login flow" --type symbol --hops 2
 | `--type <t>` | string (repetível) | `[]` | Filtra tipos de nó (pode repetir). |
 | `--edge-type <e>` | string (repetível) | `[]` | Filtra tipos de aresta (pode repetir). |
 
+### `dare graph drift`
+
+Detecta desalinhamento entre requirements e código no grafo dual (determinístico, sem LLM).
+
+```bash
+dare graph drift
+dare graph drift --strict --format json
+dare graph drift --modules src/auth
+```
+
+| Flag | Tipo | Default | Descrição |
+|------|------|---------|-----------|
+| `--strict` | boolean | `false` | Exit **7** quando contagens excedem limiares de `drift` em `dare.config.json`. |
+| `--format <fmt>` | string | `human` | `human` ou `json` (`DriftReport`). |
+| `--modules <list>` | string | — | Filtra por paths (validados com path-safety). |
+
+**Veredito `drift-fail`:** `orphan-requirement` > `maxOrphanReqs` OU `orphan-code` > `maxOrphanCode` OU (`failOnStale` && `stale` > 0). Sem `--strict`, exit 0 mesmo com findings.
+
 ### `dare graph ingest`
 
 Re-sincroniza o grafo a partir do `dare-dag.yaml` + estado atuais.

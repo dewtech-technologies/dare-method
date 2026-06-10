@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import type { KnowledgeGraph } from './knowledge-graph.js';
 import type { RequirementNode } from './types.js';
 
@@ -125,8 +126,10 @@ function sourceForFile(name: string): RequirementNode['source'] | null {
 export function ingestRequirements(
   graph: KnowledgeGraph,
   projectRoot: string,
+  opts?: { readonly ingestedAt?: string },
 ): { nodes: number; edges: number } {
   const dareDir = path.join(projectRoot, 'DARE');
+  const ingestedAt = opts?.ingestedAt ?? new Date().toISOString();
   let nodes = 0;
   let edges = 0;
 
@@ -152,6 +155,8 @@ export function ingestRequirements(
 
   for (const req of parsed) {
     const nodeId = `requirement:${req.reqId}`;
+    const requirementText = req.title || req.reqId;
+    const contentHash = createHash('sha256').update(requirementText).digest('hex');
     graph.addNode({
       id: nodeId,
       type: 'requirement',
@@ -161,6 +166,8 @@ export function ingestRequirements(
         source: req.source,
         priority: req.priority,
         title: req.title,
+        contentHash,
+        ingestedAt,
       },
     });
     if (!seenNodes.has(nodeId)) {

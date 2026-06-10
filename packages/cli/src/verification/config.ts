@@ -38,9 +38,35 @@ export const DEFAULTS: VerificationConfig = {
   formal: FORMAL_DEFAULTS,
 };
 
+const DRIFT_IGNORE_DEFAULTS = [
+  '**/index.ts',
+  '**/*.generated.*',
+  '**/bin/**',
+] as const;
+
 const loopPolicySchema = z.enum(['decay', 'fixed']);
 const saturationActionSchema = z.enum(['fresh-start', 'replan', 'escalate']);
 const formalBackendSchema = z.enum(['dafny', 'verus', 'lean']);
+export const driftConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    maxOrphanReqs: z
+      .number()
+      .int()
+      .nonnegative('maxOrphanReqs must be a non-negative integer')
+      .default(0),
+    maxOrphanCode: z
+      .number()
+      .int()
+      .nonnegative('maxOrphanCode must be a non-negative integer')
+      .default(0),
+    failOnStale: z.boolean().default(false),
+    ignore: z.array(z.string()).default([...DRIFT_IGNORE_DEFAULTS]),
+  })
+  .strict();
+
+export type DriftConfig = z.infer<typeof driftConfigSchema>;
+export const DRIFT_DEFAULTS: DriftConfig = driftConfigSchema.parse({});
 
 const formalGateSchema = z
   .object({
@@ -168,11 +194,28 @@ export class VerificationConfigError extends Error {
   }
 }
 
+export class DriftConfigError extends Error {
+  readonly issues: ReadonlyArray<{ path: string; message: string }>;
+
+  constructor(issues: ReadonlyArray<{ path: string; message: string }>) {
+    super(`Invalid drift config: ${issues.map((i) => `${i.path}: ${i.message}`).join('; ')}`);
+    this.name = 'DriftConfigError';
+    this.issues = issues;
+  }
+}
+
 function isVerificationBlockAbsent(raw: unknown): boolean {
   if (raw === undefined || raw === null) return true;
   if (typeof raw !== 'object') return false;
   const rec = raw as Record<string, unknown>;
   return !('verification' in rec) || rec.verification === undefined;
+}
+
+function isDriftBlockAbsent(raw: unknown): boolean {
+  if (raw === undefined || raw === null) return true;
+  if (typeof raw !== 'object') return false;
+  const rec = raw as Record<string, unknown>;
+  return !('drift' in rec) || rec.drift === undefined;
 }
 
 function zodIssues(
@@ -204,6 +247,23 @@ export function seedVerificationDefaultsIfAbsent(
   return true;
 }
 
+/** Serializable defaults for dare.config.json (new projects + migrations). */
+export function defaultDriftConfigForProject(): DriftConfig {
+  return structuredClone(DRIFT_DEFAULTS);
+}
+
+/**
+ * Inserts the drift block when absent (opt-in: enabled stays false).
+ * Returns true when the block was added.
+ */
+export function seedDriftDefaultsIfAbsent(
+  cfg: Record<string, unknown>,
+): boolean {
+  if (cfg.drift !== undefined) return false;
+  cfg.drift = defaultDriftConfigForProject();
+  return true;
+}
+
 export function parseVerificationConfig(raw: unknown): VerificationConfig {
   if (isVerificationBlockAbsent(raw)) {
     return { ...DEFAULTS, enabled: false };
@@ -213,6 +273,22 @@ export function parseVerificationConfig(raw: unknown): VerificationConfig {
   const result = verificationConfigSchema.safeParse(block);
   if (!result.success) {
     throw new VerificationConfigError(zodIssues(result.error));
+  }
+  return result.data;
+}
+
+/**
+ * Parse and validate `drift` from an already-parsed dare.config.json object.
+ */
+export function parseDriftConfig(raw: unknown): DriftConfig {
+  if (isDriftBlockAbsent(raw)) {
+    return defaultDriftConfigForProject();
+  }
+
+  const block = (raw as Record<string, unknown>).drift;
+  const result = driftConfigSchema.safeParse(block);
+  if (!result.success) {
+    throw new DriftConfigError(zodIssues(result.error));
   }
   return result.data;
 }

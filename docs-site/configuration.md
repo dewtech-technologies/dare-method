@@ -81,6 +81,15 @@ O arquivo na raiz do projeto reúne quatro grupos:
     "unicode": "strip",             // 'strip' | 'block'
     "trustedPaths": [".dare/steering/**", "DARE/TASKS.md"],
     "signing": { "enabled": false }
+  },
+
+  // ── drift (DRIFT_DEFAULTS de verification/config.ts) ──────────────────
+  "drift": {
+    "enabled": false,
+    "maxOrphanReqs": 0,
+    "maxOrphanCode": 0,
+    "failOnStale": false,
+    "ignore": ["**/index.ts", "**/*.generated.*", "**/bin/**"]
   }
 }
 ```
@@ -220,6 +229,19 @@ Detalhes em [Referência da CLI › `dare guard`](cli-reference.md#dare-guard).
 | `trustedPaths` | `string[]` | `['.dare/steering/**', 'DARE/TASKS.md']` | Paths elegíveis a assinatura/control channel. |
 | `signing.enabled` | `boolean` | `false` | Habilita verificação de assinatura. |
 | `signing.publicKey` | `string` | — | Chave pública minisign (opcional). |
+
+### `drift`
+
+Bloco validado em `verification/config.ts` (Zod). Defaults: `enabled:false` (opt-in).
+Detalhes em [Referência da CLI › `dare graph drift`](cli-reference.md#dare-graph-drift).
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `enabled` | `boolean` | `false` | Liga o gate de drift. |
+| `maxOrphanReqs` | `number` | `0` | Limiar de requirements órfãos antes de `drift-fail`. |
+| `maxOrphanCode` | `number` | `0` | Limiar de símbolos órfãos antes de `drift-fail`. |
+| `failOnStale` | `boolean` | `false` | Trata `stale` como falha no veredito. |
+| `ignore` | `string[]` | globs de barrel/generated/bin | Allowlist para orphan-code. |
 
 Cada item de `on[evento]` é um `HookAction`:
 

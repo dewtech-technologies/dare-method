@@ -18,7 +18,10 @@ import type {
   UpdatePlan,
 } from '../types/UpdateManifest.types.js';
 import { classifyChange, readProjectConfig } from './UpdateDetector.js';
-import { seedVerificationDefaultsIfAbsent } from '../verification/config.js';
+import {
+  seedDriftDefaultsIfAbsent,
+  seedVerificationDefaultsIfAbsent,
+} from '../verification/config.js';
 import { seedHooksDefaultsIfAbsent } from '../hooks/config.js';
 
 /** Where templates ship inside the CLI bundle. */
@@ -230,6 +233,7 @@ async function runMigration(
       const configPath = path.join(projectRoot, 'dare.config.json');
       const cfg = (await readProjectConfig(projectRoot)) as Record<string, unknown>;
       seedVerificationDefaultsIfAbsent(cfg);
+      seedDriftDefaultsIfAbsent(cfg);
       seedHooksDefaultsIfAbsent(cfg);
       await fs.writeJSON(configPath, cfg, { spaces: 2 });
       return;

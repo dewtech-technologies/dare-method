@@ -1,0 +1,102 @@
+title: "Drift Gate (spec ↔ código) — Development Tasks"
+version: "3.10.0"
+generated: "2026-06-10T00:00:00Z"
+
+# Feature: drift-gate
+# Branch:  feat/drift-gate
+# Design:  DARE/DESIGN-Feature-drift-gate.md
+# Blueprint: DARE/BLUEPRINT-Feature-drift-gate.md
+#
+# Regra de ouro: gate 100% determinístico — só travessia do grafo dual existente, zero LLM.
+# Bloco de IDs: 7xx. Detalhe executável por task em DARE/EXECUTION/.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: detecção + ingest (rank 0 paralelo) ─────────────────────────
+  - id: task-701
+    title: "graphrag/drift.ts — detectDrift + tipos"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-701-drift-detect.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/drift.ts (BLUEPRINT §3.1). Tipos: DriftKind
+      'orphan-requirement'|'orphan-code'|'stale'; DriftFinding { kind; nodeId; label; detail };
+      DriftReport { findings; counts: Record<DriftKind,number>; staleIndeterminate };
+      DriftConfig { enabled; maxOrphanReqs; maxOrphanCode; failOnStale; ignore[] }.
+      detectDrift(graph: KnowledgeGraph, cfg): DriftReport — determinístico, SEM LLM:
+      - orphan-requirement: queryNodes('requirement') sem getEdges(id,'in') do tipo implements/affects de code_symbol.
+      - orphan-code: queryNodes('code_symbol') não casando cfg.ignore e sem getEdges(id,'out') implements p/ requirement.
+      - stale: requirement com metadata.contentHash E código ligado cujo hash mudou após o código → finding;
+        sem contentHash → incrementar staleIndeterminate (WARN). Reusar getEdges/queryNodes (não SQL custom).
+      Testes: graphrag/__tests__/drift.test.ts (os 3 kinds em fixtures; staleIndeterminate). Gates: tsc; vitest run drift.
+      Leia: DARE/EXECUTION/task-701-drift-detect.md.
+
+  - id: task-702
+    title: "requirement-ingest — contentHash + ingestedAt"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-702-requirement-hash.md
+    subtask_prompt: |
+      Modificar packages/cli/src/graphrag/requirement-ingest.ts (BLUEPRINT §3.4). No ingest de cada
+      'requirement', gravar metadata.contentHash = sha256(requirementText) (node:crypto) e metadata.ingestedAt.
+      Habilita a detecção de stale (task-701) sem custo de runtime no gate. Schema aditivo (não quebra grafos
+      existentes). Testes: requirement-hash.test.ts (hash estável; muda com o texto). Gates: tsc; vitest run requirement.
+      Leia: DARE/EXECUTION/task-702-requirement-hash.md.
+
+  - id: task-703
+    title: "config — bloco drift (zod)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-703-drift-config.md
+    subtask_prompt: |
+      Adicionar bloco 'drift' ao schema de dare.config.json (BLUEPRINT §3.3). zod: drift { enabled (default false);
+      maxOrphanReqs (default 0); maxOrphanCode (default 0); failOnStale (default false);
+      ignore: string[] (default ['**/index.ts','**/*.generated.*','**/bin/**']) }. enabled:false => gate não roda.
+      Atualizar template dare.config.json. Testes: drift-config.test.ts. Gates: tsc; vitest run drift-config.
+      Leia: DARE/EXECUTION/task-703-drift-config.md.
+
+  # ─── Fase 2: comando ──────────────────────────────────────────────────────
+  - id: task-704
+    title: "dare graph drift — subcomando + exit 7"
+    depends_on: [task-701, task-703]
+    complexity: MED
+    spec_file: EXECUTION/task-704-graph-drift-command.md
+    subtask_prompt: |
+      Adicionar subcomando 'drift' a 'dare graph' (BLUEPRINT §3.2), junto de owners/impact/trace.
+      dare graph drift [--strict] [--format json] [--modules <list>]. Chama detectDrift; saída legível agrupada
+      por kind + contagens; --format json imprime DriftReport. Veredito drift-fail quando
+      counts.orphan-requirement > maxOrphanReqs OU orphan-code > maxOrphanCode OU (failOnStale && stale>0).
+      drift-fail + --strict => process.exit(7) (estende 0/1/3/4/5/6). --modules valida path (path-safety).
+      NÃO é comando top-level => sem nova skill (parity de 'graph' já existe). Testes: graph-drift.test.ts.
+      Gates: tsc; vitest run graph-drift; lint. Leia: DARE/EXECUTION/task-704-graph-drift-command.md.
+
+  # ─── Fase N-1: auditoria + docs ───────────────────────────────────────────
+  - id: task-705
+    title: "auditoria N-1 — drift-regression.test.ts"
+    depends_on: [task-701, task-702, task-704]
+    complexity: MED
+    spec_file: EXECUTION/task-705-drift-regression.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/drift-regression.test.ts. Prova: 3 kinds detectados corretamente em
+      fixture de grafo dual; allowlist (ignore) respeitada em orphan-code; stale degrada para WARN sem contentHash;
+      exit 7 só com --strict acima do limiar; determinístico (sem LLM no caminho do gate).
+      Gates: vitest run drift-regression. Leia: DARE/EXECUTION/task-705-drift-regression.md.
+
+  - id: task-706
+    title: "CHANGELOG + docs (graph drift)"
+    depends_on: [task-705]
+    complexity: LOW
+    spec_file: EXECUTION/task-706-drift-docs.md
+    subtask_prompt: |
+      CHANGELOG: entrada [3.10.0] (drift gate). Documentar 'dare graph drift' em docs-site/cli-reference.md e o
+      bloco 'drift' em docs-site/configuration.md (gate de cobertura de docs da v3.8.2 exige). Atualizar exit codes
+      documentados (0/1/3/4/5/6/7). Gates: verify-docs-coverage. Leia: DARE/EXECUTION/task-706-drift-docs.md.

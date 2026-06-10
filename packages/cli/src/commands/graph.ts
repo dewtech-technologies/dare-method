@@ -5,10 +5,13 @@ import path from 'path';
 import { convertYamlToDag } from '../utils/dag-converter.js';
 import { ingestDag } from '../dag-runner/graph-ingest.js';
 import { ingestRequirements } from '../graphrag/requirement-ingest.js';
+import { detectDrift, type DriftConfig, type DriftKind, type DriftReport } from '../graphrag/drift.js';
 import { loadAndApplyState } from '../dag-runner/state-store.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
-import type { EdgeType, NodeType } from '../graphrag/types.js';
+import type { EdgeType, GraphNode, NodeType } from '../graphrag/types.js';
+import { DriftConfigError, parseDriftConfig } from '../verification/config.js';
+import { assertRelativeSafe } from '../utils/path-safety.js';
 import {
   collectImpact,
   collectOwners,
@@ -72,6 +75,11 @@ const KNOWN_NODE_TYPES = [
   'formal-gate',
 ] as const;
 type KnownNodeType = (typeof KNOWN_NODE_TYPES)[number];
+type DriftOutputFormat = 'human' | 'json';
+
+const DRIFT_QUERY_LIMIT = 1_000_000;
+const DRIFT_FAIL_EXIT = 7;
+const DRIFT_KINDS: readonly DriftKind[] = ['orphan-requirement', 'orphan-code', 'stale'];
 
 graphCommand
   .command('query <term>')
@@ -286,6 +294,59 @@ graphCommand
   );
 
 graphCommand
+  .command('drift')
+  .description('Detect requirement/code drift from the graph')
+  .option('--strict', 'Exit with code 7 when drift thresholds fail')
+  .option('--format <fmt>', 'Output format: human | json', 'human')
+  .option('--modules <list>', 'Limit traversal to modules (comma-separated relative paths)')
+  .action(async (options: { strict?: boolean; format?: string; modules?: string }) => {
+    const format = parseDriftFormat(options.format);
+    if (!format) {
+      console.error(chalk.red(`Unsupported format "${options.format}". Use: human | json.`));
+      process.exit(1);
+      return;
+    }
+
+    let modules: string[] | undefined;
+    try {
+      modules = parseDriftModules(options.modules);
+    } catch {
+      console.error(GRAPH_PATH_ERROR);
+      process.exit(1);
+      return;
+    }
+
+    let driftConfig: DriftConfig;
+    try {
+      driftConfig = await loadProjectDriftConfig(process.cwd());
+    } catch (err) {
+      if (err instanceof DriftConfigError) {
+        console.error(chalk.red(`❌ ${err.message}`));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
+
+    await withGraph(async (graph) => {
+      const targetGraph = modules && modules.length > 0 ? scopeGraphToModules(graph, modules) : graph;
+      const report = detectDrift(targetGraph, driftConfig);
+      const driftFail = isDriftFailure(report, driftConfig);
+
+      if (format === 'json') {
+        console.log(JSON.stringify(report));
+      } else {
+        printDriftReport(report, driftFail, modules);
+      }
+
+      if (driftFail && options.strict) {
+        process.exit(DRIFT_FAIL_EXIT);
+        return;
+      }
+    });
+  });
+
+graphCommand
   .command('ingest')
   .description('Re-sync the graph from the current dare-dag.yaml + state')
   .option('--dag <file>', 'Path to dare-dag.yaml', 'DARE/dare-dag.yaml')
@@ -446,4 +507,163 @@ function sanitizeMermaidId(id: string): string {
 
 function collectRepeated(value: string, previous: string[] = []): string[] {
   return [...previous, value];
+}
+
+function parseDriftFormat(raw?: string): DriftOutputFormat | null {
+  const normalized = (raw ?? 'human').trim().toLowerCase();
+  if (normalized === 'human' || normalized === 'json') return normalized;
+  return null;
+}
+
+function parseDriftModules(raw?: string): string[] | undefined {
+  if (!raw) return undefined;
+  const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return undefined;
+  const normalized = parts.map(normalizeModulePath);
+  return [...new Set(normalized)].sort();
+}
+
+function normalizeModulePath(modulePath: string): string {
+  assertRelativeSafe(modulePath);
+  const posix = modulePath
+    .replace(/\\/g, '/')
+    .replace(/^(?:\.\/)+/, '')
+    .replace(/\/+$/, '');
+  return posix.length > 0 ? posix : '.';
+}
+
+async function loadProjectDriftConfig(cwd: string): Promise<DriftConfig> {
+  const file = path.join(cwd, 'dare.config.json');
+  const raw = (await fs.pathExists(file)) ? ((await fs.readJson(file)) as unknown) : {};
+  return parseDriftConfig(raw);
+}
+
+function isDriftFailure(report: DriftReport, cfg: DriftConfig): boolean {
+  return (
+    report.counts['orphan-requirement'] > cfg.maxOrphanReqs ||
+    report.counts['orphan-code'] > cfg.maxOrphanCode ||
+    (cfg.failOnStale && report.counts.stale > 0)
+  );
+}
+
+function printDriftReport(
+  report: DriftReport,
+  driftFail: boolean,
+  modules?: readonly string[],
+): void {
+  console.log(chalk.blue.bold('\nGraph Drift Report\n'));
+  if (modules && modules.length > 0) {
+    console.log(`  Modules: ${modules.join(', ')}`);
+  }
+  for (const kind of DRIFT_KINDS) {
+    console.log(`  ${kind}: ${report.counts[kind]}`);
+  }
+  if (report.staleIndeterminate > 0) {
+    console.log(`  stale-indeterminate: ${report.staleIndeterminate}`);
+  }
+  console.log(`  verdict: ${driftFail ? 'drift-fail' : 'pass'}`);
+
+  if (report.findings.length === 0) {
+    console.log(chalk.green('\nNo drift findings.\n'));
+    return;
+  }
+
+  const grouped = new Map<DriftKind, Array<(typeof report.findings)[number]>>();
+  for (const kind of DRIFT_KINDS) grouped.set(kind, []);
+  for (const finding of report.findings) {
+    const bucket = grouped.get(finding.kind);
+    if (bucket) {
+      bucket.push(finding);
+    }
+  }
+
+  for (const kind of DRIFT_KINDS) {
+    const findings = grouped.get(kind) ?? [];
+    if (findings.length === 0) continue;
+    console.log(chalk.bold(`\n${kind} (${findings.length})`));
+    for (const finding of findings) {
+      console.log(`  - ${finding.nodeId}: ${finding.detail}`);
+    }
+  }
+  console.log();
+}
+
+function scopeGraphToModules(graph: KnowledgeGraph, modules: readonly string[]): KnowledgeGraph {
+  const scopedCodeNodeIds = new Set<string>();
+  const scopedRequirementIds = new Set<string>();
+
+  for (const node of graph.queryNodes('code_symbol', DRIFT_QUERY_LIMIT)) {
+    const candidates = codeSymbolPathCandidates(node);
+    const inScope = candidates.some((candidate) =>
+      modules.some((modulePrefix) => pathIsUnderModule(candidate, modulePrefix)),
+    );
+    if (inScope) scopedCodeNodeIds.add(node.id);
+  }
+
+  for (const codeNodeId of scopedCodeNodeIds) {
+    const linkedEdges = [
+      ...graph.getEdges(codeNodeId, 'out'),
+      ...graph.getEdges(codeNodeId, 'in'),
+    ];
+    for (const edge of linkedEdges) {
+      if (edge.type !== 'implements' && edge.type !== 'affects') continue;
+      const source = graph.getNode(edge.sourceId);
+      const target = graph.getNode(edge.targetId);
+      if (source?.type === 'requirement') scopedRequirementIds.add(source.id);
+      if (target?.type === 'requirement') scopedRequirementIds.add(target.id);
+    }
+  }
+
+  const allowedNodeIds = new Set<string>([...scopedCodeNodeIds, ...scopedRequirementIds]);
+  return createScopedGraphView(graph, allowedNodeIds);
+}
+
+function createScopedGraphView(graph: KnowledgeGraph, allowedNodeIds: ReadonlySet<string>): KnowledgeGraph {
+  const view = Object.create(graph) as KnowledgeGraph;
+
+  view.getNode = (id: string) => (allowedNodeIds.has(id) ? graph.getNode(id) : null);
+  view.queryNodes = (type?: NodeType, limit?: number) => {
+    const filtered = graph.queryNodes(type, DRIFT_QUERY_LIMIT).filter((node) =>
+      allowedNodeIds.has(node.id),
+    );
+    return typeof limit === 'number' ? filtered.slice(0, limit) : filtered;
+  };
+  view.getEdges = (nodeId: string, direction: 'out' | 'in' | 'both' = 'both') => {
+    if (!allowedNodeIds.has(nodeId)) return [];
+    return graph.getEdges(nodeId, direction).filter((edge) => {
+      return allowedNodeIds.has(edge.sourceId) && allowedNodeIds.has(edge.targetId);
+    });
+  };
+  view.exportToJson = () => {
+    const exported = graph.exportToJson();
+    return {
+      nodes: exported.nodes.filter((node) => allowedNodeIds.has(node.id)),
+      edges: exported.edges.filter(
+        (edge) => allowedNodeIds.has(edge.sourceId) && allowedNodeIds.has(edge.targetId),
+      ),
+    };
+  };
+
+  return view;
+}
+
+function codeSymbolPathCandidates(node: GraphNode): string[] {
+  const candidates = new Set<string>();
+  const metadataPath = node.metadata?.path;
+  if (typeof metadataPath === 'string' && metadataPath.length > 0) {
+    candidates.add(metadataPath);
+  }
+  const metadataQualified = node.metadata?.qualifiedName;
+  if (typeof metadataQualified === 'string' && metadataQualified.length > 0) {
+    candidates.add(metadataQualified.split('::')[0] ?? metadataQualified);
+  }
+  if (node.id.startsWith('code_symbol:')) {
+    candidates.add((node.id.slice('code_symbol:'.length).split('::')[0] ?? node.id).trim());
+  }
+  return [...candidates].map((candidate) => candidate.replace(/\\/g, '/'));
+}
+
+function pathIsUnderModule(candidatePath: string, modulePrefix: string): boolean {
+  if (modulePrefix === '.') return true;
+  return candidatePath === modulePrefix || candidatePath.startsWith(`${modulePrefix}/`);
 }

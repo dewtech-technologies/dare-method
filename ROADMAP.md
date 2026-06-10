@@ -1,12 +1,21 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.9.0
+> **Status atual:** v3.10.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
 
 ---
+
+## ✅ Shipped — v3.10.0
+
+**Drift Gate** — detecção determinística spec ↔ código no grafo dual.
+
+- ✅ **`dare graph drift`** — orphan-requirement, orphan-code, stale
+- ✅ **Exit code 7** com `--strict` acima dos limiares
+- ✅ **Bloco `drift`** opt-in em `dare.config.json`
+- ✅ **`contentHash`** no ingest de requirements
 
 ## ✅ Shipped — v3.9.0
 

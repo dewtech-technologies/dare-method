@@ -1,0 +1,141 @@
+title: "Local Semantic Search (GraphRAG híbrido) — Development Tasks"
+version: "3.10.0"
+generated: "2026-06-10T00:00:00Z"
+
+# Feature: semantic-search
+# Branch:  feat/semantic-search
+# Design:  DARE/DESIGN-Feature-semantic-search.md
+# Blueprint: DARE/BLUEPRINT-Feature-semantic-search.md
+#
+# Regra de ouro: retrieval híbrido determinístico (keyword + vetor + grafo). Embeddings != LLM gerativo.
+# D-002: runtime/modelo de embeddings como optionalDependency + lazy import (único ponto: embeddings.ts).
+# Bloco de IDs: 8xx. Detalhe executável por task em DARE/EXECUTION/.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: núcleo vetorial determinístico ──────────────────────────────
+  - id: task-801
+    title: "graphrag/vector-search.ts — cosine + topK"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-801-vector-search.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/vector-search.ts (BLUEPRINT §3.2). cosine(a,b: Float32Array): number;
+      cosineTopK(query: Float32Array, vectors: {id; v: Float32Array}[], k): {id; score}[]. Determinístico,
+      sem dep nativa. Testes: vector-search.test.ts (cosseno conhecido; topK ordena; empate estável).
+      Gates: tsc; vitest run vector-search. Leia: DARE/EXECUTION/task-801-vector-search.md.
+
+  - id: task-803
+    title: "graphrag/embeddings.ts — loadEmbedder lazy"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-803-embeddings-lazy.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/embeddings.ts (BLUEPRINT §3.1, D-002). ÚNICO arquivo autorizado a
+      import() o runtime de embeddings. Embedder { dim; embed(text): Promise<Float32Array> } (determinístico).
+      loadEmbedder(cfg): Promise<Embedder> — carrega runtime/modelo (ex.: all-MiniLM-L6-v2 ONNX) LAZY;
+      EmbeddingModelMissingError (code 'EMBEDDING_MODEL_MISSING', message acionável) se ausente.
+      Runtime de embeddings em optionalDependencies do package.json (NUNCA dependencies). modelHash pinado (RS-01).
+      Gates: tsc; eslint. Leia: DARE/EXECUTION/task-803-embeddings-lazy.md.
+
+  - id: task-808
+    title: "config — bloco graphrag.semantic (zod)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-808-semantic-config.md
+    subtask_prompt: |
+      Adicionar bloco 'graphrag.semantic' ao schema (BLUEPRINT §3.7). zod: semantic { enabled (default false);
+      model (default 'all-MiniLM-L6-v2'); modelHash; rrfK (default 60) }. enabled:false => caminho keyword
+      inalterado. Atualizar template dare.config.json. Testes: semantic-config.test.ts. Gates: tsc; vitest run semantic-config.
+      Leia: DARE/EXECUTION/task-808-semantic-config.md.
+
+  # ─── Fase 1/2: fusão + gate de arquitetura ────────────────────────────────
+  - id: task-802
+    title: "graphrag/hybrid.ts — Reciprocal Rank Fusion"
+    depends_on: [task-801]
+    complexity: MED
+    spec_file: EXECUTION/task-802-hybrid-rrf.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/hybrid.ts (BLUEPRINT §3.3). hybridSearch(graph, embedder: Embedder|null,
+      query, opts): Promise<SearchResult[]>. Funde keyword (LIKE — searchNodes atual) + vetor (cosineTopK) +
+      proximidade no grafo (traverse) por RRF: score(d) = Σ 1/(rrfK + rank_i(d)). Se embedder === null =>
+      retorna SÓ o ranking keyword (fallback, A-5). Testes: hybrid.test.ts (RRF correto; fallback sem embedder).
+      Gates: tsc; vitest run hybrid. Leia: DARE/EXECUTION/task-802-hybrid-rrf.md.
+
+  - id: task-804
+    title: "no-heavy-dep-in-core.test.ts — gate de arquitetura"
+    depends_on: [task-803]
+    complexity: LOW
+    spec_file: EXECUTION/task-804-no-heavy-dep-test.md
+    subtask_prompt: |
+      Criar packages/cli/src/graphrag/__tests__/no-heavy-dep-in-core.test.ts (D-002/A-7). Faz grep nos .ts de
+      src/ (exceto graphrag/embeddings.ts e testes) e FALHA se encontrar import do runtime de embeddings
+      (ex.: 'onnxruntime', '@xenova/transformers' ou o pacote escolhido). Garante core sem dep pesada.
+      Gates: vitest run no-heavy-dep-in-core. Leia: DARE/EXECUTION/task-804-no-heavy-dep-test.md.
+
+  # ─── Fase 3: persistência + integração ────────────────────────────────────
+  - id: task-805
+    title: "GraphNode.vector? — persistência do vetor"
+    depends_on: [task-801]
+    complexity: MED
+    spec_file: EXECUTION/task-805-vector-persistence.md
+    subtask_prompt: |
+      Adicionar vetor opcional aos nós (BLUEPRINT §3.4). GraphNode ganha vector?: number[] (aditivo) em
+      graphrag/types.ts/knowledge-graph.ts. addNode persiste o vetor (BLOB serializado) nos backends sql.js/JSON;
+      loadVectors(): {id; v: Float32Array}[] para o cosineTopK. Grafos antigos sem vetor seguem válidos (RNF-03).
+      Testes: vector-persistence.test.ts (round-trip Float32Array; compat sem vetor). Gates: tsc; vitest run vector-persistence.
+      Leia: DARE/EXECUTION/task-805-vector-persistence.md.
+
+  - id: task-806
+    title: "searchNodes/locate híbrido + fallback + graph_locate MCP"
+    depends_on: [task-802, task-803, task-805]
+    complexity: HIGH
+    spec_file: EXECUTION/task-806-hybrid-integration.md
+    subtask_prompt: |
+      Estender graph-rag.ts (BLUEPRINT §3.5). Sob graphrag.semantic.enabled E modelo presente: searchNodes/locate
+      delegam a hybridSearch (carrega embedder lazy). Senão: caminho LIKE atual INALTERADO (RNF-03/A-4). Fallback
+      keyword se modelo ausente/erro (A-5). graph_locate (MCP) usa o mesmo caminho (RF-08). Testes:
+      hybrid-integration.test.ts (habilitado usa híbrido; desabilitado = keyword; fallback sem modelo).
+      Gates: tsc; vitest run hybrid-integration; lint. Leia: DARE/EXECUTION/task-806-hybrid-integration.md.
+
+  - id: task-807
+    title: "indexação incremental por hash"
+    depends_on: [task-806]
+    complexity: MED
+    spec_file: EXECUTION/task-807-incremental-index.md
+    subtask_prompt: |
+      Re-embedding incremental (BLUEPRINT §3.6, RF-06). No dare execute --complete/graph ingest: só (re)embeddar
+      nó cujo metadata.contentHash mudou (evita custo). Persistir o vetor (task-805). Testes:
+      incremental-index.test.ts (nó inalterado não re-embedda; nó alterado sim). Gates: tsc; vitest run incremental-index.
+      Leia: DARE/EXECUTION/task-807-incremental-index.md.
+
+  # ─── Fase N-1: auditoria + docs ───────────────────────────────────────────
+  - id: task-809
+    title: "auditoria N-1 — semantic-regression.test.ts"
+    depends_on: [task-804, task-806, task-807, task-808]
+    complexity: HIGH
+    spec_file: EXECUTION/task-809-semantic-regression.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/semantic-regression.test.ts. Prova: híbrido >= keyword na fixture rotulada
+      (O-02, MRR/recall); fallback keyword sem modelo sem erro (O-04); no-heavy-dep-in-core verde (reusa task-804);
+      grafo legado sem vetor funciona (RNF-03); embeddings determinísticos (mesmo texto => mesmo vetor).
+      Gates: vitest run semantic-regression. Leia: DARE/EXECUTION/task-809-semantic-regression.md.
+
+  - id: task-810
+    title: "CHANGELOG + docs (semantic)"
+    depends_on: [task-809]
+    complexity: LOW
+    spec_file: EXECUTION/task-810-semantic-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.10.0]: busca semântica local (retrieval híbrido, embeddings opcionais lazy, fallback keyword).
+      Documentar o bloco graphrag.semantic em docs-site/configuration.md e o comportamento de graph query --semantic
+      em cli-reference.md (gate de cobertura de docs). Gates: verify-docs-coverage. Leia: DARE/EXECUTION/task-810-semantic-docs.md.

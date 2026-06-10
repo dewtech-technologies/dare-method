@@ -9,6 +9,19 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.10.0] — Unreleased
+
+Release **Drift Gate** — detecção determinística de desalinhamento spec ↔ código no grafo dual.
+
+> Trocar `Unreleased` pela data ao publicar.
+
+### ✨ Adicionado — Drift gate
+
+- **`dare graph drift`** — subcomando que detecta `orphan-requirement`, `orphan-code` e `stale` via travessia do grafo (zero LLM).
+- **Exit code 7** — drift acima dos limiares com `--strict`.
+- **`drift` em `dare.config.json`** — opt-in (`enabled:false`); `maxOrphanReqs`, `maxOrphanCode`, `failOnStale`, `ignore[]`.
+- **`contentHash` + `ingestedAt`** no ingest de requirements — habilita detecção de stale sem custo no gate.
+
 ## [3.9.0] — Unreleased
 
 Release **Secure Autonomous Executor** — modo autônomo no orquestrador (motor determinístico, LLM

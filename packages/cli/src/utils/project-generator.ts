@@ -30,7 +30,10 @@ import {
   type McpLanguage,
   type ToolchainMode,
 } from './stack-bootstrap.js';
-import { defaultVerificationConfigForProject } from '../verification/config.js';
+import {
+  defaultDriftConfigForProject,
+  defaultVerificationConfigForProject,
+} from '../verification/config.js';
 import { defaultHookConfigForProject } from '../hooks/config.js';
 import { defaultGuardConfigForProject } from '../guard/config.js';
 import { assertWithinCwd } from '../commands/init-validation.js';
@@ -109,6 +112,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     verification: defaultVerificationConfigForProject(),
     hooks: defaultHookConfigForProject(),
     guard: defaultGuardConfigForProject(),
+    drift: defaultDriftConfigForProject(),
   };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;

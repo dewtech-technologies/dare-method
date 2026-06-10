@@ -1,0 +1,58 @@
+%% DARE DAG — Local Semantic Search (GraphRAG híbrido) — Development Tasks
+%% Generated: 2026-06-10T00:00:00Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_801["task-801\nvector-search.ts — cosine + topK\n⏳ PENDING"]
+    task_803["task-803\nembeddings.ts — loadEmbedder lazy\n⏳ PENDING"]
+    task_808["task-808\nconfig — graphrag.semantic (zod)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_802["task-802\nhybrid.ts — Reciprocal Rank Fusion\n⏳ PENDING"]
+    task_804["task-804\nno-heavy-dep-in-core.test.ts\n⏳ PENDING"]
+    task_805["task-805\nGraphNode.vector? — persistência\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_806["task-806\nsearchNodes/locate híbrido + fallback + MCP\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_807["task-807\nindexação incremental por hash\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_809["task-809\nauditoria N-1 — semantic-regression\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    task_810["task-810\nCHANGELOG + docs (semantic)\n⏳ PENDING"]
+  end
+  task_801 --> task_802
+  task_803 --> task_804
+  task_801 --> task_805
+  task_802 --> task_806
+  task_803 --> task_806
+  task_805 --> task_806
+  task_806 --> task_807
+  task_804 --> task_809
+  task_806 --> task_809
+  task_807 --> task_809
+  task_808 --> task_809
+  task_809 --> task_810
+  class task_801 st_pending;
+  class task_802 st_pending;
+  class task_803 st_pending;
+  class task_804 st_pending;
+  class task_805 st_pending;
+  class task_806 st_pending;
+  class task_807 st_pending;
+  class task_808 st_pending;
+  class task_809 st_pending;
+  class task_810 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

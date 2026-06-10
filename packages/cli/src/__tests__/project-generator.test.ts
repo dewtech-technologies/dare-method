@@ -5,6 +5,8 @@ import fs from 'fs-extra';
 import { generateProjectStructure } from '../utils/project-generator.js';
 import {
   DEFAULTS,
+  DRIFT_DEFAULTS,
+  seedDriftDefaultsIfAbsent,
   seedVerificationDefaultsIfAbsent,
 } from '../verification/config.js';
 
@@ -47,6 +49,7 @@ describe('project-generator — verification block', () => {
     expect(cfg.verification.mutation.minScore).toBe(0.7);
     expect(cfg.verification.loop.policy).toBe('decay');
     expect(cfg.verification.prerank.enabled).toBe(false);
+    expect(cfg.drift).toEqual(DRIFT_DEFAULTS);
   });
 
   it('should_match_config_defaults', async () => {
@@ -66,11 +69,14 @@ describe('project-generator — verification block', () => {
 
     const cfg = await fs.readJSON(cfgPath);
     expect(seedVerificationDefaultsIfAbsent(cfg)).toBe(true);
+    expect(seedDriftDefaultsIfAbsent(cfg)).toBe(true);
     expect(cfg.verification).toEqual(DEFAULTS);
+    expect(cfg.drift).toEqual(DRIFT_DEFAULTS);
     await fs.writeJSON(cfgPath, cfg, { spaces: 2 });
 
     const reloaded = await fs.readJSON(cfgPath);
     expect(reloaded.verification.enabled).toBe(false);
     expect(seedVerificationDefaultsIfAbsent(reloaded)).toBe(false);
+    expect(seedDriftDefaultsIfAbsent(reloaded)).toBe(false);
   });
 });

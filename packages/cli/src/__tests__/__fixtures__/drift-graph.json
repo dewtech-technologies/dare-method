@@ -1,0 +1,86 @@
+{
+  "nodes": [
+    {
+      "id": "requirement:RF-ORPHAN",
+      "type": "requirement",
+      "label": "RF-ORPHAN",
+      "metadata": {
+        "contentHash": "hash-rf-orphan",
+        "ingestedAt": "2026-06-10T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "requirement:RF-STALE",
+      "type": "requirement",
+      "label": "RF-STALE",
+      "metadata": {
+        "contentHash": "hash-rf-stale-new",
+        "ingestedAt": "2026-06-10T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "requirement:RF-NOHASH",
+      "type": "requirement",
+      "label": "RF-NOHASH",
+      "metadata": {
+        "ingestedAt": "2026-06-10T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "code_symbol:src/payments/charge.ts::charge",
+      "type": "code_symbol",
+      "label": "charge",
+      "metadata": {
+        "path": "src/payments/charge.ts",
+        "qualifiedName": "src/payments/charge.ts::charge",
+        "requirementContentHash": "hash-rf-stale-old",
+        "ingestedAt": "2026-06-10T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "code_symbol:src/orders/checkout.ts::checkout",
+      "type": "code_symbol",
+      "label": "checkout",
+      "metadata": {
+        "path": "src/orders/checkout.ts",
+        "qualifiedName": "src/orders/checkout.ts::checkout",
+        "ingestedAt": "2026-06-10T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "code_symbol:src/inventory/sync.ts::syncInventory",
+      "type": "code_symbol",
+      "label": "syncInventory",
+      "metadata": {
+        "path": "src/inventory/sync.ts",
+        "qualifiedName": "src/inventory/sync.ts::syncInventory"
+      }
+    },
+    {
+      "id": "code_symbol:src/generated/bootstrap.ts::bootstrap",
+      "type": "code_symbol",
+      "label": "bootstrap",
+      "metadata": {
+        "path": "src/generated/bootstrap.ts",
+        "qualifiedName": "src/generated/bootstrap.ts::bootstrap"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "implements:charge->rf-stale",
+      "sourceId": "code_symbol:src/payments/charge.ts::charge",
+      "targetId": "requirement:RF-STALE",
+      "type": "implements",
+      "metadata": {
+        "requirementContentHash": "hash-rf-stale-old"
+      }
+    },
+    {
+      "id": "implements:checkout->rf-nohash",
+      "sourceId": "code_symbol:src/orders/checkout.ts::checkout",
+      "targetId": "requirement:RF-NOHASH",
+      "type": "implements"
+    }
+  ]
+}
