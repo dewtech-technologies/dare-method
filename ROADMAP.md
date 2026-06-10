@@ -1,12 +1,25 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.3.0
+> **Status atual:** v3.9.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
 
 ---
+
+## ✅ Shipped — v3.9.0
+
+**Secure Autonomous Executor + Agentic-chain Security Gate** — modo autônomo (core determinístico) + gate de segurança da cadeia agêntica.
+
+- ✅ **`dare execute --agent`** — driver plugável (mock/noop/claude), best-of-N, decay policy reutilizada
+- ✅ **`--budget-tokens`**, **`--require-approval rank|none`**, **`--dry-run`**
+- ✅ **Telemetria de custo** no GraphRAG (nó `task`)
+- ✅ **Gate `no-llm-in-core`** — SDK confinado ao driver
+- ✅ **`dare guard`** — unicode-audit, scan heurístico, proveniência Ed25519/minisign-compat
+- ✅ **Trust boundaries** — control/data channel enforcement
+- ✅ **Exit code 6** — FAIL de guard (ou WARN com `--strict`)
+- ✅ **Pré-flight** integrado ao `dare execute --agent`
 
 ## ✅ Shipped — v3.3.0
 

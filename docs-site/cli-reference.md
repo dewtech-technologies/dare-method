@@ -160,8 +160,37 @@ dare execute --complete task-001 --output "OK" --tokens 1200
 | `--formal` | boolean | `false` | Habilita o gate de verificação formal nesta conclusão (herda `verification.formal.enabled`). |
 | `--no-formal` | boolean | (config) | Pula a verificação formal mesmo se habilitada na config. |
 | `--formal-backend <backend>` | string | (`formal.backend`) | Sobrescreve o backend formal (`dafny`\|`verus`\|`lean`). |
+| `--agent` | boolean | `false` | Modo autônomo: o driver executa cada task do DAG (requer `--dry-run` ou SDK instalado). |
+| `--budget-tokens <n>` | string | — | Teto de tokens para a sessão autônoma (soma todos os candidatos best-of-N). |
+| `--require-approval <mode>` | string | `rank` | `rank`: pausa entre ranks; `none`: totalmente autônomo. |
+| `--on-fail <action>` | string | `escalate` | `replan`\|`escalate`\|`stop` quando a decay policy esgota tentativas. |
+| `--dry-run` | boolean | `false` | Usa `mockDriver` (sem rede/SDK). |
+
+**Exit codes (modo `--agent`):** `0` sucesso/pausa preservando PENDING; `1` SDK ausente ou erro geral; `6` guard FAIL no pré-flight.
 
 > **Opt-in / experimental.** O gate formal é desligado por padrão e exige opt-in em dois níveis: `verification.formal.enabled` na config **e** marcação por módulo (`@dare-formal` ou `verification.formal.modules`). Sem isso o comportamento é idêntico ao de antes.
+
+## `dare guard`
+
+Gate de segurança para artefatos (spec, steering, etc.) consumidos pelo executor autônomo.
+
+```bash
+dare guard DARE/EXECUTION/task-001.md
+dare guard --staged [--strict] [--format json]
+dare guard --all [--unicode strip|block] [--sign]
+```
+
+| Flag | Tipo | Default | Descrição |
+|------|------|---------|-----------|
+| `[path]` | argumento | — | Arquivo ou diretório a auditar. |
+| `--staged` | boolean | `false` | Audita arquivos staged no git. |
+| `--all` | boolean | `false` | Audita artefatos DARE conhecidos. |
+| `--strict` | boolean | `false` | WARN também retorna exit 6. |
+| `--format <fmt>` | string | `human` | `human` ou `json`. |
+| `--sign` | boolean | `false` | Assina path em `guard.trustedPaths` (`.minisig`). |
+| `--unicode <mode>` | string | (config) | `strip` ou `block`. |
+
+**Exit codes:** `0` PASS ou WARN; `6` FAIL (ou WARN com `--strict`).
 
 ## `dare graph`
 

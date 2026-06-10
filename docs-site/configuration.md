@@ -72,6 +72,15 @@ O arquivo na raiz do projeto reúne quatro grupos:
   "hooks": {
     "on": {},                       // evento → lista de ações da allowlist
     "trusted": false
+  },
+
+  // ── guard (GUARD_DEFAULTS de guard/config.ts) ───────────────────────
+  "guard": {
+    "enabled": false,
+    "onExecute": true,
+    "unicode": "strip",             // 'strip' | 'block'
+    "trustedPaths": [".dare/steering/**", "DARE/TASKS.md"],
+    "signing": { "enabled": false }
   }
 }
 ```
@@ -197,6 +206,20 @@ Detalhes de eventos, ações e segurança em [Agentes › Hooks](agents.md#hooks
 |---|---|---|---|
 | `on` | `Record<HookEvent, HookAction[]>` | `{}` | Mapa de evento → lista de ações. Eventos: `on-save`, `on-file-create`, `on-task-complete`, `pre-commit`. |
 | `trusted` | `boolean` | `false` | Confiança explícita. Enquanto `false`, hooks não auto-executam (`dare hooks run` falha com `TRUST_REQUIRED` até `--trust` ou `trusted:true`). |
+
+### `guard`
+
+Bloco validado em `guard/config.ts` (Zod `.strict()`). Defaults: `enabled:false` (opt-in).
+Detalhes em [Referência da CLI › `dare guard`](cli-reference.md#dare-guard).
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `enabled` | `boolean` | `false` | Liga o gate de segurança. |
+| `onExecute` | `boolean` | `true` | Pré-flight no `dare execute --agent`. |
+| `unicode` | `'strip' \| 'block'` | `'strip'` | Modo de auditoria unicode. |
+| `trustedPaths` | `string[]` | `['.dare/steering/**', 'DARE/TASKS.md']` | Paths elegíveis a assinatura/control channel. |
+| `signing.enabled` | `boolean` | `false` | Habilita verificação de assinatura. |
+| `signing.publicKey` | `string` | — | Chave pública minisign (opcional). |
 
 Cada item de `on[evento]` é um `HookAction`:
 

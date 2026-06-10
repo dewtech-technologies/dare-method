@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "instr-override",
+      "description": "Tentativas de sobrepor instrucoes anteriores do agente",
+      "regex": [
+        "/ignore (all )?previous (instructions|rules)/i",
+        "/disregard the (system|above)/i"
+      ]
+    },
+    {
+      "id": "shell-exec",
+      "description": "Comandos de execucao shell potencialmente maliciosos",
+      "regex": [
+        "/\\b(curl|wget|bash -c|sh -c|powershell -enc|Invoke-Expression|iex)\\b/i"
+      ]
+    },
+    {
+      "id": "exfiltration",
+      "description": "Padroes de exfiltracao de segredos e variaveis de ambiente",
+      "regex": [
+        "/(cat|type)\\s+[^\\n]*\\.env/i",
+        "/(api[_-]?key|secret|token)\\b[^\\n]*(post|fetch|curl|http)/i"
+      ]
+    },
+    {
+      "id": "hidden-directive",
+      "description": "Diretivas ocultas em comentario HTML ou markdown imperativo",
+      "regex": [
+        "/<!--[\\s\\S]*?(ignore|follow|execute|run|agent|assistant|system|instruction)[\\s\\S]*?-->/i",
+        "/(?:^|\\n)\\s*(?:>|[-*]|\\d+\\.)?\\s*(?:agent|assistant)\\s*[:\\-]?\\s*(?:ignore|follow|execute|run|do)\\b/i"
+      ]
+    }
+  ]
+}

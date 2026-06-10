@@ -1,0 +1,89 @@
+%% DARE DAG — Secure Autonomous Executor — Development Tasks
+%% Generated: 2026-06-10T00:00:00Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_601["task-601\nagent/driver.ts — interface AgentDriver + tipos\n⏳ PENDING"]
+    task_610["task-610\nguard/types.ts — GuardResult/Finding/Artifact\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_602["task-602\ndrivers mock.ts + noop.ts (determinísticos)\n⏳ PENDING"]
+    task_603["task-603\nagent/budget.ts — BudgetTracker (soma best-of-N)\n⏳ PENDING"]
+    task_605["task-605\ndrivers/claude.ts — lazy import + optionalDependency\n⏳ PENDING"]
+    task_611["task-611\nguard/unicode.ts — audit strip/block\n⏳ PENDING"]
+    task_612["task-612\nguard/scan.ts + rules/scan-rules.json\n⏳ PENDING"]
+    task_614["task-614\nguard/provenance.ts — digest + Ed25519\n⏳ PENDING"]
+    task_616["task-616\nconfig — bloco guard (zod)\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_604["task-604\nno-llm-in-core.test.ts (gate de arquitetura)\n⏳ PENDING"]
+    task_606["task-606\nexecute --agent — loop, flags, resolveDriver\n⏳ PENDING"]
+    task_613["task-613\ncommands/guard.ts — comando + exit 6\n⏳ PENDING"]
+    task_615["task-615\nguard/boundary.ts — control/data enforcement\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_607["task-607\ntelemetria de custo → GraphRAG\n⏳ PENDING"]
+    task_608["task-608\n--require-approval rank — gating por rank\n⏳ PENDING"]
+    task_617["task-617\nintegração: guard --sign + pré-flight no executor\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_620["task-620\nauditoria N-1 — secure-executor-regression\n⏳ PENDING"]
+  end
+  subgraph rank_5 ["Rank 5"]
+    direction TB
+    task_621["task-621\nCHANGELOG + docs/skills + bump\n⏳ PENDING"]
+  end
+  task_601 --> task_602
+  task_601 --> task_603
+  task_601 --> task_605
+  task_605 --> task_604
+  task_602 --> task_606
+  task_603 --> task_606
+  task_605 --> task_606
+  task_610 --> task_611
+  task_610 --> task_612
+  task_610 --> task_614
+  task_610 --> task_616
+  task_611 --> task_613
+  task_612 --> task_613
+  task_610 --> task_615
+  task_614 --> task_615
+  task_606 --> task_607
+  task_606 --> task_608
+  task_606 --> task_617
+  task_613 --> task_617
+  task_614 --> task_617
+  task_615 --> task_617
+  task_616 --> task_617
+  task_604 --> task_620
+  task_607 --> task_620
+  task_608 --> task_620
+  task_617 --> task_620
+  task_620 --> task_621
+  class task_601 st_pending;
+  class task_602 st_pending;
+  class task_603 st_pending;
+  class task_604 st_pending;
+  class task_605 st_pending;
+  class task_606 st_pending;
+  class task_607 st_pending;
+  class task_608 st_pending;
+  class task_610 st_pending;
+  class task_611 st_pending;
+  class task_612 st_pending;
+  class task_613 st_pending;
+  class task_614 st_pending;
+  class task_615 st_pending;
+  class task_616 st_pending;
+  class task_617 st_pending;
+  class task_620 st_pending;
+  class task_621 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

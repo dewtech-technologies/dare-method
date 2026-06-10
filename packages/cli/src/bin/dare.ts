@@ -22,6 +22,7 @@ import { benchCommand } from '../commands/bench.js';
 import { steeringCommand } from '../commands/steering.js';
 import { hooksCommand } from '../commands/hooks.js';
 import { patternsCommand } from '../commands/patterns.js';
+import { guardCommand } from '../commands/guard.js';
 import { skillCommand } from '../skills/index.js';
 import { welcomeCommand } from '../commands/welcome.js';
 import { printBanner } from '../utils/banner.js';
@@ -57,6 +58,7 @@ program.addCommand(benchCommand);
 program.addCommand(steeringCommand);
 program.addCommand(hooksCommand);
 program.addCommand(patternsCommand);
+program.addCommand(guardCommand);
 program.addCommand(skillCommand);
 program.addCommand(welcomeCommand);
 

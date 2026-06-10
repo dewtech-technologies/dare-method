@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
+import { createInterface } from 'node:readline/promises';
 import {
   applyCascadingSkip,
   buildTaskPrompt,
@@ -20,17 +21,26 @@ import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
 import {
   DEFAULT_STATE_PATH,
+  appendAttempt,
+  getAttempts,
   loadAndApplyState,
   saveState,
 } from '../dag-runner/state-store.js';
 import {
   resolveStackFromConfig,
   runRalphLoop,
-  type GateName,
 } from '../dag-runner/ralph-loop.js';
 import { runReview } from '../utils/ReviewRunner.js';
 import { readProjectConfig } from '../utils/UpdateDetector.js';
 import { buildLocateContext, loadGraphLocateConfig } from '../dag-runner/graph-locate.js';
+import type { AgentDriver, AgentRunResult, TokenUsage } from '../agent/driver.js';
+import { BudgetTracker } from '../agent/budget.js';
+import { recordCostTelemetry } from '../agent/telemetry.js';
+import { mockDriver } from '../agent/drivers/mock.js';
+import {
+  AgentSdkMissingError,
+  createClaudeDriver,
+} from '../agent/drivers/claude.js';
 import {
   gateToAspect,
   loadVerificationConfig,
@@ -43,10 +53,28 @@ import {
   applyPolicyOverride,
   resolveBestOfCount,
 } from './execute-verification.js';
+import { parseVerificationConfig } from '../verification/config.js';
+import { decideNextAction } from '../verification/decay/policy.js';
+import { failureSignature } from '../verification/decay/signature.js';
 import { recordVerification, recordFormalProof } from '../verification/telemetry.js';
-import type { FormalVerdict } from '../verification/types.js';
+import type {
+  Aspect,
+  AttemptRecord,
+  FormalVerdict,
+  VerificationConfig,
+  VerificationResult,
+} from '../verification/types.js';
 import { runBestOfN } from '../verification/best-of-n/runner.js';
+import {
+  NoViableCandidateError,
+  selectByPareto,
+} from '../verification/best-of-n/selector/pareto.js';
 import { createLogger } from '../utils/logger.js';
+import { parseGuardConfig, type GuardConfig } from '../guard/config.js';
+import type { BoundaryIntent } from '../guard/boundary.js';
+import { runGuardPipeline } from '../guard/pipeline.js';
+import type { GuardedArtifact } from '../guard/types.js';
+import { loadSteeringFiles } from '../steering/loader.js';
 
 const execLog = createLogger('execute');
 
@@ -68,6 +96,7 @@ const execLog = createLogger('execute');
 
 interface ExecuteOptions {
   dag: string;
+  agent: boolean;
   next: boolean;
   status: boolean;
   watch: boolean;
@@ -90,11 +119,16 @@ interface ExecuteOptions {
   formal?: boolean;
   noFormal?: boolean;
   formalBackend?: string;
+  budgetTokens?: string;
+  requireApproval?: string;
+  onFail?: string;
+  dryRun?: boolean;
 }
 
 export const executeCommand = new Command('execute')
   .description('Orchestrate DAG execution (the IDE agent runs each task)')
   .option('--dag <file>', 'Path to dare-dag.yaml', 'DARE/dare-dag.yaml')
+  .option('--agent', 'Run the autonomous executor loop', false)
   .option('--next', 'Print the next executable tasks (with composed prompts)', false)
   .option('--status', 'Render canvas and show summary (default action)', false)
   .option('--watch', 'Stream task readiness (re-print on every state change). Implies --next.', false)
@@ -117,6 +151,18 @@ export const executeCommand = new Command('execute')
   .option('--formal', 'Enable formal verification gate for this completion', false)
   .option('--no-formal', 'Skip formal verification even when enabled in config', false)
   .option('--formal-backend <backend>', 'Formal backend override (dafny|verus|lean)')
+  .option('--budget-tokens <n>', 'Token budget cap for --agent mode')
+  .option(
+    '--require-approval <mode>',
+    'Approval mode for --agent (rank|none)',
+    'rank',
+  )
+  .option(
+    '--on-fail <mode>',
+    'Action when a failed attempt does not resolve (replan|escalate|stop)',
+    'escalate',
+  )
+  .option('--dry-run', 'Use mock driver instead of Claude SDK driver', false)
   .action(async (options: ExecuteOptions) => {
     const cwd = process.cwd();
     const dagPath = path.resolve(cwd, options.dag);
@@ -135,7 +181,9 @@ export const executeCommand = new Command('execute')
     const graph = options.noGraph ? undefined : await tryOpenGraph(cwd);
 
     try {
-      if (options.complete) {
+      if (options.agent) {
+        await handleAgent(dag, options, stateFile, canvasPath, graph, cwd);
+      } else if (options.complete) {
         await handleComplete(dag, options, stateFile, canvasPath, graph);
       } else if (options.fail) {
         await handleFail(dag, options, stateFile, canvasPath, graph);
@@ -154,7 +202,718 @@ export const executeCommand = new Command('execute')
     }
   });
 
+type RequireApprovalMode = 'rank' | 'none';
+type OnFailMode = 'replan' | 'escalate' | 'stop';
+type AgentExecutionAction =
+  | 'DONE'
+  | 'CONTINUE'
+  | 'FRESH_START'
+  | 'REPLAN'
+  | 'ESCALATE'
+  | 'STOP';
+
+interface AgentRuntimeConfig {
+  readonly model: string;
+  readonly apiKeyEnv?: string;
+  readonly maxTokens?: number;
+  readonly guard: GuardConfig;
+}
+
+interface PreflightGuardResult {
+  readonly verdict: 'PASS' | 'WARN' | 'FAIL';
+  readonly artifacts: ReadonlyArray<GuardedArtifact>;
+  readonly reason?: string;
+}
+
+type PreflightGuardFn = (
+  task: DagTask,
+  guardConfig: GuardConfig,
+) => Promise<PreflightGuardResult>;
+
+type ResolveDriverFn = (
+  args: ExecuteOptions,
+  config: AgentRuntimeConfig,
+) => Promise<AgentDriver>;
+
+type RankApprovalFn = (
+  rank: number,
+  tasks: ReadonlyArray<DagTask>,
+) => Promise<boolean>;
+type ApprovalGateResult = 'proceed' | 'stop';
+
+interface AgentCandidate {
+  readonly id: string;
+  readonly run: AgentRunResult;
+  readonly verification: VerificationResult;
+}
+
+const GUARD_FAIL_EXIT_CODE = 6;
+const DEFAULT_AGENT_MODEL = 'claude-sonnet-4-5';
+
+const ZERO_USAGE: TokenUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  costUsd: 0,
+  model: 'agent-error',
+};
+
+type PreflightTargetRole = 'spec' | 'steering';
+
+interface PreflightTarget {
+  readonly path: string;
+  readonly role: PreflightTargetRole;
+}
+
+function normalizePreflightPath(rawPath: string): string {
+  return rawPath
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/\/{2,}/g, '/')
+    .replace(/^\/+/, '');
+}
+
+function inferBoundaryIntent(artifactPath: string): BoundaryIntent {
+  const normalized = normalizePreflightPath(artifactPath).toLowerCase();
+  if (normalized.includes('/hooks/')) return 'execute-hook';
+  if (normalized.includes('/gates/') || normalized.endsWith('dare-dag.yaml')) {
+    return 'reorder-gate';
+  }
+  return 'read';
+}
+
+function preflightFailReason(verdict: ReturnType<typeof runGuardPipeline>['result']): string {
+  const finding =
+    verdict.findings.find((item) => item.severity === 'FAIL') ??
+    verdict.findings[0];
+  if (!finding) return `${verdict.artifact}: guard preflight failed`;
+  return `${verdict.artifact}: [${finding.layer}:${finding.rule}] ${finding.evidence}`;
+}
+
+async function collectPreflightTargets(
+  cwd: string,
+  task: DagTask,
+): Promise<PreflightTarget[]> {
+  const targets = new Map<string, PreflightTargetRole>();
+  if (task.spec_file && task.spec_file.trim().length > 0) {
+    targets.set(normalizePreflightPath(task.spec_file), 'spec');
+  }
+  for (const steering of loadSteeringFiles(cwd)) {
+    const normalized = normalizePreflightPath(steering.path);
+    if (!targets.has(normalized)) targets.set(normalized, 'steering');
+  }
+
+  return [...targets.entries()].map(([filePath, role]) => ({
+    path: filePath,
+    role,
+  }));
+}
+
+const defaultPreflightGuard: PreflightGuardFn = async (task, guardConfig) => {
+  if (!guardConfig.enabled || !guardConfig.onExecute) {
+    return { verdict: 'PASS', artifacts: [] };
+  }
+
+  const cwd = process.cwd();
+  let targets: PreflightTarget[];
+  try {
+    targets = await collectPreflightTargets(cwd, task);
+  } catch (err) {
+    return {
+      verdict: 'FAIL',
+      artifacts: [],
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  const steeringArtifacts: GuardedArtifact[] = [];
+  let overallVerdict: PreflightGuardResult['verdict'] = 'PASS';
+
+  for (const target of targets) {
+    const artifactAbsPath = path.resolve(cwd, target.path);
+    if (!(await fs.pathExists(artifactAbsPath))) continue;
+    const stat = await fs.stat(artifactAbsPath);
+    if (!stat.isFile()) continue;
+
+    const content = await fs.readFile(artifactAbsPath);
+    const pipeline = runGuardPipeline(artifactAbsPath, content, guardConfig, {
+      cwd,
+      boundaryIntent: inferBoundaryIntent(target.path),
+    });
+
+    if (target.role === 'steering' && pipeline.result.verdict !== 'FAIL') {
+      steeringArtifacts.push(pipeline.artifact);
+    }
+
+    if (pipeline.result.verdict === 'FAIL') {
+      return {
+        verdict: 'FAIL',
+        artifacts: [],
+        reason: preflightFailReason(pipeline.result),
+      };
+    }
+    if (pipeline.result.verdict === 'WARN') {
+      overallVerdict = 'WARN';
+    }
+  }
+
+  return {
+    verdict: overallVerdict,
+    artifacts: steeringArtifacts,
+  };
+};
+
+const defaultRankApproval: RankApprovalFn = async (rank, tasks) => {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  try {
+    const answer = await rl.question(`Rank ${rank}: ${tasks.length} task(s). Proceder? [y/N] `);
+    const normalized = answer.trim().toLowerCase();
+    return normalized === 'y' || normalized === 'yes';
+  } finally {
+    rl.close();
+  }
+};
+
+let preflightGuardImpl: PreflightGuardFn = defaultPreflightGuard;
+let resolveDriverOverride: ResolveDriverFn | null = null;
+let rankApprovalImpl: RankApprovalFn = defaultRankApproval;
+
+export function setPreflightGuardForTests(
+  fn: PreflightGuardFn | null,
+): void {
+  preflightGuardImpl = fn ?? defaultPreflightGuard;
+}
+
+export function setResolveDriverForTests(
+  fn: ResolveDriverFn | null,
+): void {
+  resolveDriverOverride = fn;
+}
+
+export function setRankApprovalForTests(fn: RankApprovalFn | null): void {
+  rankApprovalImpl = fn ?? defaultRankApproval;
+}
+
+export async function resolveDriver(
+  args: ExecuteOptions,
+  config: AgentRuntimeConfig,
+): Promise<AgentDriver> {
+  if (resolveDriverOverride) {
+    return resolveDriverOverride(args, config);
+  }
+  if (args.dryRun) return mockDriver;
+  return createClaudeDriver({
+    model: config.model,
+    apiKeyEnv: config.apiKeyEnv,
+    maxTokens: config.maxTokens,
+  });
+}
+
+function parseRequireApprovalMode(raw: string | undefined): RequireApprovalMode | null {
+  if (!raw || raw === 'rank') return 'rank';
+  if (raw === 'none') return 'none';
+  return null;
+}
+
+function isInteractiveRuntime(): boolean {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+async function gateRank(
+  rank: number,
+  tasks: ReadonlyArray<DagTask>,
+  mode: RequireApprovalMode,
+): Promise<ApprovalGateResult> {
+  if (mode === 'none') return 'proceed';
+  const ok = await rankApprovalImpl(rank, tasks);
+  return ok ? 'proceed' : 'stop';
+}
+
+function parseOnFailMode(raw: string | undefined): OnFailMode | null {
+  if (!raw || raw === 'escalate') return 'escalate';
+  if (raw === 'replan') return 'replan';
+  if (raw === 'stop') return 'stop';
+  return null;
+}
+
+function parsePositiveInt(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 1) return undefined;
+  return parsed;
+}
+
+function usageTotals(candidates: ReadonlyArray<AgentCandidate>): TokenUsage {
+  const totals = candidates.reduce(
+    (acc, candidate) => {
+      acc.inputTokens += candidate.run.usage.inputTokens;
+      acc.outputTokens += candidate.run.usage.outputTokens;
+      acc.costUsd += candidate.run.usage.costUsd;
+      acc.models.add(candidate.run.usage.model);
+      return acc;
+    },
+    { inputTokens: 0, outputTokens: 0, costUsd: 0, models: new Set<string>() },
+  );
+  const model =
+    totals.models.size === 1 ? (totals.models.values().next().value ?? 'unknown') : 'mixed';
+  return {
+    inputTokens: totals.inputTokens,
+    outputTokens: totals.outputTokens,
+    costUsd: Number(totals.costUsd.toFixed(6)),
+    model,
+  };
+}
+
+function verificationFromRun(taskId: string, run: AgentRunResult): VerificationResult {
+  if (run.status === 'implemented') {
+    return {
+      taskId,
+      passed: true,
+      aspects: [
+        { aspect: 'build', verdict: 'PASS', reason: 'agent candidate built', durationMs: 0 },
+        { aspect: 'test', verdict: 'PASS', reason: 'agent candidate tested', durationMs: 0 },
+        { aspect: 'lint', verdict: 'PASS', reason: 'agent candidate linted', durationMs: 0 },
+      ],
+      durationMs: 0,
+    };
+  }
+
+  const reason =
+    run.status === 'aborted'
+      ? 'driver aborted candidate execution'
+      : (run.failureSignature ?? run.summary) || 'driver failed candidate execution';
+  return {
+    taskId,
+    passed: false,
+    aspects: [
+      {
+        aspect: 'test',
+        verdict: 'FAIL',
+        reason,
+        durationMs: 0,
+      },
+    ],
+    durationMs: 0,
+  };
+}
+
+function selectParetoCandidate(candidates: ReadonlyArray<AgentCandidate>): AgentCandidate {
+  const mapped = candidates.map((candidate) => ({
+    id: candidate.id,
+    worktree: {
+      id: candidate.id,
+      path: candidate.run.worktree,
+      branch: `dare/agent/${candidate.id}`,
+    },
+    verification: candidate.verification,
+  }));
+
+  try {
+    const winner = selectByPareto(mapped);
+    return (
+      candidates.find((candidate) => candidate.id === winner.id) ??
+      candidates[0]
+    );
+  } catch (err) {
+    if (err instanceof NoViableCandidateError) {
+      return candidates[0];
+    }
+    throw err;
+  }
+}
+
+function failureReasonFromVerification(result: VerificationResult): string {
+  const failed = result.aspects.filter((aspect) => aspect.verdict === 'FAIL');
+  if (failed.length === 0) return 'candidate verification failed';
+  return failed.map((aspect) => `${aspect.aspect}: ${aspect.reason}`).join('\n');
+}
+
+function resolveAgentAction(
+  action: AgentExecutionAction,
+  onFail: OnFailMode,
+  budgetExhausted: boolean,
+): AgentExecutionAction {
+  if (action === 'DONE') return 'DONE';
+  if (budgetExhausted) return 'ESCALATE';
+  if (action !== 'CONTINUE') return action;
+  if (onFail === 'replan') return 'REPLAN';
+  if (onFail === 'stop') return 'STOP';
+  return 'ESCALATE';
+}
+
+async function loadTaskSpec(cwd: string, task: DagTask): Promise<string> {
+  if (!task.spec_file) return task.subtask_prompt;
+  const specPath = path.resolve(cwd, task.spec_file);
+  if (!(await fs.pathExists(specPath))) return task.subtask_prompt;
+  return fs.readFile(specPath, 'utf8');
+}
+
+async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> {
+  let rawConfig: Record<string, unknown> = {};
+  try {
+    rawConfig = (await readProjectConfig(cwd)) as Record<string, unknown>;
+  } catch {
+    rawConfig = {};
+  }
+
+  const guard = parseGuardConfig(rawConfig);
+  const agent =
+    typeof rawConfig.agent === 'object' && rawConfig.agent !== null
+      ? (rawConfig.agent as Record<string, unknown>)
+      : {};
+  const model =
+    typeof agent.model === 'string' && agent.model.trim().length > 0
+      ? agent.model
+      : DEFAULT_AGENT_MODEL;
+  const apiKeyEnv =
+    typeof agent.apiKeyEnv === 'string' && agent.apiKeyEnv.trim().length > 0
+      ? agent.apiKeyEnv
+      : undefined;
+  const maxTokens =
+    typeof agent.maxTokens === 'number' &&
+    Number.isInteger(agent.maxTokens) &&
+    agent.maxTokens > 0
+      ? agent.maxTokens
+      : undefined;
+
+  return { model, apiKeyEnv, maxTokens, guard };
+}
+
+async function loadVerificationConfigForAgent(
+  cwd: string,
+  options: ExecuteOptions,
+): Promise<VerificationConfig> {
+  try {
+    return await loadVerificationConfig(cwd, options.fullMutation, {
+      formal: options.formal,
+      noFormal: options.noFormal,
+      formalBackend: options.formalBackend,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('dare.config.json not found')) {
+      return parseVerificationConfig({});
+    }
+    throw err;
+  }
+}
+
+async function runAgentCandidates(args: {
+  readonly cwd: string;
+  readonly task: DagTask;
+  readonly spec: string;
+  readonly steering: ReadonlyArray<GuardedArtifact>;
+  readonly driver: AgentDriver;
+  readonly budget: BudgetTracker;
+  readonly n: number;
+}): Promise<AgentCandidate[]> {
+  const controller = new AbortController();
+  if (args.budget.exhausted()) controller.abort();
+
+  const runs = Array.from({ length: args.n }, async (_unused, idx) => {
+    const id = `cand-${idx + 1}`;
+    const worktree = path.resolve(
+      args.cwd,
+      '.dare',
+      'agent-worktrees',
+      args.task.id,
+      id,
+    );
+    await fs.ensureDir(worktree);
+
+    let run: AgentRunResult;
+    try {
+      run = await args.driver.run({
+        taskId: args.task.id,
+        spec: args.spec,
+        steering: args.steering,
+        worktree,
+        budgetRemaining: args.budget.remaining(),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      run = {
+        status: 'failed',
+        worktree,
+        summary: `driver threw: ${err instanceof Error ? err.message : String(err)}`,
+        usage: ZERO_USAGE,
+        failureSignature: err instanceof Error ? err.name : 'DriverError',
+      };
+    }
+
+    args.budget.add(run.usage);
+    if (args.budget.exhausted() && !controller.signal.aborted) {
+      controller.abort();
+    }
+
+    return {
+      id,
+      run,
+      verification: verificationFromRun(args.task.id, run),
+    };
+  });
+
+  return Promise.all(runs);
+}
+
 // ─── Handlers ────────────────────────────────────────────────────────────────
+
+async function handleAgent(
+  dag: Dag,
+  options: ExecuteOptions,
+  stateFile: string,
+  canvasPath: string,
+  graph: KnowledgeGraph | undefined,
+  cwd: string,
+): Promise<void> {
+  if (
+    options.complete ||
+    options.fail ||
+    options.reset ||
+    options.next ||
+    options.watch ||
+    options.status
+  ) {
+    console.error(
+      chalk.red(
+        'Error: --agent cannot be combined with --status/--next/--watch/--complete/--fail/--reset.',
+      ),
+    );
+    process.exit(1);
+    return;
+  }
+
+  const requireApproval = parseRequireApprovalMode(options.requireApproval);
+  if (!requireApproval) {
+    console.error(
+      chalk.red(
+        `Error: --require-approval must be 'rank' or 'none' (got '${options.requireApproval}')`,
+      ),
+    );
+    process.exit(1);
+    return;
+  }
+
+  if (requireApproval === 'rank' && !isInteractiveRuntime()) {
+    console.error(
+      chalk.red(
+        "Error: --require-approval rank needs an interactive TTY. Use '--require-approval none' in CI/non-interactive environments.",
+      ),
+    );
+    process.exit(1);
+    return;
+  }
+
+  const onFail = parseOnFailMode(options.onFail);
+  if (!onFail) {
+    console.error(
+      chalk.red(
+        `Error: --on-fail must be 'replan', 'escalate' or 'stop' (got '${options.onFail}')`,
+      ),
+    );
+    process.exit(1);
+    return;
+  }
+
+  if (options.policy) {
+    const policyErr = validatePolicy(options.policy);
+    if (policyErr) {
+      console.error(chalk.red(policyErr));
+      process.exit(1);
+      return;
+    }
+  }
+
+  if (options.formalBackend) {
+    const formalErr = validateFormalBackend(options.formalBackend);
+    if (formalErr) {
+      console.error(chalk.red(formalErr));
+      process.exit(1);
+      return;
+    }
+  }
+
+  let verificationConfig = await loadVerificationConfigForAgent(cwd, options);
+  if (options.policy) {
+    verificationConfig = applyPolicyOverride(verificationConfig, options.policy);
+  }
+
+  const bestOfFlag = parsePositiveInt(options.bestOf);
+  if (options.bestOf !== undefined && bestOfFlag === undefined) {
+    console.error(
+      chalk.red(`Error: --best-of must be between 1 and ${verificationConfig.bestOfN.max} (got ${options.bestOf})`),
+    );
+    process.exit(1);
+    return;
+  }
+  const bestOfN = resolveBestOfCount(bestOfFlag, verificationConfig);
+  const bestOfErr = validateBestOf(bestOfN, verificationConfig.bestOfN.max);
+  if (bestOfErr) {
+    console.error(chalk.red(bestOfErr));
+    process.exit(1);
+    return;
+  }
+
+  const budgetTokens = options.budgetTokens
+    ? parsePositiveInt(options.budgetTokens)
+    : verificationConfig.bestOfN.budgetTokens;
+  if (options.budgetTokens !== undefined && budgetTokens === undefined) {
+    console.error(
+      chalk.red(`Error: --budget-tokens must be a positive integer (got ${options.budgetTokens})`),
+    );
+    process.exit(1);
+    return;
+  }
+
+  const runtimeConfig = await loadAgentRuntimeConfig(cwd);
+  const budget = new BudgetTracker(budgetTokens ?? null);
+  while (true) {
+    const newlySkipped = applyCascadingSkip(dag);
+    if (newlySkipped.length > 0) {
+      console.log(chalk.gray(`↷ Auto-skipped ${newlySkipped.length} blocked task(s).`));
+    }
+
+    const ready = nextExecutableTasks(dag, true);
+    if (ready.length === 0) break;
+
+    const rank = computeRanks(dag.tasks).get(ready[0].id) ?? 0;
+    const rankGate = await gateRank(rank, ready, requireApproval);
+    if (rankGate === 'stop') {
+      console.log(
+        chalk.yellow(
+          `⏸ Rank ${rank} paused by approval policy. State preserved as PENDING/RUNNING.`,
+        ),
+      );
+      await persist(dag, stateFile, canvasPath);
+      return;
+    }
+
+    for (const task of ready) {
+      if (budget.exhausted()) {
+        console.error(chalk.red('❌ Budget exhausted before starting next task. Escalating.'));
+        await persist(dag, stateFile, canvasPath);
+        process.exit(1);
+        return;
+      }
+
+      markRunning(dag, task.id);
+      await persist(dag, stateFile, canvasPath);
+
+      const guarded = await preflightGuardImpl(task, runtimeConfig.guard);
+      if (guarded.verdict === 'FAIL') {
+        markFailed(dag, task.id, {
+          error: guarded.reason ?? 'guard preflight failed',
+          graph,
+        });
+        await persist(dag, stateFile, canvasPath);
+        process.exit(GUARD_FAIL_EXIT_CODE);
+        return;
+      }
+
+      let driver: AgentDriver;
+      try {
+        driver = await resolveDriver(options, runtimeConfig);
+      } catch (err) {
+        if (err instanceof AgentSdkMissingError) {
+          console.error(chalk.red(err.message));
+          await persist(dag, stateFile, canvasPath);
+          process.exit(1);
+          return;
+        }
+        throw err;
+      }
+
+      const spec = await loadTaskSpec(cwd, task);
+      const candidates = await runAgentCandidates({
+        cwd,
+        task,
+        spec,
+        steering: guarded.artifacts,
+        driver,
+        budget,
+        n: bestOfN,
+      });
+
+      const winner = selectParetoCandidate(candidates);
+      const totals = usageTotals(candidates);
+      const failedAspect = winner.verification.aspects.find((a) => a.verdict === 'FAIL')
+        ?.aspect as Aspect | undefined;
+      const failureBody = failureReasonFromVerification(winner.verification);
+      const sig = winner.verification.passed
+        ? undefined
+        : winner.run.failureSignature ??
+          failureSignature({
+            failedAspect: failedAspect ?? 'test',
+            stderr: failureBody,
+          });
+
+      const current: AttemptRecord = await appendAttempt(cwd, task.id, {
+        at: new Date().toISOString(),
+        passed: winner.verification.passed,
+        failureSignature: sig,
+        failedAspect: winner.verification.passed ? undefined : failedAspect,
+      });
+      const history = await getAttempts(cwd, task.id);
+      const verdict = decideNextAction({
+        result: winner.verification,
+        current,
+        history,
+        loop: verificationConfig.loop,
+      });
+      const action = resolveAgentAction(
+        verdict.action as AgentExecutionAction,
+        onFail,
+        budget.exhausted(),
+      );
+
+      if (action === 'DONE') {
+        markDone(dag, task.id, {
+          output: winner.run.summary,
+          tokens: totals.inputTokens + totals.outputTokens,
+          durationMs: winner.verification.durationMs,
+          graph,
+        });
+        if (graph) {
+          try {
+            recordCostTelemetry(graph, task.id, totals, candidates.length);
+          } catch (err) {
+            execLog.warn(
+              { err: err instanceof Error ? err.message : String(err), taskId: task.id },
+              'cost telemetry write failed (best-effort)',
+            );
+          }
+        }
+        await persist(dag, stateFile, canvasPath);
+        continue;
+      }
+
+      markFailed(dag, task.id, {
+        error: `${action}: ${verdict.reason}`,
+        durationMs: winner.verification.durationMs,
+        graph,
+      });
+      if (graph) {
+        try {
+          recordCostTelemetry(graph, task.id, totals, candidates.length);
+        } catch (err) {
+          execLog.warn(
+            { err: err instanceof Error ? err.message : String(err), taskId: task.id },
+            'cost telemetry write failed (best-effort)',
+          );
+        }
+      }
+      await persist(dag, stateFile, canvasPath);
+      console.error(chalk.red(`❌ ${task.id} ${action} — ${verdict.reason}`));
+      process.exit(1);
+      return;
+    }
+  }
+
+  await persist(dag, stateFile, canvasPath);
+  console.log(chalk.green('✅ Autonomous agent loop completed all executable tasks.'));
+}
 
 async function handleNext(
   dag: Dag,

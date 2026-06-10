@@ -1,50 +1,96 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-08T04:04:53.527Z",
+  "updatedAt": "2026-06-10T17:15:19.583Z",
   "tasks": {
-    "task-501": {
+    "task-601": {
       "status": "DONE",
-      "duration": 84915
+      "output": "Criado packages/cli/src/agent/driver.ts com TokenUsage, AgentRunInput, AgentRunResult, AgentDriver (jsdoc pre/post). Teste: src/agent/__tests__/driver.types.test.ts. Gates: tsc, eslint, vitest OK.",
+      "duration": 71442
     },
-    "task-502": {
+    "task-602": {
       "status": "DONE",
-      "duration": 82157
+      "output": "mock.ts + noop.ts em packages/cli/src/agent/drivers/. Fixtures em __fixtures__/patches/. Testes mock-driver.test.ts (patch, determinismo, usage zero, abort, noop). Gates OK.",
+      "duration": 60569
     },
-    "task-503": {
+    "task-603": {
       "status": "DONE",
-      "duration": 134109
+      "output": "BudgetTracker em packages/cli/src/agent/budget.ts. Soma todos candidatos best-of-N (A-4). Testes budget.test.ts. Gates OK.",
+      "duration": 58071
     },
-    "task-504": {
+    "task-605": {
       "status": "DONE",
-      "duration": 84494
+      "output": "createClaudeDriver + AgentSdkMissingError em packages/cli/src/agent/drivers/claude.ts. Lazy import @anthropic-ai/sdk. optionalDependencies. Testes claude-driver.test.ts. Gates OK.",
+      "duration": 59294
     },
-    "task-505": {
+    "task-604": {
       "status": "DONE",
-      "duration": 77059
+      "output": "no-llm-in-core.test.ts varre src/ exceto claude.ts. IDE parity atualizado com dare-guard. Gates OK.",
+      "duration": 57693
     },
-    "task-506": {
+    "task-606": {
       "status": "DONE",
-      "duration": 75755
+      "output": "execute --agent em execute.ts: flags, resolveDriver, loop best-of-N, budget A-4, decideNextAction reutilizado, preflightGuard STUB. Testes execute-agent.test.ts (5). Gates OK.",
+      "duration": 59135
     },
-    "task-507": {
+    "task-607": {
       "status": "DONE",
-      "duration": 69820
+      "output": "agent/telemetry.ts recordCostTelemetry integrado no loop --agent. Testes cost-telemetry.test.ts (3). Gates OK.",
+      "duration": 86412
     },
-    "task-508": {
+    "task-608": {
       "status": "DONE",
-      "duration": 64946
+      "output": "gateRank rank|none no execute --agent. Testes require-approval.test.ts (4). Gates OK.",
+      "duration": 87425
     },
-    "task-509": {
+    "task-610": {
       "status": "DONE",
-      "duration": 70717
+      "output": "Criado packages/cli/src/guard/types.ts com GuardVerdict, ArtifactOrigin, TrustChannel, GuardedArtifact, GuardFinding, GuardResult. Teste: src/guard/__tests__/guard-types.test.ts. Gates: tsc, eslint, vitest OK.",
+      "duration": 57563
     },
-    "task-510": {
+    "task-611": {
       "status": "DONE",
-      "duration": 77737
+      "output": "auditUnicode em packages/cli/src/guard/unicode.ts (strip/block, invisíveis + homoglyphs). Testes unicode.test.ts (8 casos). Gates OK.",
+      "duration": 58992
     },
-    "task-511": {
+    "task-612": {
       "status": "DONE",
-      "duration": 76687
+      "output": "scanHeuristics em packages/cli/src/guard/scan.ts + rules/scan-rules.json. Achados isolados WARN. Testes scan.test.ts (7). Gates OK.",
+      "duration": 58614
+    },
+    "task-613": {
+      "status": "DONE",
+      "output": "commands/guard.ts: dare guard path|--staged|--all, unicode+scan, exit 6 em FAIL. Registrado em bin/dare.ts. Testes guard-command.test.ts. Gates OK.",
+      "duration": 56844
+    },
+    "task-614": {
+      "status": "DONE",
+      "output": "provenance.ts: computeDigest, signArtifact, verifyArtifact (Ed25519 minisign-compat), classify. Testes provenance.test.ts (6). Gates OK.",
+      "duration": 58488
+    },
+    "task-615": {
+      "status": "DONE",
+      "output": "guard/boundary.ts: enforceBoundary + BoundaryViolationError. Testes boundary.test.ts (5). Gates OK.",
+      "duration": 57585
+    },
+    "task-616": {
+      "status": "DONE",
+      "output": "guard/config.ts com zod schema (enabled default false). seedGuardDefaultsIfAbsent. project-generator inclui guard block. Testes guard-config.test.ts. Gates OK.",
+      "duration": 56895
+    },
+    "task-617": {
+      "status": "DONE",
+      "output": "guard/pipeline.ts + --sign + preflight real no execute --agent. Testes guard-integration.test.ts (5). Gates OK.",
+      "duration": 87712
+    },
+    "task-620": {
+      "status": "DONE",
+      "output": "secure-executor-regression.test.ts com 5 invariantes N-1. vitest 5/5 OK. pnpm audit --prod --audit-level=high: 0 HIGH.",
+      "duration": 89211
+    },
+    "task-621": {
+      "status": "DONE",
+      "output": "CHANGELOG [3.9.0]+[3.10.0], README/cli-reference/configuration atualizados, bump 3.10.0, ROADMAP shipped. ide-command-parity + verify-docs-coverage OK.",
+      "duration": 88785
     }
   }
 }
