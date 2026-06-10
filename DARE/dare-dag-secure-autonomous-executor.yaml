@@ -1,0 +1,245 @@
+title: "Secure Autonomous Executor — Development Tasks"
+version: "3.9.0"
+generated: "2026-06-10T00:00:00Z"
+
+# Feature: secure-autonomous-executor
+# Branch:  feat/secure-autonomous-executor
+# Design:  DARE/DESIGN-Feature-secure-autonomous-executor.md
+# Blueprint: DARE/BLUEPRINT-Feature-secure-autonomous-executor.md
+# RFC:     docs/rfcs/RFC-001-secure-autonomous-executor.md
+#
+# Regra de ouro: motor de decisão 100% determinístico (DAG, gates, decideNextAction, guard).
+# LLM confinado ao AgentDriver (D-002). Guard LLM-free. Detalhe executável por task em DARE/EXECUTION/.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: AgentDriver foundation (v3.9.0) ─────────────────────────────
+  - id: task-601
+    title: "agent/driver.ts — interface AgentDriver + tipos"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-601-agent-driver-interface.md
+    subtask_prompt: |
+      Criar packages/cli/src/agent/driver.ts (BLUEPRINT §3.1). Exportar interfaces:
+      AgentDriver { id; requiresNetwork; run(input: AgentRunInput): Promise<AgentRunResult> },
+      AgentRunInput { taskId; spec; steering: GuardedArtifact[]; worktree; budgetRemaining; signal: AbortSignal },
+      AgentRunResult { status: 'implemented'|'failed'|'aborted'; worktree; summary; usage: TokenUsage; failureSignature? },
+      TokenUsage { inputTokens; outputTokens; costUsd; model }.
+      Pré-condição (doc): spec e steering[] já passaram pelo guard (status != FAIL).
+      Sem dependência de runtime; só tipos + jsdoc. Gates: tsc --noEmit; eslint.
+      Leia: DARE/EXECUTION/task-601-agent-driver-interface.md.
+
+  - id: task-602
+    title: "drivers mock.ts + noop.ts (determinísticos)"
+    depends_on: [task-601]
+    complexity: LOW
+    spec_file: EXECUTION/task-602-mock-noop-drivers.md
+    subtask_prompt: |
+      Criar packages/cli/src/agent/drivers/mock.ts e noop.ts (BLUEPRINT §3.2).
+      mockDriver: requiresNetwork=false; aplica patch pré-gravado de fixture no worktree; usage zerado;
+      status 'implemented'. noopDriver: status 'aborted', sem efeito.
+      Testes: mock-driver.test.ts (aplica patch, usage=0, determinístico). Gates: tsc; vitest run mock-driver.
+      Leia: DARE/EXECUTION/task-602-mock-noop-drivers.md.
+
+  - id: task-603
+    title: "agent/budget.ts — BudgetTracker"
+    depends_on: [task-601]
+    complexity: LOW
+    spec_file: EXECUTION/task-603-budget-tracker.md
+    subtask_prompt: |
+      Criar packages/cli/src/agent/budget.ts (BLUEPRINT §3.4). class BudgetTracker:
+      constructor(totalTokens: number|null); add(usage: TokenUsage); remaining(): number (Infinity se null);
+      exhausted(): boolean. CRÍTICO (A-4): add() é chamado para TODOS os candidatos best-of-N, não só o vencedor.
+      Testes: budget.test.ts (soma N candidatos; exhausted ao zerar; ilimitado quando null).
+      Gates: tsc; vitest run budget. Leia: DARE/EXECUTION/task-603-budget-tracker.md.
+
+  # ─── Fase 2: Executor autônomo --agent (v3.9.0) ──────────────────────────
+  - id: task-605
+    title: "drivers/claude.ts — lazy import + optionalDependency"
+    depends_on: [task-601]
+    complexity: MED
+    spec_file: EXECUTION/task-605-claude-driver.md
+    subtask_prompt: |
+      Criar packages/cli/src/agent/drivers/claude.ts (BLUEPRINT §3.3). ÚNICO arquivo do src/ autorizado
+      a import() o SDK do LLM. createClaudeDriver(opts): Promise<AgentDriver> — faz `await import('@anthropic-ai/sdk')`
+      lazy; se ausente, lança AgentSdkMissingError (code 'AGENT_SDK_MISSING', message acionável com 'npm i' e '--dry-run').
+      Adicionar @anthropic-ai/sdk em optionalDependencies do packages/cli/package.json (NUNCA em dependencies).
+      Token/credencial nunca logado (RS-07). Gates: tsc; eslint. Leia: DARE/EXECUTION/task-605-claude-driver.md.
+
+  - id: task-604
+    title: "no-llm-in-core.test.ts — gate de arquitetura"
+    depends_on: [task-605]
+    complexity: LOW
+    spec_file: EXECUTION/task-604-no-llm-in-core-test.md
+    subtask_prompt: |
+      Criar packages/cli/src/agent/__tests__/no-llm-in-core.test.ts (O-02/D-002).
+      Faz grep nos arquivos .ts de src/ (exceto agent/drivers/claude.ts) e FALHA se encontrar
+      import/require de '@anthropic-ai' ou de qualquer SDK de LLM. Garante o core determinístico.
+      Gates: vitest run no-llm-in-core. Leia: DARE/EXECUTION/task-604-no-llm-in-core-test.md.
+
+  - id: task-606
+    title: "execute --agent — loop, flags, resolveDriver"
+    depends_on: [task-602, task-603, task-605]
+    complexity: HIGH
+    spec_file: EXECUTION/task-606-execute-agent-loop.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/execute.ts (BLUEPRINT §3.5). Adicionar flags commander:
+      --agent, --budget-tokens <n>, --require-approval <rank|none> (default rank), --on-fail <replan|escalate|stop>,
+      --dry-run (usa mockDriver), reusar --best-of. resolveDriver(args,config): mock se --dry-run, claude senão
+      (AgentSdkMissingError se SDK ausente). Loop por task: pré-flight de guard (STUB até T-617), driver.run × N,
+      budget.add para TODOS os candidatos (A-4), selectPareto, REUSAR decideNextAction de verification/decay/policy.ts
+      (NÃO reimplementar). Edge cases da BLUEPRINT §3.5. Gates: tsc; vitest run execute; lint.
+      Leia: DARE/EXECUTION/task-606-execute-agent-loop.md.
+
+  - id: task-607
+    title: "telemetria de custo → GraphRAG"
+    depends_on: [task-606]
+    complexity: MED
+    spec_file: EXECUTION/task-607-cost-telemetry.md
+    subtask_prompt: |
+      Gravar custo por task no GraphRAG (BLUEPRINT §3.6, A-5). Metadados no nó 'task' existente via addNode:
+      { inputTokens, outputTokens, costUsd, model, attempts }. NÃO criar backend novo. Se precisar NodeType/EdgeType,
+      adicionar em graphrag/types.ts mantendo compat com dare graph stats. Consultável por dare graph.
+      Testes: cost-telemetry.test.ts. Gates: tsc; vitest run cost-telemetry. Leia: DARE/EXECUTION/task-607-cost-telemetry.md.
+
+  - id: task-608
+    title: "--require-approval rank — gating por fronteira de rank"
+    depends_on: [task-606]
+    complexity: MED
+    spec_file: EXECUTION/task-608-require-approval.md
+    subtask_prompt: |
+      Implementar pausa por fronteira de rank do DAG em execute --agent (O-08). Default rank: pausa e pede
+      aprovação humana a cada novo rank; none: totalmente autônomo. Ao recusar: exit 0, estado PENDING preservado.
+      Testes: require-approval.test.ts (rank pausa; none não). Gates: tsc; vitest run require-approval.
+      Leia: DARE/EXECUTION/task-608-require-approval.md.
+
+  # ─── Fase 3: dare guard core (v3.10.0) ───────────────────────────────────
+  - id: task-610
+    title: "guard/types.ts"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-610-guard-types.md
+    subtask_prompt: |
+      Criar packages/cli/src/guard/types.ts (BLUEPRINT §4.1). Tipos: GuardVerdict 'PASS'|'WARN'|'FAIL';
+      ArtifactOrigin 'human'|'agent'|'external'; TrustChannel 'control'|'data'; GuardedArtifact { path; origin;
+      channel; trust: 'signed'|'unsigned'; taskId?; digest }; GuardFinding { layer; severity; rule; evidence };
+      GuardResult { artifact; verdict; findings; sanitized? }. Gates: tsc; eslint. Leia: DARE/EXECUTION/task-610-guard-types.md.
+
+  - id: task-611
+    title: "guard/unicode.ts — audit strip/block"
+    depends_on: [task-610]
+    complexity: MED
+    spec_file: EXECUTION/task-611-guard-unicode.md
+    subtask_prompt: |
+      Criar packages/cli/src/guard/unicode.ts (BLUEPRINT §4.2, RF-09). auditUnicode(content, mode:'strip'|'block'):
+      detecta codepoints U+200B-200F, U+202A-202E, U+2066-2069, U+FE00-FE0F, U+E0000-E007F + homóglifos
+      (tabela Latin/Cyrillic/Greek confusables). mode 'block': achado → FAIL (sanitized==content). mode 'strip':
+      remove codepoints, retorna sanitized, severidade WARN. Testes: unicode.test.ts com fixtures (2510.05025).
+      Gates: tsc; vitest run unicode. Leia: DARE/EXECUTION/task-611-guard-unicode.md.
+
+  - id: task-612
+    title: "guard/scan.ts + rules/scan-rules.json"
+    depends_on: [task-610]
+    complexity: MED
+    spec_file: EXECUTION/task-612-guard-scan.md
+    subtask_prompt: |
+      Criar packages/cli/src/guard/scan.ts + rules/scan-rules.json (BLUEPRINT §4.3, RF-10). scanHeuristics(content):
+      GuardFinding[]. Regras: instr-override (/ignore (all )?previous (instructions|rules)/i), shell-exec
+      (curl|wget|bash -c|powershell -enc|Invoke-Expression), exfiltration (.env, api_key+post/fetch),
+      hidden-directive (comentário HTML/md com imperativo). Achado isolado => WARN (NUNCA FAIL sozinho — best-effort).
+      Testes: scan.test.ts. Gates: tsc; vitest run scan. Leia: DARE/EXECUTION/task-612-guard-scan.md.
+
+  - id: task-613
+    title: "commands/guard.ts — comando + exit 6"
+    depends_on: [task-611, task-612]
+    complexity: MED
+    spec_file: EXECUTION/task-613-guard-command.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/guard.ts (BLUEPRINT §4.6). dare guard <path>|--staged|--all
+      [--strict] [--format json] [--sign] [--unicode strip|block]. Agrega unicode+scan (provenance entra em T-617).
+      verdict = pior severidade. FAIL => process.exit(6) (estende convenção 0/1/3/4/5 de execute-verification.ts);
+      WARN => exit 0 (a menos de --strict). Registrar comando no CLI. Testes: guard-command.test.ts.
+      Gates: tsc; vitest run guard; lint. Leia: DARE/EXECUTION/task-613-guard-command.md.
+
+  # ─── Fase 4: Proveniência + boundaries + integração (v3.10.0) ────────────
+  - id: task-614
+    title: "guard/provenance.ts — digest + Ed25519 (minisign-compat)"
+    depends_on: [task-610]
+    complexity: HIGH
+    spec_file: EXECUTION/task-614-guard-provenance.md
+    subtask_prompt: |
+      Criar packages/cli/src/guard/provenance.ts (BLUEPRINT §4.4, D-003). Usar node:crypto NATIVO (sem dep externa):
+      computeDigest(buf): sha256 hex; signArtifact(buf, privKey): assinatura Ed25519 em formato compatível minisign;
+      verifyArtifact(buf, sig, pubKey): boolean; classify(path, cfg): {origin, channel, trust}.
+      Artefato em trustedPaths com assinatura válida => signed/control. Assinatura inválida ou ausente quando
+      esperada => FAIL (tamper-evidence). CRÍTICO: assinado AINDA passa por unicode+scan (assinatura != conteúdo seguro).
+      Testes: provenance.test.ts (mutar 1 byte => verify false => FAIL). Gates: tsc; vitest run provenance.
+      Leia: DARE/EXECUTION/task-614-guard-provenance.md.
+
+  - id: task-615
+    title: "guard/boundary.ts — control/data enforcement"
+    depends_on: [task-610, task-614]
+    complexity: MED
+    spec_file: EXECUTION/task-615-guard-boundary.md
+    subtask_prompt: |
+      Criar packages/cli/src/guard/boundary.ts (BLUEPRINT §4.5, RF-12/RS-02/03). enforceBoundary(a: GuardedArtifact):
+      throws BoundaryViolationError se channel==='data' tenta virar hook executável ou reordenar gates.
+      Hooks só executam de channel==='control' + trust==='signed'. Testes: boundary.test.ts (data-channel => shell negado).
+      Gates: tsc; vitest run boundary. Leia: DARE/EXECUTION/task-615-guard-boundary.md.
+
+  - id: task-616
+    title: "config — bloco guard (zod)"
+    depends_on: [task-610]
+    complexity: LOW
+    spec_file: EXECUTION/task-616-guard-config.md
+    subtask_prompt: |
+      Adicionar bloco 'guard' ao schema de dare.config.json (BLUEPRINT §4.7). Estender verification/config.ts
+      (ou loader equivalente) com zod: guard { enabled (default false); onExecute (default true); unicode 'strip'|'block';
+      trustedPaths: string[]; signing { enabled; publicKey } }. enabled:false => guard não roda (RNF-02).
+      Atualizar template dare.config.json. Testes: config.test.ts. Gates: tsc; vitest run config.
+      Leia: DARE/EXECUTION/task-616-guard-config.md.
+
+  - id: task-617
+    title: "integração: guard --sign + pré-flight no execute --agent"
+    depends_on: [task-606, task-613, task-614, task-615, task-616]
+    complexity: MED
+    spec_file: EXECUTION/task-617-guard-integration.md
+    subtask_prompt: |
+      Integrar guard ao executor (BLUEPRINT §3.5/§4). Implementar guard --sign (assina path em trustedPaths,
+      grava .minisig ao lado). Substituir o STUB de pré-flight em execute --agent (T-606) pela chamada real:
+      por artefato consumido (spec + steering), rodar pipeline completo (unicode+scan+provenance+boundary);
+      FAIL bloqueia a task (exit 6). Artefato assinado AINDA passa por unicode+scan. Respeitar guard.onExecute.
+      Testes: guard-integration.test.ts (artefato FAIL bloqueia task; assinado-envenenado é pego). Gates: tsc; vitest; lint.
+      Leia: DARE/EXECUTION/task-617-guard-integration.md.
+
+  # ─── Fase 5: Auditoria N-1 + release (v3.10.0) ───────────────────────────
+  - id: task-620
+    title: "auditoria N-1 — secure-executor-regression.test.ts"
+    depends_on: [task-604, task-607, task-608, task-617]
+    complexity: HIGH
+    spec_file: EXECUTION/task-620-regression-audit.md
+    subtask_prompt: |
+      Criar suíte de regressão de segurança packages/cli/src/__tests__/secure-executor-regression.test.ts.
+      Prova: (1) budget nunca estourado (soma best-of-N respeitada); (2) artefato channel:'data' nunca executa shell;
+      (3) toda adulteração de artefato assinado detectada; (4) zero import de LLM no caminho determinístico (reusa T-604).
+      Rodar pnpm audit --prod --audit-level=high (incluindo o optionalDependency) = 0 HIGH.
+      Gates: vitest run secure-executor-regression; pnpm audit --prod. Leia: DARE/EXECUTION/task-620-regression-audit.md.
+
+  - id: task-621
+    title: "CHANGELOG + docs/skills + bump"
+    depends_on: [task-620]
+    complexity: LOW
+    spec_file: EXECUTION/task-621-changelog-docs.md
+    subtask_prompt: |
+      CHANGELOG.md: entradas [3.9.0] (executor autônomo, --agent, telemetria de custo) e [3.10.0] (dare guard,
+      exit 6, assinatura minisign). Documentar flags no README/packages/cli/README e nas skills (paridade 3 IDEs).
+      Bump de versão conforme a fase entregue. Gates: verify-docs-coverage; build. Leia: DARE/EXECUTION/task-621-changelog-docs.md.

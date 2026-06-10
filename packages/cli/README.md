@@ -166,6 +166,8 @@ Pick **one** of the two paths per stack:
 
 > **v3.8.1–3.8.2 (manutenção):** `dare update` passa a entregar os skills/comandos/config das v3.4→v3.8 a projetos existentes (backfill do `UPDATE-MANIFEST`, 3.8.1). O CI ganha um **gate de cobertura de docs** + **redeploy automático da documentação** a cada release (3.8.2).
 
+> **v3.10.0:** **Agentic-chain Security Gate** — `dare guard` (unicode-audit + scan heurístico + proveniência Ed25519/minisign-compat + trust boundaries control/data), exit code **6** em FAIL, integração como pré-flight do `dare execute --agent`. Bloco `guard` em `dare.config.json` (opt-in, `enabled:false` por default).
+> **v3.9.0:** **Secure Autonomous Executor** — `dare execute --agent` (driver plugável, SDK como `optionalDependency` lazy), `--budget-tokens`, `--require-approval rank|none`, `--on-fail replan|escalate|stop`, `--dry-run`, telemetria de custo no GraphRAG, gate `no-llm-in-core`.
 > **v3.8.0:** **Formal Verification Gate** — opt-in strict aspect `verification.formal` (enabled/backend/modules/maxRepairIterations/proofTimeoutSeconds/antiBypass) plus flags `--formal` / `--no-formal` / `--formal-backend <dafny|verus|lean>`. Proves marked critical modules against external Dafny/Verus/Lean toolchain (not an npm dep); exit 5 when toolchain missing on a marked module; anti-bypass rejects `assume(false)`/`ensures true`/leaks even on solver exit 0; telemetry edge `proven_by` → `formal-gate`.
 
 > **v3.7.0:** **Brownfield Discovery** — deterministic auto-discovery of codebase patterns/conventions (`dare patterns`, read-only) fed into the dual graph + steering, plus lightweight planning personas (Analyst/PM/Architect) at planning time only (no runtime swarm). Extends `dare reverse`/`dna`.
@@ -425,6 +427,23 @@ dare execute --next                                # → next rank
 The skills shipped by `dare init` (`.cursor/rules/skill-dag-runner.mdc`,
 `.agents/skills/dare-dag-runner/SKILL.md`, `.claude/commands/dare-dag-run.md`)
 guide the IDE agent through this loop.
+
+#### Autonomous mode (`--agent`)
+
+```bash
+dare execute --agent --dry-run --dag DARE/dare-dag.yaml --require-approval none
+dare execute --agent --budget-tokens 50000 --best-of 3
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--agent` | off | Driver executa cada task (mock/claude) |
+| `--budget-tokens <n>` | unlimited | Teto de tokens (soma best-of-N) |
+| `--require-approval` | `rank` | `rank` pausa entre ranks; `none` autônomo |
+| `--on-fail` | `escalate` | `replan` \| `escalate` \| `stop` |
+| `--dry-run` | off | Usa `mockDriver` sem rede |
+
+Exit codes: `6` quando o guard bloqueia no pré-flight (`guard.enabled`).
 
 #### Stack-specific skills
 

@@ -9,6 +9,30 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.9.0] — Unreleased
+
+Release **Secure Autonomous Executor** — modo autônomo no orquestrador (motor determinístico, LLM
+confinado ao driver) **+ gate de segurança** da cadeia agêntica. Entregue como um único minor
+(consolida o que o planejamento chamou de executor 3.9 + guard 3.10).
+
+> Trocar `Unreleased` pela data ao publicar. Próximo release (drift-gate + semantic-search) = **3.10.0**.
+
+### ✨ Adicionado — Executor autônomo
+
+- **`dare execute --agent`** — loop autônomo por rank com `AgentDriver` plugável (`mock`/`noop`/`claude`).
+- **Flags** — `--budget-tokens`, `--require-approval rank|none`, `--on-fail replan|escalate|stop`, `--dry-run` (mockDriver).
+- **`@anthropic-ai/sdk`** como `optionalDependency` com import lazy (único ponto autorizado no `src/`).
+- **`BudgetTracker`** — soma custo de todos os candidatos best-of-N (A-4).
+- **Telemetria de custo** — metadados no nó `task` do GraphRAG (`inputTokens`, `outputTokens`, `costUsd`, `model`, `attempts`).
+- **Gate de arquitetura** — `no-llm-in-core.test.ts` impede regressão de imports de SDK no core.
+
+### ✨ Adicionado — Gate de segurança da cadeia agêntica
+
+- **`dare guard`** (comando CLI + skill `/dare-guard` nas 3 IDEs) — unicode-audit (strip/block), scan heurístico, proveniência Ed25519/minisign-compat e trust boundaries control/data.
+- **Exit code 6** — artefato com verdict `FAIL` (ou `WARN` com `--strict`).
+- **Pré-flight no `dare execute --agent`** — pipeline completo antes de cada task quando `guard.enabled` e `guard.onExecute`.
+- **`guard` em `dare.config.json`** — opt-in (`enabled:false` por default); `trustedPaths`, `unicode`, `signing`.
+
 ## [3.8.2] — 2026-06
 
 Patch de **processo/documentação**. Padroniza a regeneração da doc no release e fecha os "esquecimentos" recorrentes (banner do README, `UPDATE-MANIFEST`) com gates determinísticos.

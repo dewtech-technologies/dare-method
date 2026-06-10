@@ -38,6 +38,7 @@ const CLI_COMMANDS: Record<string, string> = {
   bench: 'dare-bench',
   steering: 'dare-steering',
   hooks: 'dare-hooks',
+  guard: 'dare-guard',
   patterns: 'dare-patterns',
   skill: 'dare-skill',
   welcome: 'dare-welcome',
