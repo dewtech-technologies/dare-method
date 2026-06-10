@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.10.0** — última feature: **Agentic-chain Security Gate** (v3.10.0) — `dare guard` com unicode-audit, scan heurístico, proveniência Ed25519 e trust boundaries; exit 6. Sobre o **Secure Autonomous Executor** (v3.9.0) — `dare execute --agent`, budget best-of-N, telemetria GraphRAG. Formal Verification Gate (v3.8.0), Reliable Verification Core (v3.3), Security Hardening (v3.4), Dual Graph (v3.5), Agent Hooks + Steering (v3.6) e Brownfield Discovery (v3.7). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.9.0** — última feature: **Secure Autonomous Executor + Agentic-chain Security Gate** — `dare execute --agent` (modo autônomo, budget best-of-N, telemetria GraphRAG, core LLM-free) e `dare guard` (unicode-audit, scan heurístico, proveniência Ed25519, trust boundaries; exit 6). Formal Verification Gate (v3.8.0), Reliable Verification Core (v3.3), Security Hardening (v3.4), Dual Graph (v3.5), Agent Hooks + Steering (v3.6) e Brownfield Discovery (v3.7). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
