@@ -5,6 +5,7 @@ import type { AttemptRecord, LoopConfig } from '../types.js';
 const loopBase: LoopConfig = {
   policy: 'decay',
   maxAttempts: 5,
+  maxDepth: 2,
   saturationWindow: 3,
   onSaturation: 'fresh-start',
 };

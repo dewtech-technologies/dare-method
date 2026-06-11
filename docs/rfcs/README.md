@@ -10,6 +10,7 @@ de ideia custa um parágrafo, não um refactor. É o insumo natural da fase
 | # | Título | Status | Target | Data |
 |---|--------|--------|--------|------|
 | [001](RFC-001-secure-autonomous-executor.md) | Secure Autonomous Executor (`dare execute --agent` + `dare guard`) | Accepted | v3.9.0 / v3.10.0 | 2026-06-10 |
+| [002](RFC-002-provider-agnostic-agent-mode.md) | Provider-Agnostic Agent Mode (BYO-LLM — Anthropic/OpenAI/Gemini/Bedrock) | Draft / Proposed | v3.12.0 / 4.0 | 2026-06-11 |
 
 ## Status possíveis
 

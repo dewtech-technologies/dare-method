@@ -1,0 +1,41 @@
+%% DARE DAG — CI/PR Integration — Development Tasks
+%% Generated: 2026-06-11T00:00:00Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_1101["task-1101\nreporters/github.ts — annotations + PR comment\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_1102["task-1102\nflags --format github / --comment / --fail-on\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_1103["task-1103\naction.yml composite + workflow template\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_1104["task-1104\ndogfood — CI do DARE usa a action\n⏳ PENDING"]
+    task_1105["task-1105\nauditoria N-1 — ci-pr-regression\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_1106["task-1106\nCHANGELOG + docs (ci-pr)\n⏳ PENDING"]
+  end
+  task_1101 --> task_1102
+  task_1102 --> task_1103
+  task_1103 --> task_1104
+  task_1102 --> task_1105
+  task_1103 --> task_1105
+  task_1105 --> task_1106
+  class task_1101 st_pending;
+  class task_1102 st_pending;
+  class task_1103 st_pending;
+  class task_1104 st_pending;
+  class task_1105 st_pending;
+  class task_1106 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

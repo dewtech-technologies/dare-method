@@ -20,6 +20,8 @@ export interface PersistedTaskState {
   tokens?: number;
   duration?: number;
   attempts?: AttemptRecord[];
+  parentId?: string;
+  dependsOn?: string[];
 }
 
 interface PersistedState {
@@ -52,15 +54,33 @@ function emptyPersistedState(): PersistedState {
  */
 export async function loadAndApplyState(dag: Dag, stateFile: string): Promise<void> {
   const data = await readPersistedState(stateFile);
+  const byId = new Map(dag.tasks.map((task) => [task.id, task]));
+
+  for (const [taskId, persisted] of Object.entries(data?.tasks ?? {})) {
+    let task = byId.get(taskId);
+    if (!task) {
+      task = materializeNestedTask(taskId, persisted, byId);
+      if (task) {
+        dag.tasks.push(task);
+        byId.set(taskId, task);
+      }
+    }
+    if (!task) continue;
+
+    task.status = persisted.status;
+    task.output = persisted.output;
+    task.error = persisted.error;
+    task.tokens = persisted.tokens;
+    task.duration = persisted.duration;
+    if (Array.isArray(persisted.dependsOn)) {
+      task.depends_on = [...persisted.dependsOn];
+    }
+    task.__parentId = persisted.parentId;
+  }
+
   for (const task of dag.tasks) {
     const persisted = data?.tasks?.[task.id];
-    if (persisted) {
-      task.status = persisted.status;
-      task.output = persisted.output;
-      task.error = persisted.error;
-      task.tokens = persisted.tokens;
-      task.duration = persisted.duration;
-    } else {
+    if (!persisted) {
       task.status = task.status ?? 'PENDING';
     }
   }
@@ -80,6 +100,8 @@ export async function saveState(dag: Dag, stateFile: string): Promise<void> {
       tokens: t.tokens,
       duration: t.duration,
       attempts: existing?.tasks?.[t.id]?.attempts,
+      dependsOn: [...t.depends_on],
+      parentId: t.__parentId,
     };
   }
   const payload: PersistedState = {
@@ -132,6 +154,29 @@ function isPersistedState(value: unknown): value is PersistedState {
     'tasks' in value &&
     typeof (value as { tasks: unknown }).tasks === 'object'
   );
+}
+
+function materializeNestedTask(
+  taskId: string,
+  persisted: PersistedTaskState,
+  byId: Map<string, DagTask>,
+): DagTask | undefined {
+  if (!persisted.parentId) return undefined;
+  const parent = byId.get(persisted.parentId);
+  return {
+    id: taskId,
+    title: taskId,
+    depends_on: Array.isArray(persisted.dependsOn) ? [...persisted.dependsOn] : [],
+    __parentId: persisted.parentId,
+    complexity: parent?.complexity ?? 'MED',
+    subtask_prompt: `Execute ${taskId} as part of ${persisted.parentId}.`,
+    spec_file: undefined,
+    status: persisted.status,
+    output: persisted.output,
+    error: persisted.error,
+    tokens: persisted.tokens,
+    duration: persisted.duration,
+  };
 }
 
 export type { DagTask };

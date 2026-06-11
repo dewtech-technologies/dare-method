@@ -26,6 +26,7 @@ export const DEFAULTS: VerificationConfig = {
   loop: {
     policy: 'decay',
     maxAttempts: 5,
+    maxDepth: 2,
     saturationWindow: 3,
     onSaturation: 'fresh-start',
   },
@@ -151,6 +152,7 @@ const verificationConfigSchema = z
           .int()
           .min(1, 'maxAttempts must be at least 1')
           .default(DEFAULTS.loop.maxAttempts),
+        maxDepth: z.number().int().min(1).default(2),
         saturationWindow: z
           .number()
           .int()

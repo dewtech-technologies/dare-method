@@ -76,6 +76,13 @@ import type { BoundaryIntent } from '../guard/boundary.js';
 import { runGuardPipeline } from '../guard/pipeline.js';
 import type { GuardedArtifact } from '../guard/types.js';
 import { loadSteeringFiles } from '../steering/loader.js';
+import {
+  CycleError,
+  MaxDepthError,
+  spliceSubDag,
+  type SubTask,
+} from '../dag-runner/sub-dag.js';
+import { buildSplitProposal } from './refine.js';
 
 const execLog = createLogger('execute');
 
@@ -246,6 +253,10 @@ interface AgentCandidate {
   readonly id: string;
   readonly run: AgentRunResult;
   readonly verification: VerificationResult;
+}
+
+interface RefineSplitResult {
+  readonly subTasks: ReadonlyArray<SubTask>;
 }
 
 const GUARD_FAIL_EXIT_CODE = 6;
@@ -549,6 +560,30 @@ async function loadTaskSpec(cwd: string, task: DagTask): Promise<string> {
   const specPath = path.resolve(cwd, task.spec_file);
   if (!(await fs.pathExists(specPath))) return task.subtask_prompt;
   return fs.readFile(specPath, 'utf8');
+}
+
+async function refineSplit(task: DagTask, cwd: string): Promise<RefineSplitResult> {
+  const proposal = await buildSplitProposal(task.id, cwd);
+  const subTasks = proposal.subtasks.map((subtask, idx) => {
+    const dependsOn =
+      idx === 0 ? [...task.depends_on] : [proposal.subtasks[idx - 1]!.id];
+    return {
+      id: subtask.id,
+      parentId: task.id,
+      dependsOn,
+      specPath: `DARE/EXECUTION/${subtask.id}.md`,
+    } satisfies SubTask;
+  });
+  return { subTasks };
+}
+
+function replaceDagState(target: Dag, source: Dag): void {
+  target.title = source.title;
+  target.version = source.version;
+  target.generated = source.generated;
+  target.limits = source.limits;
+  target.models = source.models;
+  target.tasks = source.tasks;
 }
 
 async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> {
@@ -890,8 +925,40 @@ async function handleAgent(
         continue;
       }
 
+      let terminalAction = action;
+      let terminalReason = verdict.reason;
+      if (action === 'REPLAN') {
+        try {
+          const sub = await refineSplit(task, cwd);
+          const spliced = spliceSubDag(
+            dag,
+            task.id,
+            sub.subTasks,
+            verificationConfig.loop.maxDepth ?? 2,
+          );
+          replaceDagState(dag, spliced.dag);
+          const parent = dag.tasks.find((item) => item.id === task.id);
+          if (parent) {
+            parent.status = 'PENDING';
+            parent.error = undefined;
+          }
+          await persist(dag, stateFile, canvasPath);
+          continue;
+        } catch (err) {
+          if (err instanceof MaxDepthError) {
+            terminalAction = 'ESCALATE';
+            terminalReason = 'max nesting depth';
+          } else if (err instanceof CycleError) {
+            terminalAction = 'ESCALATE';
+            terminalReason = 'replan would create a cycle';
+          } else {
+            throw err;
+          }
+        }
+      }
+
       markFailed(dag, task.id, {
-        error: `${action}: ${verdict.reason}`,
+        error: `${terminalAction}: ${terminalReason}`,
         durationMs: winner.verification.durationMs,
         graph,
       });
@@ -906,7 +973,7 @@ async function handleAgent(
         }
       }
       await persist(dag, stateFile, canvasPath);
-      console.error(chalk.red(`❌ ${task.id} ${action} — ${verdict.reason}`));
+      console.error(chalk.red(`❌ ${task.id} ${terminalAction} — ${terminalReason}`));
       process.exit(1);
       return;
     }
@@ -1322,6 +1389,11 @@ async function handleStatus(dag: Dag, canvasPath: string): Promise<void> {
   console.log(`  ⏳ PENDING  : ${counts.PENDING}`);
   console.log(`  ❌ FAILED   : ${counts.FAILED}`);
   console.log(`  ⏭️  SKIPPED  : ${counts.SKIPPED}`);
+  const nestingLines = renderNestingSummary(dag);
+  if (nestingLines.length > 0) {
+    console.log(chalk.cyan('\n  🪜 Sub-DAG nesting:'));
+    for (const line of nestingLines) console.log(`  ${line}`);
+  }
   console.log(chalk.cyan(`\n  📄 Canvas: ${canvasPath}\n`));
 }
 
@@ -1416,6 +1488,57 @@ function printTaskBriefing(
   const prompt = buildTaskPrompt(dag, task, { graphLocate });
   for (const line of prompt.split('\n')) console.log(`    ${line}`);
   console.log();
+}
+
+function renderNestingSummary(dag: Dag): string[] {
+  const byId = new Map(dag.tasks.map((task) => [task.id, task]));
+  const childrenByParent = new Map<string, DagTask[]>();
+
+  for (const task of dag.tasks) {
+    if (!task.__parentId) continue;
+    if (!childrenByParent.has(task.__parentId)) childrenByParent.set(task.__parentId, []);
+    childrenByParent.get(task.__parentId)!.push(task);
+  }
+  if (childrenByParent.size === 0) return [];
+
+  for (const children of childrenByParent.values()) {
+    children.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  const parentIds = [...childrenByParent.keys()].sort((a, b) => a.localeCompare(b));
+  const rootParents = parentIds.filter((parentId) => {
+    const parent = byId.get(parentId);
+    return !parent?.__parentId;
+  });
+  const visitedParents = new Set<string>();
+  const lines: string[] = [];
+
+  const walk = (parentId: string, depth: number, ancestry: Set<string>): void => {
+    const children = childrenByParent.get(parentId) ?? [];
+    if (children.length === 0 || ancestry.has(parentId)) return;
+
+    visitedParents.add(parentId);
+    const pad = '  '.repeat(depth);
+    for (const child of children) {
+      const status = child.status ?? 'PENDING';
+      lines.push(`${pad}- ${child.id} (${status})`);
+      const nextAncestry = new Set(ancestry);
+      nextAncestry.add(parentId);
+      walk(child.id, depth + 1, nextAncestry);
+    }
+  };
+
+  for (const parentId of rootParents) {
+    lines.push(`• ${parentId}`);
+    walk(parentId, 1, new Set());
+  }
+  for (const parentId of parentIds) {
+    if (visitedParents.has(parentId)) continue;
+    lines.push(`• ${parentId}`);
+    walk(parentId, 1, new Set());
+  }
+
+  return lines;
 }
 
 /**

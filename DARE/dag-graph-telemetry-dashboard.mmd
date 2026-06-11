@@ -1,0 +1,44 @@
+%% DARE DAG — Local Telemetry Dashboard — Development Tasks
+%% Generated: 2026-06-11T00:00:00Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_1001["task-1001\ntelemetry/aggregator.ts — aggregateTelemetry\n⏳ PENDING"]
+    task_1002["task-1002\nhttp/app.ts — Express compartilhado (refactor MCP)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_1003["task-1003\ndashboard/routes.ts — /api/telemetry + /dashboard\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_1004["task-1004\ncommands/dashboard.ts — dare dashboard + skill\n⏳ PENDING"]
+    task_1005["task-1005\ntemplates/dashboard — front vanilla\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_1006["task-1006\nauditoria N-1 — dashboard-regression\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_1007["task-1007\nCHANGELOG + docs (dashboard)\n⏳ PENDING"]
+  end
+  task_1001 --> task_1003
+  task_1002 --> task_1003
+  task_1003 --> task_1004
+  task_1003 --> task_1005
+  task_1004 --> task_1006
+  task_1005 --> task_1006
+  task_1006 --> task_1007
+  class task_1001 st_pending;
+  class task_1002 st_pending;
+  class task_1003 st_pending;
+  class task_1004 st_pending;
+  class task_1005 st_pending;
+  class task_1006 st_pending;
+  class task_1007 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

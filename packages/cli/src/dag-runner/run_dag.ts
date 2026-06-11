@@ -32,6 +32,8 @@ export interface DagTask {
   id: string;
   title: string;
   depends_on: string[];
+  /** Runtime-only link for sub-DAG nesting (persisted in `.dare/state.json`). */
+  __parentId?: string;
   complexity: Complexity;
   subtask_prompt: string;
   /** Optional path (relative to project root) to a spec file with detailed instructions. */

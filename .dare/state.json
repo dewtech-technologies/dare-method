@@ -1,56 +1,62 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-11T00:20:12.522Z",
+  "updatedAt": "2026-06-11T22:27:08.019Z",
   "tasks": {
-    "task-801": {
+    "task-901": {
       "status": "DONE",
-      "output": "vector-search.ts: cosine + cosineTopK determinístico. Testes vector-search.test.ts (4). Gates OK.",
-      "duration": 70174
+      "output": "sub-dag.ts + sub-dag.test.ts: spliceSubDag, nestingDepth, CycleError, MaxDepthError, idempotência, rollback. Gates task: tsc + vitest sub-dag OK.",
+      "duration": 87958,
+      "dependsOn": []
     },
-    "task-803": {
+    "task-902": {
       "status": "DONE",
-      "output": "embeddings.ts: loadEmbedder lazy, EmbeddingModelMissingError, @xenova/transformers optionalDep. Gates OK.",
-      "duration": 65733
+      "output": "loop.maxDepth em config.ts (default 2) + maxdepth-config.test.ts. Gates task: tsc + vitest maxdepth-config OK.",
+      "duration": 56873,
+      "dependsOn": []
     },
-    "task-808": {
+    "task-903": {
       "status": "DONE",
-      "output": "graphrag.semantic zod config + project-generator. Testes semantic-config.test.ts. Gates OK.",
-      "duration": 65340
+      "output": "REPLAN→splice em execute.ts: decideNextAction, refine split, spliceSubDag, escalate MaxDepth/Cycle. Testes replan-splice 5/5.",
+      "duration": 64261,
+      "dependsOn": [
+        "task-901",
+        "task-902"
+      ]
     },
-    "task-802": {
+    "task-904": {
       "status": "DONE",
-      "output": "hybrid.ts: hybridSearch RRF keyword+vector+graph, fallback sem embedder. Testes hybrid.test.ts. Gates OK.",
-      "duration": 63341
+      "output": "refine --split --apply injeta sub-DAG via spliceSubDag + persist. Testes refine-apply 4/4.",
+      "duration": 68051,
+      "dependsOn": [
+        "task-901"
+      ]
     },
-    "task-804": {
+    "task-905": {
       "status": "DONE",
-      "output": "no-heavy-dep-in-core.test.ts bloqueia imports pesados fora embeddings.ts. Gates OK.",
-      "duration": 61068
+      "output": "Nesting persistido em state.json com round-trip; dag viz agrupa sub-tasks; --status mostra nesting. Testes persist-viz 3/3.",
+      "duration": 78764,
+      "dependsOn": [
+        "task-901",
+        "task-903"
+      ]
     },
-    "task-805": {
+    "task-906": {
       "status": "DONE",
-      "output": "GraphNode.vector + loadVectors em backends. Testes vector-persistence.test.ts. Gates OK.",
-      "duration": 61815
+      "output": "dynamic-dag-regression.test.ts: 6 invariantes (replan, cycle, maxDepth, flat, idempotent, deterministic). vitest 6/6.",
+      "duration": 70825,
+      "dependsOn": [
+        "task-903",
+        "task-904",
+        "task-905"
+      ]
     },
-    "task-806": {
+    "task-907": {
       "status": "DONE",
-      "output": "graph-rag searchNodes/locate híbrido + fallback keyword + MCP graph_locate. Testes hybrid-integration.test.ts. Gates OK.",
-      "duration": 62618
-    },
-    "task-807": {
-      "status": "DONE",
-      "output": "incremental-index.ts: re-embed só quando contentHash muda. Integrado execute/graph ingest. Testes incremental-index.test.ts. Gates OK.",
-      "duration": 68648
-    },
-    "task-809": {
-      "status": "DONE",
-      "output": "semantic-regression.test.ts + fixture (5 invariantes N-1). vitest semantic-regression OK.",
-      "duration": 67157
-    },
-    "task-810": {
-      "status": "DONE",
-      "output": "CHANGELOG semantic + drift [3.10.0], docs graphrag.semantic + query --semantic, ROADMAP/README. verify-docs-coverage OK.",
-      "duration": 64741
+      "output": "CHANGELOG 3.11.0 + docs-site (maxDepth, refine --apply, viz nesting) + README/ROADMAP. verify-docs-coverage OK.",
+      "duration": 62538,
+      "dependsOn": [
+        "task-906"
+      ]
     }
   }
 }

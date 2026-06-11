@@ -9,6 +9,19 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.11.0] — Unreleased
+
+Release **Dynamic DAG** — replan estrutural com sub-DAGs aninhados em runtime (compõe o release 3.11.0 junto de dashboard + ci-pr).
+
+> Trocar `Unreleased` pela data ao publicar.
+
+### ✨ Adicionado — Dynamic DAG
+
+- **`REPLAN` → splice de sub-DAG** — veredito `REPLAN` da decay policy gera sub-tasks via `refine --split` e insere no DAG ativo em runtime; a task pai retoma após as filhas concluírem.
+- **`verification.loop.maxDepth`** — teto de profundidade de aninhamento (default `2`); excedeu → `ESCALATE` (sem inserir).
+- **`dare refine <task-id> --split --apply`** — modo manual: injeta o sub-DAG no DAG ativo e persiste em `dare-dag.yaml` + `.dare/state.json` (requer `--split`).
+- **`dare dag viz` agrupa sub-DAGs** — tasks com `__parentId` aparecem em `subgraph Sub-DAG: <pai>` (Mermaid/DOT/Excalidraw); DAG flat inalterado quando não há nesting.
+
 ## [3.10.0] — 2026-06-10
 
 Release **Drift Gate** + **Local Semantic Search** — detecção de drift spec↔código e retrieval híbrido no GraphRAG.

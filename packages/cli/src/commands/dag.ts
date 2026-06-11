@@ -147,6 +147,7 @@ export function renderDagMermaid(dag: Dag): string {
   const nodes: GraphNode[] = dag.tasks.map((task) => ({
     id: task.id,
     depends_on: task.depends_on,
+    parentId: task.__parentId,
     labelLines: taskLabelLines(task),
     bg: '',
     stroke: '',
@@ -166,6 +167,7 @@ export function renderDagDot(dag: Dag): string {
     return {
       id: task.id,
       depends_on: task.depends_on,
+      parentId: task.__parentId,
       labelLines: taskLabelLines(task),
       bg: DOT_FILL[status],
       stroke: DOT_BORDER[status],

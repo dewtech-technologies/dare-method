@@ -1,0 +1,95 @@
+title: "CI/PR Integration (dare gates como GitHub Action) — Development Tasks"
+version: "3.11.0"
+generated: "2026-06-11T00:00:00Z"
+
+# Feature: ci-pr-integration
+# Branch:  feat/v3.11.0
+# Design:  DARE/DESIGN-Feature-ci-pr-integration.md
+# Blueprint: DARE/BLUEPRINT-Feature-ci-pr-integration.md
+#
+# Regra de ouro: SEM verificação nova — só formato (annotations) + post (comentário). Determinístico/LLM-free.
+# Default fail-on:none (comenta, não bloqueia). Bloco de IDs: 11xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: emitter ──────────────────────────────────────────────────────
+  - id: task-1101
+    title: "reporters/github.ts — emitAnnotations + upsertPrComment"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1101-github-reporter.md
+    subtask_prompt: |
+      Criar packages/cli/src/reporters/github.ts (BLUEPRINT §3.1). Finding { severity 'error'|'warning'; file?; line?;
+      rule; message }. emitAnnotations(findings): emite '::${severity} file=..,line=..::msg' no stdout (formato Actions),
+      sem path absoluto/segredo. upsertPrComment({repo; prNumber; token; summary[]; findings[]}): lista comentários do PR,
+      acha o que contém o marker '<!-- dare-report -->' e EDITA; se não existir, CRIA (idempotência, A-2/A-7). Mensagens
+      sanitizadas (reusa a sanitização do guard, RS-04); token nunca logado. Testes: github-reporter.test.ts (API mockada).
+      Gates: tsc; vitest run github-reporter. Leia: DARE/EXECUTION/task-1101-github-reporter.md.
+
+  # ─── Fase 2: flags nos gates ──────────────────────────────────────────────
+  - id: task-1102
+    title: "flags --format github / --comment / --fail-on nos gates"
+    depends_on: [task-1101]
+    complexity: MED
+    spec_file: EXECUTION/task-1102-gate-flags.md
+    subtask_prompt: |
+      Adicionar a review/guard/graph drift (commands/{review,guard,graph}.ts) (BLUEPRINT §3.2):
+      --format github => emitAnnotations (além da saída normal); --comment => upsertPrComment (lê GITHUB_TOKEN,
+      GITHUB_REPOSITORY, nº do PR do evento); --fail-on none|warn|error controla o exit (none=>0 sempre; warn=>!=0 em WARN+;
+      error=>!=0 só em FAIL). Default none. NENHUMA verificação nova — só formato + post + exit. Testes: gate-flags.test.ts.
+      Gates: tsc; vitest run gate-flags; lint. Leia: DARE/EXECUTION/task-1102-gate-flags.md.
+
+  # ─── Fase 3: action + dogfood ─────────────────────────────────────────────
+  - id: task-1103
+    title: "action.yml composite + workflow template"
+    depends_on: [task-1102]
+    complexity: MED
+    spec_file: EXECUTION/task-1103-composite-action.md
+    subtask_prompt: |
+      Criar action.yml (composite, raiz do repo) (BLUEPRINT §3.3). inputs: gate (review|guard|drift|bench), args,
+      fail-on (default none), comment (default true). steps: instala @dewtech/dare-cli; roda
+      `dare <gate> <args> --format github [--comment] --fail-on <fail-on>` com GITHUB_TOKEN. Permissões mínimas
+      documentadas (pull-requests: write, contents: read). Criar template opcional packages/cli/templates/.github/workflows/dare-pr.yml
+      (actions pinadas por SHA). Testes: validar action.yml (lint YAML). Gates: tsc; verify-actions-pinned.
+      Leia: DARE/EXECUTION/task-1103-composite-action.md.
+
+  - id: task-1104
+    title: "dogfood — CI do DARE usa a action"
+    depends_on: [task-1103]
+    complexity: LOW
+    spec_file: EXECUTION/task-1104-dogfood.md
+    subtask_prompt: |
+      Usar a própria action no CI do DARE (BLUEPRINT §6 Fase 3). Adicionar um job em .github/workflows que roda
+      `dare review`/`guard` via a composite action em PRs do próprio repo (dogfood), fail-on: none. Actions pinadas por SHA.
+      Gates: verify-actions-pinned. Leia: DARE/EXECUTION/task-1104-dogfood.md.
+
+  # ─── Fase N-1: auditoria + docs ───────────────────────────────────────────
+  - id: task-1105
+    title: "auditoria N-1 — ci-pr-regression.test.ts"
+    depends_on: [task-1102, task-1103]
+    complexity: MED
+    spec_file: EXECUTION/task-1105-ci-pr-regression.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/ci-pr-regression.test.ts. Prova: annotations bem formadas (formato Actions);
+      comentário ATUALIZA via marker (não duplica); token nunca logado; fail-on none não bloqueia (exit 0); findings
+      sanitizados (sem segredo/path absoluto); verify-actions-pinned verde. Gates: vitest run ci-pr-regression.
+      Leia: DARE/EXECUTION/task-1105-ci-pr-regression.md.
+
+  - id: task-1106
+    title: "CHANGELOG + docs (ci-pr)"
+    depends_on: [task-1105]
+    complexity: LOW
+    spec_file: EXECUTION/task-1106-ci-pr-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.11.0]: integração CI/PR — --format github/--comment/--fail-on nos gates + composite action
+      dewtech-technologies/dare-action. Documentar as flags em docs-site/cli-reference.md e o uso da action (gate de
+      cobertura de docs). Gates: verify-docs-coverage. Leia: DARE/EXECUTION/task-1106-ci-pr-docs.md.

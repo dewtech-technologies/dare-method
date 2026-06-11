@@ -69,6 +69,8 @@ export interface LoopConfig {
   readonly policy: LoopPolicy;
   /** Teto duro de tentativas. Veredito ESCALATE ao atingir. Default 5. */
   readonly maxAttempts: number;
+  /** Profundidade máxima de aninhamento de sub-DAGs (REPLAN). Default 2. */
+  readonly maxDepth: number;
   /** Nº de tentativas com a MESMA assinatura → saturado. Default 3 (≤3, idea-3). */
   readonly saturationWindow: number;
   /** Ação ao saturar antes do teto. Default 'fresh-start'. */

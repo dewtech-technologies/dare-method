@@ -21,6 +21,8 @@
 export interface GraphNode {
   id: string;
   depends_on: string[];
+  /** Optional parent task id used to group nested sub-DAG nodes. */
+  parentId?: string;
   /** Lines composing the node label (joined with the renderer's separator). */
   labelLines: string[];
   /** Background fill (Excalidraw, Mermaid inline, DOT fillcolor). */
@@ -101,6 +103,32 @@ function groupByRank(
   return byRank;
 }
 
+function buildNestedGroups(nodes: GraphNode[]): {
+  nodeById: Map<string, GraphNode>;
+  childrenByParent: Map<string, GraphNode[]>;
+  roots: GraphNode[];
+} {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const childrenByParent = new Map<string, GraphNode[]>();
+
+  for (const node of nodes) {
+    const parentId = node.parentId;
+    if (!parentId || !nodeById.has(parentId)) continue;
+    if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+    childrenByParent.get(parentId)!.push(node);
+  }
+
+  for (const children of childrenByParent.values()) {
+    children.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  const roots = nodes
+    .filter((node) => !node.parentId || !nodeById.has(node.parentId))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  return { nodeById, childrenByParent, roots };
+}
+
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
 export function sanitizeId(id: string): string {
@@ -124,19 +152,58 @@ export function renderGraphMermaid(
     `graph ${dir}`,
   ];
 
-  const ranks = computeRanks(nodes);
-  const byRank = groupByRank(nodes, ranks);
-  const sortedRanks = [...byRank.keys()].sort((a, b) => a - b);
+  const hasNested = nodes.some((node) => Boolean(node.parentId));
 
-  for (const r of sortedRanks) {
-    lines.push(`  subgraph rank_${r} ["Rank ${r}"]`);
-    lines.push(`    direction TB`);
-    for (const node of byRank.get(r)!) {
+  if (hasNested) {
+    const { nodeById, childrenByParent, roots } = buildNestedGroups(nodes);
+    const emitted = new Set<string>();
+
+    const emitNodeTree = (nodeId: string, indent: string, ancestry: Set<string>): void => {
+      if (emitted.has(nodeId)) return;
+      const node = nodeById.get(nodeId);
+      if (!node) return;
+
+      emitted.add(nodeId);
       const id = sanitizeId(node.id);
       const label = node.labelLines.map(escapeMermaid).join('\\n');
-      lines.push(`    ${id}["${label}"]`);
+      lines.push(`${indent}${id}["${label}"]`);
+
+      const children = childrenByParent.get(node.id) ?? [];
+      if (children.length === 0 || ancestry.has(node.id)) return;
+
+      lines.push(
+        `${indent}subgraph subdag_${sanitizeId(node.id)} ["Sub-DAG: ${escapeMermaid(node.id)}"]`,
+      );
+      lines.push(`${indent}  direction TB`);
+      const nextAncestry = new Set(ancestry);
+      nextAncestry.add(node.id);
+      for (const child of children) {
+        emitNodeTree(child.id, `${indent}  `, nextAncestry);
+      }
+      lines.push(`${indent}end`);
+    };
+
+    for (const root of roots) {
+      emitNodeTree(root.id, '  ', new Set());
     }
-    lines.push('  end');
+    for (const node of nodes) {
+      emitNodeTree(node.id, '  ', new Set());
+    }
+  } else {
+    const ranks = computeRanks(nodes);
+    const byRank = groupByRank(nodes, ranks);
+    const sortedRanks = [...byRank.keys()].sort((a, b) => a - b);
+
+    for (const r of sortedRanks) {
+      lines.push(`  subgraph rank_${r} ["Rank ${r}"]`);
+      lines.push(`    direction TB`);
+      for (const node of byRank.get(r)!) {
+        const id = sanitizeId(node.id);
+        const label = node.labelLines.map(escapeMermaid).join('\\n');
+        lines.push(`    ${id}["${label}"]`);
+      }
+      lines.push('  end');
+    }
   }
 
   for (const node of nodes) {
@@ -170,12 +237,58 @@ export function renderGraphDot(nodes: GraphNode[], opts: DotOptions): string {
     '  node [shape=box style=filled fontname=Helvetica];',
   ];
 
-  for (const node of nodes) {
+  const hasNested = nodes.some((node) => Boolean(node.parentId));
+
+  const renderDotNode = (node: GraphNode, indent = '  '): void => {
     const id = JSON.stringify(node.id);
     const label = JSON.stringify(node.labelLines.join('\n'));
     lines.push(
-      `  ${id} [label=${label} fillcolor="${node.bg}" color="${node.stroke}"];`,
+      `${indent}${id} [label=${label} fillcolor="${node.bg}" color="${node.stroke}"];`,
     );
+  };
+
+  if (hasNested) {
+    const { nodeById, childrenByParent, roots } = buildNestedGroups(nodes);
+    const emitted = new Set<string>();
+
+    const emitCluster = (parentId: string, indent: string, ancestry: Set<string>): void => {
+      const children = childrenByParent.get(parentId) ?? [];
+      if (children.length === 0 || ancestry.has(parentId)) return;
+
+      lines.push(`${indent}subgraph cluster_${sanitizeId(parentId)} {`);
+      lines.push(`${indent}  label=${JSON.stringify(`Sub-DAG: ${parentId}`)};`);
+      lines.push(`${indent}  color="#94a3b8";`);
+
+      const nextAncestry = new Set(ancestry);
+      nextAncestry.add(parentId);
+      for (const child of children) {
+        if (!emitted.has(child.id)) {
+          renderDotNode(child, `${indent}  `);
+          emitted.add(child.id);
+        }
+        emitCluster(child.id, `${indent}  `, nextAncestry);
+      }
+      lines.push(`${indent}}`);
+    };
+
+    for (const root of roots) {
+      if (!emitted.has(root.id)) {
+        renderDotNode(root);
+        emitted.add(root.id);
+      }
+      emitCluster(root.id, '  ', new Set());
+    }
+
+    for (const node of nodeById.values()) {
+      if (emitted.has(node.id)) continue;
+      renderDotNode(node);
+      emitted.add(node.id);
+      emitCluster(node.id, '  ', new Set());
+    }
+  } else {
+    for (const node of nodes) {
+      renderDotNode(node);
+    }
   }
 
   for (const node of nodes) {
@@ -298,11 +411,51 @@ function createEdgeArrow(fromId: string, toId: string): ExcalidrawElement {
   };
 }
 
+function createGroupRect(
+  id: string,
+  label: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): ExcalidrawElement {
+  return {
+    id,
+    type: 'rectangle',
+    x,
+    y,
+    width,
+    height,
+    angle: 0,
+    strokeColor: '#94a3b8',
+    backgroundColor: '#f8fafc',
+    fillStyle: 'solid',
+    strokeWidth: 1,
+    strokeStyle: 'dashed',
+    roughness: 0,
+    opacity: 100,
+    roundness: { type: 2, value: 8 },
+    text: label,
+    fontSize: 11,
+    fontFamily: 1,
+    textAlign: 'left',
+    verticalAlign: 'top',
+    boundElements: [],
+    updated: Date.now(),
+    link: null,
+    locked: false,
+    seed: Math.floor(Math.random() * 2147483647),
+    versionNonce: Math.floor(Math.random() * 2147483647),
+  };
+}
+
 export function renderGraphExcalidraw(
   nodes: GraphNode[],
   opts: ExcalidrawOptions,
 ): ExcalidrawData {
-  const elements: ExcalidrawElement[] = [];
+  const nodeElements: ExcalidrawElement[] = [];
+  const edgeElements: ExcalidrawElement[] = [];
+  const nodeBounds = new Map<string, { x: number; y: number; width: number; height: number }>();
   const ranks = computeRanks(nodes);
   const byRank = groupByRank(nodes, ranks);
   const sortedRanks = [...byRank.keys()].sort((a, b) => a - b);
@@ -312,15 +465,72 @@ export function renderGraphExcalidraw(
     for (let i = 0; i < inRank.length; i++) {
       const x = 20 + i * 140;
       const y = 20 + rank * 160;
-      elements.push(createNodeRect(inRank[i], x, y));
+      const node = inRank[i];
+      nodeElements.push(createNodeRect(node, x, y));
+      nodeBounds.set(node.id, { x, y, width: 120, height: 60 });
     }
   }
 
   for (const node of nodes) {
     for (const dep of node.depends_on) {
-      elements.push(createEdgeArrow(dep, node.id));
+      edgeElements.push(createEdgeArrow(dep, node.id));
     }
   }
+
+  const groupElements: Array<ExcalidrawElement & { __area: number }> = [];
+  const { childrenByParent } = buildNestedGroups(nodes);
+
+  const collectDescendants = (parentId: string, acc: Set<string>, ancestry: Set<string>): void => {
+    if (ancestry.has(parentId)) return;
+    const nextAncestry = new Set(ancestry);
+    nextAncestry.add(parentId);
+
+    for (const child of childrenByParent.get(parentId) ?? []) {
+      if (!acc.has(child.id)) acc.add(child.id);
+      collectDescendants(child.id, acc, nextAncestry);
+    }
+  };
+
+  for (const parentId of childrenByParent.keys()) {
+    const descendants = new Set<string>();
+    collectDescendants(parentId, descendants, new Set());
+    if (descendants.size === 0) continue;
+
+    const bounds = [...descendants]
+      .map((id) => nodeBounds.get(id))
+      .filter((item): item is { x: number; y: number; width: number; height: number } => Boolean(item));
+    if (bounds.length === 0) continue;
+
+    const minX = Math.min(...bounds.map((item) => item.x));
+    const minY = Math.min(...bounds.map((item) => item.y));
+    const maxRight = Math.max(...bounds.map((item) => item.x + item.width));
+    const maxBottom = Math.max(...bounds.map((item) => item.y + item.height));
+    const padding = 24;
+    const titlePad = 28;
+    const x = minX - padding;
+    const y = minY - titlePad;
+    const width = maxRight - minX + padding * 2;
+    const height = maxBottom - minY + padding + titlePad;
+    const area = width * height;
+
+    groupElements.push({
+      ...createGroupRect(
+        `__group_${sanitizeId(parentId)}`,
+        `Sub-DAG: ${parentId}`,
+        x,
+        y,
+        width,
+        height,
+      ),
+      __area: area,
+    });
+  }
+
+  const elements: ExcalidrawElement[] = [
+    ...groupElements.sort((a, b) => b.__area - a.__area),
+    ...nodeElements,
+    ...edgeElements,
+  ];
 
   return {
     type: 'excalidraw',

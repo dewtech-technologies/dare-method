@@ -5,11 +5,22 @@ import path from 'path';
 import {
   analyzeTaskComplexity,
   proposeSplit,
-  DEFAULT_THRESHOLDS,
   type ComplexityThresholds,
 } from '../utils/complexity-analyzer.js';
 import { parseFilesFromSpec, findSpecFile } from '../utils/ReviewRunner.js';
 import { readProjectConfig } from '../utils/UpdateDetector.js';
+import { convertDagToYaml, convertYamlToDag } from '../utils/dag-converter.js';
+import {
+  DEFAULT_STATE_PATH,
+  loadAndApplyState,
+  saveState,
+} from '../dag-runner/state-store.js';
+import {
+  CycleError,
+  MaxDepthError,
+  spliceSubDag,
+  type SubTask,
+} from '../dag-runner/sub-dag.js';
 import type {
   ComplexityReport,
   RefineVerdict,
@@ -33,7 +44,7 @@ export const refineCommand = new Command('refine')
   .description("Mede complexidade de uma task e (opcional) propõe quebra em sub-tasks")
   .argument('<task-id>', 'ID da task (ex: task-001)')
   .option('--split', 'Emite uma proposta de quebra em sub-tasks', false)
-  .option('--apply', 'Aplica o split: marca task original como SPLIT em DARE/TASKS.md', false)
+  .option('--apply', 'Aplica o split no DAG ativo (requer --split)', false)
   .option(
     '--strict',
     'Exit code 2 quando complexidade for HIGH/CRITICAL (CI-friendly)',
@@ -53,6 +64,10 @@ export const refineCommand = new Command('refine')
       },
     ) => {
       const projectRoot = process.cwd();
+      if (options.apply && !options.split) {
+        console.error(chalk.red('❌ --apply exige --split.'));
+        process.exit(1);
+      }
 
       // Read optional thresholds from dare.config.json (#refine.thresholds).
       const thresholds = await readThresholds(projectRoot);
@@ -90,7 +105,16 @@ export const refineCommand = new Command('refine')
       }
 
       if (options.apply && proposal) {
-        await applySplitMarker(projectRoot, taskId, proposal);
+        try {
+          await applySplitToDag(projectRoot, taskId, proposal);
+        } catch (err) {
+          if (err instanceof MaxDepthError || err instanceof CycleError) {
+            console.error(chalk.red(`❌ ${err.message}`));
+          } else {
+            console.error(chalk.red(`❌ ${err instanceof Error ? err.message : String(err)}`));
+          }
+          process.exit(1);
+        }
       }
 
       const isHigh = report.level === 'HIGH' || report.level === 'CRITICAL';
@@ -111,7 +135,7 @@ async function readThresholds(
   }
 }
 
-async function buildSplitProposal(
+export async function buildSplitProposal(
   taskId: string,
   projectRoot: string,
 ): Promise<SplitProposal> {
@@ -137,31 +161,70 @@ async function loadAgentVerdict(filePath: string): Promise<RefineVerdict> {
   return data as RefineVerdict;
 }
 
-/**
- * Light-touch "apply": annotate `DARE/TASKS.md` with a marker so the dev /
- * agent can see this task was identified for split. Doesn't rewrite the
- * DAG — that's intentionally left to the `dare-refine` IDE skill, which
- * has the context to write coherent sub-task specs.
- */
-async function applySplitMarker(
+async function applySplitToDag(
   projectRoot: string,
   taskId: string,
   proposal: SplitProposal,
 ): Promise<void> {
-  const tasksPath = path.join(projectRoot, 'DARE', 'TASKS.md');
-  if (!(await fs.pathExists(tasksPath))) {
-    console.log(chalk.yellow(`  ⚠  ${tasksPath} não existe — pulando apply.`));
+  const dagPath = path.join(projectRoot, 'DARE', 'dare-dag.yaml');
+  if (!(await fs.pathExists(dagPath))) {
+    throw new Error(`DAG não encontrado em ${dagPath}.`);
+  }
+
+  const dag = convertYamlToDag(await fs.readFile(dagPath, 'utf-8'));
+  const statePath = path.join(projectRoot, DEFAULT_STATE_PATH);
+  await loadAndApplyState(dag, statePath);
+
+  const subTasks = proposalToSubTasks(dag, taskId, proposal);
+  const maxDepth = await readLoopMaxDepth(projectRoot);
+  const result = spliceSubDag(dag, taskId, subTasks, maxDepth);
+  if (result.inserted.length === 0) {
+    console.log(chalk.gray(`  ↺ Split já aplicado para ${taskId}; sem mudanças.`));
     return;
   }
-  const md = await fs.readFile(tasksPath, 'utf-8');
-  const stamp =
-    `\n\n<!-- dare-refine: ${taskId} marcada para split em ${proposal.subtasks.length} sub-task(s) — ` +
-    `regenere com /dare-refine ${taskId} no IDE -->\n`;
-  if (md.includes(`dare-refine: ${taskId}`)) return; // idempotent
-  await fs.writeFile(tasksPath, md + stamp);
-  console.log(
-    chalk.green(`  ✅ TASKS.md anotado com marker de split para ${taskId}.`),
-  );
+
+  await fs.writeFile(dagPath, convertDagToYaml(result.dag));
+  await saveState(result.dag, statePath);
+  console.log(chalk.green(`  ✅ Sub-DAG aplicado em ${taskId} (${result.inserted.length} sub-task(s)).`));
+}
+
+function proposalToSubTasks(
+  dag: { tasks: Array<{ id: string; depends_on: string[]; spec_file?: string }> },
+  parentId: string,
+  proposal: SplitProposal,
+): ReadonlyArray<SubTask> {
+  const parent = dag.tasks.find((task) => task.id === parentId);
+  if (!parent) throw new Error(`Task "${parentId}" não encontrada no DAG.`);
+  const baseSpecDir = resolveSpecDir(parent.spec_file);
+
+  return proposal.subtasks.map((subtask, idx) => ({
+    id: subtask.id,
+    parentId,
+    dependsOn: idx === 0 ? [...parent.depends_on] : [proposal.subtasks[idx - 1].id],
+    specPath: path.posix.join(baseSpecDir, `${subtask.id}.md`),
+  }));
+}
+
+function resolveSpecDir(parentSpecFile: string | undefined): string {
+  if (!parentSpecFile) return 'DARE/EXECUTION';
+  const normalized = parentSpecFile.replace(/\\/g, '/');
+  const dir = path.posix.dirname(normalized);
+  return dir === '.' ? 'DARE/EXECUTION' : dir;
+}
+
+async function readLoopMaxDepth(projectRoot: string): Promise<number> {
+  let rawConfig: unknown = {};
+  try {
+    rawConfig = await readProjectConfig(projectRoot);
+  } catch {
+    rawConfig = {};
+  }
+  const value = (rawConfig as { verification?: { loop?: { maxDepth?: unknown } } })
+    .verification?.loop?.maxDepth;
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value;
+  }
+  return 2;
 }
 
 function printHuman(

@@ -49,6 +49,7 @@ O arquivo na raiz do projeto reúne quatro grupos:
     "loop": {
       "policy": "decay",            // 'decay' | 'fixed'
       "maxAttempts": 5,
+      "maxDepth": 2,                // profundidade máxima de sub-DAGs (REPLAN/refine --apply)
       "saturationWindow": 3,
       "onSaturation": "fresh-start" // 'fresh-start' | 'replan' | 'escalate'
     },
@@ -169,8 +170,9 @@ Política do Ralph Loop com consciência de decaimento.
 |---|---|---|---|
 | `policy` | `'decay' \| 'fixed'` | `'decay'` | Estratégia de iteração. |
 | `maxAttempts` | `number` (int ≥ 1) | `5` | Teto duro de tentativas; ao atingir, veredito ESCALATE. |
+| `maxDepth` | `number` (int ≥ 1) | `2` | Profundidade máxima de sub-DAGs aninhados. Usado por `REPLAN` (runtime) e `dare refine --split --apply`; excedeu → `ESCALATE`/`MaxDepthError`. |
 | `saturationWindow` | `number` (int ≥ 1) | `3` | Nº de tentativas com a mesma assinatura de falha → saturado. |
-| `onSaturation` | `'fresh-start' \| 'replan' \| 'escalate'` | `'fresh-start'` | Ação ao saturar antes do teto. |
+| `onSaturation` | `'fresh-start' \| 'replan' \| 'escalate'` | `'fresh-start'` | Ação ao saturar antes do teto. Com `'replan'`, o runner faz splice de sub-DAG quando a saturação ocorre. |
 
 #### `verification.bestOfN`
 

@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.10.0** — última feature: **Drift Gate + Local Semantic Search** — `dare graph drift` (requisito órfão, código órfão, stale; exit 7) e retrieval híbrido no GraphRAG (keyword + vetor + grafo via RRF, embeddings opcionais lazy, fallback keyword). Antes: Secure Autonomous Executor + Agentic-chain Security Gate (v3.9.0 — `dare execute --agent`, `dare guard`), Formal Verification Gate (v3.8.0), Reliable Verification Core (v3.3), Security Hardening (v3.4), Dual Graph (v3.5), Agent Hooks + Steering (v3.6) e Brownfield Discovery (v3.7). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.11.0** — última feature: **Dynamic DAG** — `REPLAN` faz splice de sub-DAG em runtime (via `refine --split`); `verification.loop.maxDepth` (default 2); `dare refine --split --apply` (modo manual); `dare dag viz` agrupa sub-DAGs aninhados. Antes: Drift Gate + Local Semantic Search (v3.10.0 — `dare graph drift`, retrieval híbrido RRF), Secure Autonomous Executor + Agentic-chain Security Gate (v3.9.0 — `dare execute --agent`, `dare guard`), Formal Verification Gate (v3.8.0), Reliable Verification Core (v3.3), Security Hardening (v3.4), Dual Graph (v3.5), Agent Hooks + Steering (v3.6) e Brownfield Discovery (v3.7). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·

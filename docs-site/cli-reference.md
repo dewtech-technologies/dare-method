@@ -331,6 +331,14 @@ Inspeciona e visualiza o DAG estático de tarefas (`dare-dag.yaml`). Possui o su
 ### `dare dag viz`
 
 Renderiza o `dare-dag.yaml` como diagrama Mermaid, DOT ou Excalidraw, com cores por status.
+Quando o DAG contém sub-DAGs (tasks com `__parentId` — inseridas por `REPLAN` ou
+`dare refine --split --apply`), o viz **agrupa as filhas** sob o pai:
+
+- **Mermaid** — `subgraph subdag_<pai> ["Sub-DAG: <pai>"]` com dependências preservadas.
+- **DOT** — `subgraph cluster_<pai> { ... }`.
+- **Excalidraw** — retângulo de agrupamento ao redor das sub-tasks.
+
+DAGs flat (sem nesting) continuam agrupados por rank, como antes.
 
 ```bash
 dare dag viz --format excalidraw -o DARE/dag-graph.excalidraw
@@ -400,6 +408,10 @@ dare review task-001 --strict --format json
 ## `dare refine`
 
 Mede a complexidade de uma task e (opcionalmente) propõe quebra em sub-tasks.
+Com `--split --apply`, injeta o sub-DAG no **DAG ativo** (modo manual do replan estrutural):
+gera sub-tasks determinísticas, faz splice via `spliceSubDag`, persiste em `DARE/dare-dag.yaml`
+e `.dare/state.json`. Respeita `verification.loop.maxDepth` (default `2`); excedeu → exit `1`
+com `MaxDepthError`. Idempotente: re-aplicar sem mudanças não duplica sub-tasks.
 
 ```bash
 dare refine task-003 --split --apply
@@ -409,7 +421,7 @@ dare refine task-003 --split --apply
 |------|------|---------|-----------|
 | `<task-id>` | argumento | — | ID da task (ex.: `task-001`). |
 | `--split` | boolean | `false` | Emite uma proposta de quebra em sub-tasks. |
-| `--apply` | boolean | `false` | Aplica o split: marca a task original como SPLIT em `DARE/TASKS.md`. |
+| `--apply` | boolean | `false` | Aplica o split no DAG ativo (requer `--split`): splice de sub-DAG + persistência. |
 | `--strict` | boolean | `false` | Exit code 2 quando a complexidade for HIGH/CRITICAL (CI-friendly). |
 | `--format <fmt>` | string | `human` | Saída: `human` \| `json`. |
 | `--from-agent <path>` | string | — | JSON com `RefineVerdict` produzido pelo agente IDE. |

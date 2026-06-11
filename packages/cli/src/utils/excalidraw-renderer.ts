@@ -52,6 +52,7 @@ function taskToGraphNode(task: DagTask): GraphNode {
   return {
     id: task.id,
     depends_on: task.depends_on,
+    parentId: task.__parentId,
     labelLines: [task.id, task.title, `[${complexity}]`],
     bg: colors.bg,
     stroke: colors.stroke,

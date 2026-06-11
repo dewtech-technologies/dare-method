@@ -1,0 +1,46 @@
+%% DARE DAG — Dynamic DAG (nested sub-DAGs + replan estrutural) — Development Tasks
+%% Generated: 2026-06-11T00:00:00Z
+graph LR
+  subgraph rank_0 ["Rank 0"]
+    direction TB
+    task_901["task-901\ndag-runner/sub-dag.ts — spliceSubDag + tipos\n⏳ PENDING"]
+    task_902["task-902\nconfig — loop.maxDepth (zod)\n⏳ PENDING"]
+  end
+  subgraph rank_1 ["Rank 1"]
+    direction TB
+    task_903["task-903\nexecute.ts — REPLAN → splice\n⏳ PENDING"]
+    task_904["task-904\nrefine --split --apply no DAG ativo\n⏳ PENDING"]
+  end
+  subgraph rank_2 ["Rank 2"]
+    direction TB
+    task_905["task-905\npersistência (state.json) + dag viz nesting\n⏳ PENDING"]
+  end
+  subgraph rank_3 ["Rank 3"]
+    direction TB
+    task_906["task-906\nauditoria N-1 — dynamic-dag-regression\n⏳ PENDING"]
+  end
+  subgraph rank_4 ["Rank 4"]
+    direction TB
+    task_907["task-907\nCHANGELOG + docs (dynamic DAG)\n⏳ PENDING"]
+  end
+  task_901 --> task_903
+  task_902 --> task_903
+  task_901 --> task_904
+  task_901 --> task_905
+  task_903 --> task_905
+  task_903 --> task_906
+  task_904 --> task_906
+  task_905 --> task_906
+  task_906 --> task_907
+  class task_901 st_pending;
+  class task_902 st_pending;
+  class task_903 st_pending;
+  class task_904 st_pending;
+  class task_905 st_pending;
+  class task_906 st_pending;
+  class task_907 st_pending;
+  classDef st_pending fill:#f3f4f6,stroke:#9ca3af,color:#374151;
+  classDef st_running fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef st_done fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef st_failed fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef st_skipped fill:#e5e7eb,stroke:#6b7280,color:#374151;

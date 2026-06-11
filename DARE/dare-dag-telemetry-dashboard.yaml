@@ -1,0 +1,110 @@
+title: "Local Telemetry Dashboard — Development Tasks"
+version: "3.11.0"
+generated: "2026-06-11T00:00:00Z"
+
+# Feature: telemetry-dashboard
+# Branch:  feat/v3.11.0
+# Design:  DARE/DESIGN-Feature-telemetry-dashboard.md
+# Blueprint: DARE/BLUEPRINT-Feature-telemetry-dashboard.md
+#
+# Regra de ouro: local-first, read-only, LLM-free. Reusa Express + hardening do MCP (v3.4).
+# Front estático vanilla (sem bundler/framework, D-002). Bloco de IDs: 10xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: aggregator + app compartilhado (rank 0 paralelo) ────────────
+  - id: task-1001
+    title: "telemetry/aggregator.ts — aggregateTelemetry (read-only)"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1001-aggregator.md
+    subtask_prompt: |
+      Criar packages/cli/src/telemetry/aggregator.ts (BLUEPRINT §3.1). TelemetrySnapshot { dag {total; byStatus; ranks};
+      gates {verified; proven; mutationAvg?}; cost {totalUsd; totalTokens; byTask[]}; bestOfN?; guard?; drift?;
+      emptyHints[] }. aggregateTelemetry(graph: KnowledgeGraph): TelemetrySnapshot — READ-ONLY (nunca muta). Reusa
+      getStatistics/queryNodes/getEdges + state.json. cost = soma metadados de custo dos nós task (v3.9.0);
+      gates = conta arestas verified_by/proven_by; guard/drift presentes só se houver dados; emptyHints quando vazio.
+      Testes: aggregator.test.ts (fixtures cheia e vazia). Gates: tsc; vitest run aggregator.
+      Leia: DARE/EXECUTION/task-1001-aggregator.md.
+
+  - id: task-1002
+    title: "http/app.ts — Express compartilhado (refactor MCP)"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1002-shared-app.md
+    subtask_prompt: |
+      Criar packages/cli/src/http/app.ts (BLUEPRINT §3.2). createApp(opts:{token; projectRoot}): express.Express —
+      monta a cadeia de middleware (auth/cors/helmet/error-handler do mcp-server/middleware, bind loopback). Refatorar
+      mcp-server/server.ts para MONTAR suas rotas neste app (SEM mudar o contrato MCP — testes de MCP seguem verdes).
+      Testes: shared-app.test.ts (401 sem token; middleware aplicado). Gates: tsc; vitest run shared-app mcp.
+      Leia: DARE/EXECUTION/task-1002-shared-app.md.
+
+  # ─── Fase 2: rotas ─────────────────────────────────────────────────────────
+  - id: task-1003
+    title: "dashboard/routes.ts — /api/telemetry + /dashboard"
+    depends_on: [task-1001, task-1002]
+    complexity: MED
+    spec_file: EXECUTION/task-1003-dashboard-routes.md
+    subtask_prompt: |
+      Criar packages/cli/src/dashboard/routes.ts (BLUEPRINT §3.3). Rotas (todas read-only, atrás do auth do app):
+      GET /dashboard => HTML de templates/dashboard/index.html; GET /api/telemetry => aggregateTelemetry (JSON);
+      GET /dashboard/assets/* => estáticos confinados a templates/dashboard (path-safety, sem traversal). NENHUM POST/PUT.
+      Testes: dashboard-routes.test.ts (401 sem token; telemetry shape; assets confinados; read-only). Gates: tsc; vitest run dashboard-routes.
+      Leia: DARE/EXECUTION/task-1003-dashboard-routes.md.
+
+  # ─── Fase 3: comando + front + skill ──────────────────────────────────────
+  - id: task-1004
+    title: "commands/dashboard.ts — dare dashboard + skill 3 IDEs"
+    depends_on: [task-1003]
+    complexity: MED
+    spec_file: EXECUTION/task-1004-dashboard-command.md
+    subtask_prompt: |
+      Criar packages/cli/src/commands/dashboard.ts (BLUEPRINT §3.4). dare dashboard [--port <n>] [--no-open]: sobe
+      createApp em 127.0.0.1:<port> (default 4100); imprime URL + token; abre o navegador (a menos de --no-open).
+      Registrar em bin/dare.ts (program.addCommand). É comando NOVO => criar skill /dare-dashboard nas 3 IDEs
+      (implementations/{claude,cursor,antigravity}/...) E adicionar 'dashboard: dare-dashboard' ao CLI_COMMANDS do
+      ide-command-parity.test.ts. Testes: dashboard-command.test.ts. Gates: tsc; vitest run dashboard-command ide-command-parity; lint.
+      Leia: DARE/EXECUTION/task-1004-dashboard-command.md.
+
+  - id: task-1005
+    title: "templates/dashboard — front vanilla"
+    depends_on: [task-1003]
+    complexity: MED
+    spec_file: EXECUTION/task-1005-dashboard-front.md
+    subtask_prompt: |
+      Criar packages/cli/templates/dashboard/{index.html, app.js, style.css} (BLUEPRINT §3.5). Vanilla (sem
+      bundler/framework, D-002). app.js faz fetch('/api/telemetry') e renderiza painéis: progresso do DAG (por status/rank),
+      gates (verified/proven/mutation), custo (por task + total), best-of-N, guard/drift quando presentes. Gráficos em SVG
+      inline (sem lib pesada). Estados vazios mostram emptyHints. Testes: smoke do HTML (parse/seletores). Gates: vitest run dashboard-front.
+      Leia: DARE/EXECUTION/task-1005-dashboard-front.md.
+
+  # ─── Fase N-1: auditoria + docs ───────────────────────────────────────────
+  - id: task-1006
+    title: "auditoria N-1 — dashboard-regression.test.ts"
+    depends_on: [task-1004, task-1005]
+    complexity: MED
+    spec_file: EXECUTION/task-1006-dashboard-regression.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/dashboard-regression.test.ts. Prova: 401 sem token (reuso auth MCP);
+      read-only (nenhuma rota muta grafo/estado); assets confinados a templates/dashboard (sem traversal); grafo vazio
+      tratado (emptyHints); parity de /dare-dashboard verde. Gates: vitest run dashboard-regression ide-command-parity.
+      Leia: DARE/EXECUTION/task-1006-dashboard-regression.md.
+
+  - id: task-1007
+    title: "CHANGELOG + docs (dashboard)"
+    depends_on: [task-1006]
+    complexity: LOW
+    spec_file: EXECUTION/task-1007-dashboard-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.11.0]: dashboard local de telemetria (dare dashboard, read-only, loopback+token). Documentar o
+      comando em docs-site/cli-reference.md (gate de cobertura de docs). Paridade /dare-dashboard nas 3 IDEs.
+      Gates: verify-docs-coverage; ide-command-parity. Leia: DARE/EXECUTION/task-1007-dashboard-docs.md.

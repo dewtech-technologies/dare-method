@@ -1,0 +1,106 @@
+title: "Dynamic DAG (nested sub-DAGs + replan estrutural) — Development Tasks"
+version: "3.11.0"
+generated: "2026-06-11T00:00:00Z"
+
+# Feature: dynamic-dag
+# Branch:  feat/v3.11.0
+# Design:  DARE/DESIGN-Feature-dynamic-dag.md
+# Blueprint: DARE/BLUEPRINT-Feature-dynamic-dag.md
+#
+# Regra de ouro: splice/topo-sort/limite 100% determinísticos; LLM só no AgentDriver da sub-task.
+# Reusa decideNextAction (REPLAN), dare refine --split, dag-runner, dare validate. Bloco de IDs: 9xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+
+tasks:
+  # ─── Fase 1: splice + config (rank 0 paralelo) ───────────────────────────
+  - id: task-901
+    title: "dag-runner/sub-dag.ts — spliceSubDag + tipos"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-901-sub-dag.md
+    subtask_prompt: |
+      Criar packages/cli/src/dag-runner/sub-dag.ts (BLUEPRINT §3.1). Tipos: SubTask { id; parentId; dependsOn[]; specPath };
+      SpliceResult { inserted[]; dag }; CycleError (code 'DAG_CYCLE'); MaxDepthError (code 'DAG_MAX_DEPTH').
+      spliceSubDag(dag, parentId, subTasks, maxDepth): SpliceResult — insere sub-tasks como filhas de parentId;
+      nestingDepth(dag, taskId): number. Regras: nestingDepth(parentId)+1 > maxDepth => MaxDepthError;
+      após inserir, checar aciclicidade (reusa a checagem de dare validate) => CycleError + rollback;
+      idempotência por hash do conjunto {subTask.id}; pai passa a depender das filhas (reentrada). Determinístico.
+      Testes: dag-runner/__tests__/sub-dag.test.ts. Gates: tsc; vitest run sub-dag.
+      Leia: DARE/EXECUTION/task-901-sub-dag.md.
+
+  - id: task-902
+    title: "config — loop.maxDepth (zod)"
+    depends_on: []
+    complexity: LOW
+    spec_file: EXECUTION/task-902-maxdepth-config.md
+    subtask_prompt: |
+      Adicionar maxDepth ao bloco loop do schema (BLUEPRINT §3.4). zod: loop.maxDepth (int >=1, default 2).
+      Atualizar template dare.config.json. Testes: maxdepth-config.test.ts. Gates: tsc; vitest run maxdepth-config.
+      Leia: DARE/EXECUTION/task-902-maxdepth-config.md.
+
+  # ─── Fase 2: integração REPLAN + refine manual ───────────────────────────
+  - id: task-903
+    title: "execute.ts — REPLAN → splice"
+    depends_on: [task-901, task-902]
+    complexity: HIGH
+    spec_file: EXECUTION/task-903-replan-splice.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/execute.ts (BLUEPRINT §3.2). Quando decideNextAction => REPLAN:
+      gerar sub-tasks via refine --split (reusa, NÃO reimplementa), spliceSubDag(dag, task.id, sub, config.loop.maxDepth ?? 2),
+      persistState, continue (dag-runner pega as sub-tasks). MaxDepthError => ESCALATE; CycleError => ESCALATE
+      ('replan would create a cycle'). NÃO reimplementar a decisão (usa decideNextAction). DAG flat inalterado sem REPLAN.
+      Testes: replan-splice.test.ts. Gates: tsc; vitest run replan-splice; lint. Leia: DARE/EXECUTION/task-903-replan-splice.md.
+
+  - id: task-904
+    title: "refine --split --apply no DAG ativo"
+    depends_on: [task-901]
+    complexity: MED
+    spec_file: EXECUTION/task-904-refine-apply.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/refine.ts (BLUEPRINT §3.3). dare refine <task-id> --split --apply injeta o
+      sub-DAG no DAG ativo (modo manual, RF-07): reusa a quebra existente do refine + chama spliceSubDag + persiste.
+      Testes: refine-apply.test.ts (injeta sub-DAG; idempotente). Gates: tsc; vitest run refine-apply.
+      Leia: DARE/EXECUTION/task-904-refine-apply.md.
+
+  # ─── Fase 3: persistência + viz ───────────────────────────────────────────
+  - id: task-905
+    title: "persistência (state.json) + dag viz nesting"
+    depends_on: [task-901, task-903]
+    complexity: MED
+    spec_file: EXECUTION/task-905-persist-viz.md
+    subtask_prompt: |
+      Persistir o nesting em DARE/state.json (BLUEPRINT §3.5, RF-05) — sobrevive a reinício; dare execute --status mostra.
+      dag viz (commands/dag.ts) renderiza sub-tasks em subgraph aninhado sob o parentId (mermaid/dot/excalidraw).
+      Testes: persist-viz.test.ts (estado round-trip; viz agrupa). Gates: tsc; vitest run persist-viz.
+      Leia: DARE/EXECUTION/task-905-persist-viz.md.
+
+  # ─── Fase N-1: auditoria + docs ───────────────────────────────────────────
+  - id: task-906
+    title: "auditoria N-1 — dynamic-dag-regression.test.ts"
+    depends_on: [task-903, task-904, task-905]
+    complexity: MED
+    spec_file: EXECUTION/task-906-dynamic-dag-regression.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/dynamic-dag-regression.test.ts. Prova: REPLAN resolve via sub-DAG;
+      splice nunca cria ciclo (CycleError => ESCALATE); respeita maxDepth (=> ESCALATE); DAG flat inalterado sem REPLAN;
+      idempotência de re-splice; determinístico (sem LLM no splice). Gates: vitest run dynamic-dag-regression.
+      Leia: DARE/EXECUTION/task-906-dynamic-dag-regression.md.
+
+  - id: task-907
+    title: "CHANGELOG + docs (dynamic DAG)"
+    depends_on: [task-906]
+    complexity: LOW
+    spec_file: EXECUTION/task-907-dynamic-dag-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.11.0]: dynamic DAG — REPLAN vira splice de sub-DAG, maxDepth, refine --split --apply.
+      Documentar maxDepth (config) e o nesting do dag viz em docs-site (gate de cobertura de docs).
+      Gates: verify-docs-coverage. Leia: DARE/EXECUTION/task-907-dynamic-dag-docs.md.
