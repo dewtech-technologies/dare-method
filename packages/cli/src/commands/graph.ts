@@ -6,6 +6,7 @@ import { convertYamlToDag } from '../utils/dag-converter.js';
 import { ingestDag } from '../dag-runner/graph-ingest.js';
 import { ingestRequirements } from '../graphrag/requirement-ingest.js';
 import { detectDrift, type DriftConfig, type DriftKind, type DriftReport } from '../graphrag/drift.js';
+import { runIncrementalSemanticIndex } from '../graphrag/incremental-index.js';
 import { loadAndApplyState } from '../dag-runner/state-store.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
@@ -86,7 +87,8 @@ graphCommand
   .description('Search nodes whose label/description contains <term>')
   .option('-l, --limit <n>', 'Maximum results', '10')
   .option('-t, --type <type>', `Restrict to a node type (${KNOWN_NODE_TYPES.join(' | ')})`)
-  .action(async (term: string, options: { limit: string; type?: string }) => {
+  .option('--semantic', 'Use hybrid semantic search (requires graphrag.semantic.enabled + runtime)')
+  .action(async (term: string, options: { limit: string; type?: string; semantic?: boolean }) => {
     const limit = parseInt(options.limit, 10) || 10;
     const typeFilter = options.type?.toLowerCase();
     if (typeFilter && !KNOWN_NODE_TYPES.includes(typeFilter as KnownNodeType)) {
@@ -99,7 +101,13 @@ graphCommand
     await withGraph(async (graph) => {
       // Search wider when filtering by type — we'll trim after filtering.
       const rawLimit = typeFilter ? Math.max(limit * 5, 50) : limit;
-      const all = graph.searchNodes(term, rawLimit);
+      const hybridGraph = graph as KnowledgeGraph & {
+        searchNodesHybrid?: (q: string, n: number) => Promise<ReturnType<KnowledgeGraph['searchNodes']>>;
+      };
+      const all =
+        options.semantic && typeof hybridGraph.searchNodesHybrid === 'function'
+          ? await hybridGraph.searchNodesHybrid(term, rawLimit)
+          : graph.searchNodes(term, rawLimit);
       const results = typeFilter
         ? all.filter((r) => r.node.type === typeFilter).slice(0, limit)
         : all;
@@ -357,6 +365,7 @@ graphCommand
     if (options.requirementsOnly) {
       await withGraph(async (graph) => {
         const { nodes, edges } = ingestRequirements(graph, cwd);
+        await runIncrementalSemanticIndex(graph, cwd);
         const stats = graph.getStatistics();
         console.log(
           chalk.green(
@@ -380,6 +389,7 @@ graphCommand
     await withGraph(async (graph) => {
       ingestDag(graph, dag);
       const req = ingestRequirements(graph, cwd);
+      await runIncrementalSemanticIndex(graph, cwd);
       const stats = graph.getStatistics();
       console.log(
         chalk.green(

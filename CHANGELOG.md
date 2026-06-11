@@ -11,7 +11,7 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [3.10.0] — Unreleased
 
-Release **Drift Gate** — detecção determinística de desalinhamento spec ↔ código no grafo dual.
+Release **Drift Gate** + **Local Semantic Search** — detecção de drift spec↔código e retrieval híbrido no GraphRAG.
 
 > Trocar `Unreleased` pela data ao publicar.
 
@@ -21,6 +21,14 @@ Release **Drift Gate** — detecção determinística de desalinhamento spec ↔
 - **Exit code 7** — drift acima dos limiares com `--strict`.
 - **`drift` em `dare.config.json`** — opt-in (`enabled:false`); `maxOrphanReqs`, `maxOrphanCode`, `failOnStale`, `ignore[]`.
 - **`contentHash` + `ingestedAt`** no ingest de requirements — habilita detecção de stale sem custo no gate.
+
+### ✨ Adicionado — Busca semântica local
+
+- **Retrieval híbrido** — keyword + vetor + proximidade no grafo via RRF (`graphrag/hybrid.ts`).
+- **`graphrag.semantic`** — opt-in (`enabled:false`); `model`, `modelHash`, `rrfK`.
+- **`@xenova/transformers`** como `optionalDependency` com import lazy em `embeddings.ts` (core LLM-free preservado).
+- **`dare graph query --semantic`** — força caminho híbrido quando runtime presente; fallback keyword se modelo ausente.
+- **Indexação incremental** — re-embed só quando `contentHash` muda.
 
 ## [3.9.0] — Unreleased
 

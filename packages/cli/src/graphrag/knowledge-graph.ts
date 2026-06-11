@@ -21,6 +21,11 @@ import type {
   CodeSymbolNode,
 } from './types.js';
 
+export interface VectorRow {
+  id: string;
+  v: Float32Array;
+}
+
 export interface KnowledgeGraph {
   init(): Promise<void>;
 
@@ -39,6 +44,7 @@ export interface KnowledgeGraph {
   traverse(opts: TraverseOptions): TraverseResult;
   locate(seedQuery: string, opts?: LocateOptions): LocateResult;
   findByQualifiedName(qn: string): CodeSymbolNode | null;
+  loadVectors(): VectorRow[];
 
   exportToJson(): { nodes: GraphNode[]; edges: GraphEdge[] };
   importFromJson(data: { nodes: GraphNode[]; edges: GraphEdge[] }): void;

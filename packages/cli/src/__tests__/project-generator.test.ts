@@ -6,7 +6,9 @@ import { generateProjectStructure } from '../utils/project-generator.js';
 import {
   DEFAULTS,
   DRIFT_DEFAULTS,
+  SEMANTIC_DEFAULTS,
   seedDriftDefaultsIfAbsent,
+  seedSemanticDefaultsIfAbsent,
   seedVerificationDefaultsIfAbsent,
 } from '../verification/config.js';
 
@@ -50,6 +52,8 @@ describe('project-generator — verification block', () => {
     expect(cfg.verification.loop.policy).toBe('decay');
     expect(cfg.verification.prerank.enabled).toBe(false);
     expect(cfg.drift).toEqual(DRIFT_DEFAULTS);
+    expect(cfg.graphrag.backend).toBe('sqlite');
+    expect(cfg.graphrag.semantic).toEqual(SEMANTIC_DEFAULTS);
   });
 
   it('should_match_config_defaults', async () => {
@@ -70,13 +74,16 @@ describe('project-generator — verification block', () => {
     const cfg = await fs.readJSON(cfgPath);
     expect(seedVerificationDefaultsIfAbsent(cfg)).toBe(true);
     expect(seedDriftDefaultsIfAbsent(cfg)).toBe(true);
+    expect(seedSemanticDefaultsIfAbsent(cfg)).toBe(true);
     expect(cfg.verification).toEqual(DEFAULTS);
     expect(cfg.drift).toEqual(DRIFT_DEFAULTS);
+    expect(cfg.graphrag.semantic).toEqual(SEMANTIC_DEFAULTS);
     await fs.writeJSON(cfgPath, cfg, { spaces: 2 });
 
     const reloaded = await fs.readJSON(cfgPath);
     expect(reloaded.verification.enabled).toBe(false);
     expect(seedVerificationDefaultsIfAbsent(reloaded)).toBe(false);
     expect(seedDriftDefaultsIfAbsent(reloaded)).toBe(false);
+    expect(seedSemanticDefaultsIfAbsent(reloaded)).toBe(false);
   });
 });

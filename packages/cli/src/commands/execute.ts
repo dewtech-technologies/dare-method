@@ -41,6 +41,7 @@ import {
   AgentSdkMissingError,
   createClaudeDriver,
 } from '../agent/drivers/claude.js';
+import { runIncrementalSemanticIndex } from '../graphrag/incremental-index.js';
 import {
   gateToAspect,
   loadVerificationConfig,
@@ -1225,6 +1226,17 @@ async function handleComplete(
     durationMs: reportedDuration ?? ralphMs,
     graph,
   });
+
+  if (graph && !options.noGraph) {
+    try {
+      await runIncrementalSemanticIndex(graph, cwd);
+    } catch (err) {
+      execLog.warn(
+        { err: err instanceof Error ? err.message : String(err), taskId },
+        'incremental semantic index failed (best-effort)',
+      );
+    }
+  }
 
   const verifyNote = verification.ran ? ' + verification PASS' : '';
   console.log(

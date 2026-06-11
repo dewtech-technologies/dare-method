@@ -1,0 +1,26 @@
+[
+  {
+    "id": "q-keyword-refund",
+    "kind": "keyword",
+    "query": "refund policy",
+    "relevantNodeIds": ["node:refund"]
+  },
+  {
+    "id": "q-keyword-billing",
+    "kind": "keyword",
+    "query": "billing invoice",
+    "relevantNodeIds": ["node:billing"]
+  },
+  {
+    "id": "q-semantic-cancel",
+    "kind": "semantic",
+    "query": "cancel my plan",
+    "relevantNodeIds": ["node:cancel"]
+  },
+  {
+    "id": "q-semantic-downgrade",
+    "kind": "semantic",
+    "query": "move to cheaper tier",
+    "relevantNodeIds": ["node:downgrade"]
+  }
+]

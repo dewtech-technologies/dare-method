@@ -7,7 +7,7 @@ import pino from 'pino';
 import { assertRelativeSafe, PathEscapeError, resolveSafePath } from '../utils/path-safety.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
-import type { EdgeType, NodeType } from '../graphrag/types.js';
+import type { EdgeType, LocateOptions, LocateResult, NodeType } from '../graphrag/types.js';
 import { createAuthMiddleware } from './middleware/auth.js';
 import { createCorsMiddleware } from './middleware/cors.js';
 import { createErrorHandler } from './middleware/error-handler.js';
@@ -94,6 +94,22 @@ async function withProjectGraph<T>(
   } finally {
     await Promise.resolve(graph.close());
   }
+}
+
+type HybridLocateCapableGraph = KnowledgeGraph & {
+  locateHybrid?: (seedQuery: string, opts?: LocateOptions) => Promise<LocateResult>;
+};
+
+async function locateGraph(
+  graph: KnowledgeGraph,
+  seed: string,
+  opts: LocateOptions,
+): Promise<LocateResult> {
+  const hybridGraph = graph as HybridLocateCapableGraph;
+  if (typeof hybridGraph.locateHybrid === 'function') {
+    return hybridGraph.locateHybrid(seed, opts);
+  }
+  return graph.locate(seed, opts);
 }
 
 function validateGraphSeedPath(seed: string): void {
@@ -398,7 +414,7 @@ export function createMcpServer(
       const l = clampInt(limit, 1, 50, 10);
 
       await withProjectGraph(projectRoot, async (graph) => {
-        const result = graph.locate(seed, { hops: h, limit: l });
+        const result = await locateGraph(graph, seed, { hops: h, limit: l });
         res.json({ success: true, candidates: result.candidates });
       });
     });

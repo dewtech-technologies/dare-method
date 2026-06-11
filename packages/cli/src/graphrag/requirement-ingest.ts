@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import type { KnowledgeGraph } from './knowledge-graph.js';
 import type { RequirementNode } from './types.js';
+import { mergeWithExistingMetadata } from './incremental-index.js';
 
 export interface ParsedRequirement {
   readonly reqId: string;
@@ -127,7 +128,7 @@ export function ingestRequirements(
   graph: KnowledgeGraph,
   projectRoot: string,
   opts?: { readonly ingestedAt?: string },
-): { nodes: number; edges: number } {
+): { nodes: number; edges: number; nodeIds: string[] } {
   const dareDir = path.join(projectRoot, 'DARE');
   const ingestedAt = opts?.ingestedAt ?? new Date().toISOString();
   let nodes = 0;
@@ -152,24 +153,27 @@ export function ingestRequirements(
 
   const seenNodes = new Set<string>();
   const seenEdges = new Set<string>();
+  const nodeIds: string[] = [];
 
   for (const req of parsed) {
     const nodeId = `requirement:${req.reqId}`;
     const requirementText = req.title || req.reqId;
     const contentHash = createHash('sha256').update(requirementText).digest('hex');
+    const metadata = mergeWithExistingMetadata(graph, nodeId, {
+      reqId: req.reqId,
+      source: req.source,
+      priority: req.priority,
+      title: req.title,
+      contentHash,
+      ingestedAt,
+    });
     graph.addNode({
       id: nodeId,
       type: 'requirement',
       label: req.title || req.reqId,
-      metadata: {
-        reqId: req.reqId,
-        source: req.source,
-        priority: req.priority,
-        title: req.title,
-        contentHash,
-        ingestedAt,
-      },
+      metadata,
     });
+    nodeIds.push(nodeId);
     if (!seenNodes.has(nodeId)) {
       seenNodes.add(nodeId);
       nodes++;
@@ -190,5 +194,5 @@ export function ingestRequirements(
     }
   }
 
-  return { nodes, edges };
+  return { nodes, edges, nodeIds };
 }

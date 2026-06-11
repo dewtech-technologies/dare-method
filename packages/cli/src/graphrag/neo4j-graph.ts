@@ -4,6 +4,7 @@
  */
 import type {
   KnowledgeGraph,
+  VectorRow,
   GraphNode,
   GraphEdge,
   NodeType,
@@ -64,7 +65,11 @@ const NODE_TYPES = new Set<string>(ALL_NODE_TYPES);
 const EDGE_TYPES = new Set<string>(ALL_EDGE_TYPES);
 
 export function parseNodeFromRecord(row: unknown[]): GraphNode {
-  const [id, type, label, description, metadata, createdAt, updatedAt] = row;
+  const [id, type, label, description, metadata, maybeVector, maybeCreatedAt, maybeUpdatedAt] = row;
+  const hasVectorColumn = row.length >= 8;
+  const vectorValue = hasVectorColumn ? maybeVector : undefined;
+  const createdAt = hasVectorColumn ? maybeCreatedAt : maybeVector;
+  const updatedAt = hasVectorColumn ? maybeUpdatedAt : maybeCreatedAt;
   if (typeof id !== 'string' || !id) {
     throw new Neo4jQueryError('SHAPE', 'node id must be a non-empty string');
   }
@@ -89,6 +94,7 @@ export function parseNodeFromRecord(row: unknown[]): GraphNode {
     type: type as NodeType,
     label,
     description: typeof description === 'string' ? description : undefined,
+    vector: parseNodeVector(vectorValue),
     metadata: meta,
     createdAt: typeof createdAt === 'string' ? createdAt : undefined,
     updatedAt: typeof updatedAt === 'string' ? updatedAt : undefined,
@@ -159,7 +165,7 @@ export class Neo4jGraph implements KnowledgeGraph {
 
   private async hydrateFromServer(): Promise<void> {
     const nodeRows = await this.runRead<unknown[]>(
-      'MATCH (n:DareNode) RETURN n.id, n.type, n.label, n.description, n.metadata, n.created_at, n.updated_at LIMIT $limit',
+      'MATCH (n:DareNode) RETURN n.id, n.type, n.label, n.description, n.metadata, n.vector, n.created_at, n.updated_at LIMIT $limit',
       { limit: 10000 },
     );
     for (const row of nodeRows) {
@@ -179,23 +185,33 @@ export class Neo4jGraph implements KnowledgeGraph {
 
   addNode(node: GraphNode): void {
     const now = new Date().toISOString();
+    const existing = this.nodeCache.get(node.id);
+    const mergedVector = node.vector ?? existing?.vector;
     const params = {
       id: node.id,
       type: node.type,
       label: node.label,
       description: node.description ?? null,
       metadata: JSON.stringify(node.metadata ?? {}),
+      hasVector: mergedVector !== undefined,
+      vector: mergedVector ?? null,
       createdAt: node.createdAt ?? now,
       updatedAt: now,
     };
     this.enqueue({
       statement:
         'MERGE (n:DareNode {id:$id}) ' +
-        'ON CREATE SET n.type=$type,n.label=$label,n.description=$description,n.metadata=$metadata,n.created_at=$createdAt,n.updated_at=$updatedAt ' +
-        'ON MATCH SET n.label=$label,n.description=$description,n.metadata=$metadata,n.updated_at=$updatedAt',
+        'ON CREATE SET n.type=$type,n.label=$label,n.description=$description,n.metadata=$metadata,n.vector=CASE WHEN $hasVector THEN $vector ELSE null END,n.created_at=$createdAt,n.updated_at=$updatedAt ' +
+        'ON MATCH SET n.label=$label,n.description=$description,n.metadata=$metadata,n.vector=CASE WHEN $hasVector THEN $vector ELSE n.vector END,n.updated_at=$updatedAt',
       parameters: params,
     });
-    this.nodeCache.set(node.id, { ...node, createdAt: params.createdAt, updatedAt: params.updatedAt });
+    this.nodeCache.set(node.id, {
+      ...existing,
+      ...node,
+      vector: mergedVector,
+      createdAt: existing?.createdAt ?? params.createdAt,
+      updatedAt: params.updatedAt,
+    });
   }
 
   getNode(id: string): GraphNode | null {
@@ -324,6 +340,17 @@ export class Neo4jGraph implements KnowledgeGraph {
     return null;
   }
 
+  loadVectors(): VectorRow[] {
+    const vectors: VectorRow[] = [];
+    for (const node of this.nodeCache.values()) {
+      if (!Array.isArray(node.vector) || node.vector.length === 0) continue;
+      const parsed = node.vector.map((entry) => Number(entry));
+      if (parsed.some((entry) => !Number.isFinite(entry))) continue;
+      vectors.push({ id: node.id, v: new Float32Array(parsed) });
+    }
+    return vectors;
+  }
+
   async flush(): Promise<void> {
     if (this.pendingWrites.length === 0) return;
     const batch = this.pendingWrites;
@@ -390,4 +417,11 @@ export class Neo4jGraph implements KnowledgeGraph {
 
 function stripTrailingSlash(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
+}
+
+function parseNodeVector(value: unknown): number[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const vector = value.map((entry) => Number(entry));
+  if (vector.some((entry) => !Number.isFinite(entry))) return undefined;
+  return vector;
 }

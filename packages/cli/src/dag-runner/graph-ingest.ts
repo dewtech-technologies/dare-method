@@ -14,9 +14,11 @@
  * the graph is meant to power discovery, not be a build-system source of truth.
  */
 import path from 'path';
+import { createHash } from 'node:crypto';
 import type { Dag, DagTask } from './run_dag.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
 import { extractSymbolsFromPaths } from '../graphrag/code-index.js';
+import { mergeWithExistingMetadata } from '../graphrag/incremental-index.js';
 
 export interface IngestOptions {
   /** Project root used to resolve relative file paths. Defaults to cwd. */
@@ -86,18 +88,22 @@ export function ingestTask(
     for (const sym of symbols) {
       const symId = nodeId('code_symbol', sym.qualifiedName);
       symbolIdsCreated.add(symId);
+      const symbolText = `${sym.qualifiedName}\n${sym.symbol}\n${sym.kind}\n${sym.line ?? ''}`;
+      const contentHash = createHash('sha256').update(symbolText).digest('hex');
+      const metadata = mergeWithExistingMetadata(graph, symId, {
+        path: sym.path,
+        symbol: sym.symbol,
+        kind: sym.kind,
+        qualifiedName: sym.qualifiedName,
+        line: sym.line,
+        contentHash,
+      });
       graph.addNode({
         id: symId,
         type: 'code_symbol',
         label: sym.symbol,
         description: sym.qualifiedName,
-        metadata: {
-          path: sym.path,
-          symbol: sym.symbol,
-          kind: sym.kind,
-          qualifiedName: sym.qualifiedName,
-          line: sym.line,
-        },
+        metadata,
       });
       graph.addEdge({
         id: edgeId('contains', normalized, sym.qualifiedName),

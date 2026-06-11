@@ -210,6 +210,7 @@ Busca nós cujo label/descrição contenham `<term>`.
 
 ```bash
 dare graph query auth --type requirement --limit 5
+dare graph query "login flow" --semantic
 ```
 
 | Flag | Tipo | Default | Descrição |
@@ -217,6 +218,9 @@ dare graph query auth --type requirement --limit 5
 | `<term>` | argumento | — | Termo de busca. |
 | `-l, --limit <n>` | string | `10` | Número máximo de resultados. |
 | `-t, --type <type>` | string | — | Restringe a um tipo de nó. |
+| `--semantic` | boolean | `false` | Usa retrieval híbrido (RRF keyword+vetor+grafo) quando `graphrag.semantic.enabled` e runtime instalado; fallback keyword se ausente. |
+
+> **Ativar busca semântica:** `npm i @xenova/transformers` (optional) + `"graphrag": { "semantic": { "enabled": true } }` em `dare.config.json`.
 
 ### `dare graph viz`
 

@@ -230,6 +230,20 @@ Detalhes em [Referência da CLI › `dare guard`](cli-reference.md#dare-guard).
 | `signing.enabled` | `boolean` | `false` | Habilita verificação de assinatura. |
 | `signing.publicKey` | `string` | — | Chave pública minisign (opcional). |
 
+### `graphrag.semantic`
+
+Bloco aninhado em `graphrag` (validado em `verification/config.ts`). Defaults: `enabled:false` (opt-in).
+Detalhes em [Referência da CLI › `dare graph query`](cli-reference.md#dare-graph-query-term).
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `enabled` | `boolean` | `false` | Liga retrieval híbrido (keyword + vetor + grafo via RRF). |
+| `model` | `string` | `'all-MiniLM-L6-v2'` | Modelo de embeddings local. |
+| `modelHash` | `string` | — | Hash pinado do modelo (RS-01). |
+| `rrfK` | `number` | `60` | Constante k do Reciprocal Rank Fusion. |
+
+Instale o runtime opcional: `npm i @xenova/transformers`. Sem o pacote, o caminho cai para keyword.
+
 ### `drift`
 
 Bloco validado em `verification/config.ts` (Zod). Defaults: `enabled:false` (opt-in).

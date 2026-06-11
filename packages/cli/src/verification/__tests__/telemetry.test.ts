@@ -99,6 +99,10 @@ class RejectingGraph implements KnowledgeGraph {
     return this.inner.findByQualifiedName(qn);
   }
 
+  loadVectors() {
+    return this.inner.loadVectors();
+  }
+
   close(): void {
     this.inner.close();
   }

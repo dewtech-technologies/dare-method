@@ -20,6 +20,7 @@ import type {
 import { classifyChange, readProjectConfig } from './UpdateDetector.js';
 import {
   seedDriftDefaultsIfAbsent,
+  seedSemanticDefaultsIfAbsent,
   seedVerificationDefaultsIfAbsent,
 } from '../verification/config.js';
 import { seedHooksDefaultsIfAbsent } from '../hooks/config.js';
@@ -234,6 +235,7 @@ async function runMigration(
       const cfg = (await readProjectConfig(projectRoot)) as Record<string, unknown>;
       seedVerificationDefaultsIfAbsent(cfg);
       seedDriftDefaultsIfAbsent(cfg);
+      seedSemanticDefaultsIfAbsent(cfg);
       seedHooksDefaultsIfAbsent(cfg);
       await fs.writeJSON(configPath, cfg, { spaces: 2 });
       return;

@@ -75,6 +75,7 @@ export interface GraphNode {
   type: NodeType;
   label: string;
   description?: string;
+  vector?: number[];
   metadata?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;

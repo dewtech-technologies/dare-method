@@ -17,6 +17,15 @@ Este documento descreve o que está **shipped**, o que está **em desenvolviment
 - ✅ **Bloco `drift`** opt-in em `dare.config.json`
 - ✅ **`contentHash`** no ingest de requirements
 
+## ✅ Shipped — v3.10.0 (semantic search)
+
+**Local Semantic Search** — retrieval híbrido no GraphRAG.
+
+- ✅ **RRF** — keyword + vetor + proximidade no grafo
+- ✅ **`graphrag.semantic`** opt-in + `@xenova/transformers` lazy optionalDep
+- ✅ **`dare graph query --semantic`** + fallback keyword
+- ✅ **Indexação incremental** por `contentHash`
+
 ## ✅ Shipped — v3.9.0
 
 **Secure Autonomous Executor + Agentic-chain Security Gate** — modo autônomo (core determinístico) + gate de segurança da cadeia agêntica.

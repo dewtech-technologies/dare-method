@@ -1,36 +1,56 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-10T23:40:59.704Z",
+  "updatedAt": "2026-06-11T00:20:12.522Z",
   "tasks": {
-    "task-701": {
+    "task-801": {
       "status": "DONE",
-      "output": "graphrag/drift.ts: detectDrift determinístico (orphan-req, orphan-code, stale, staleIndeterminate). Testes drift.test.ts (5). Gates OK.",
-      "duration": 72785
+      "output": "vector-search.ts: cosine + cosineTopK determinístico. Testes vector-search.test.ts (4). Gates OK.",
+      "duration": 70174
     },
-    "task-702": {
+    "task-803": {
       "status": "DONE",
-      "output": "requirement-ingest: metadata.contentHash + ingestedAt. Testes requirement-hash.test.ts. Gates OK.",
-      "duration": 71103
+      "output": "embeddings.ts: loadEmbedder lazy, EmbeddingModelMissingError, @xenova/transformers optionalDep. Gates OK.",
+      "duration": 65733
     },
-    "task-703": {
+    "task-808": {
       "status": "DONE",
-      "output": "bloco drift zod em verification/config.ts + project-generator. Testes drift-config.test.ts. Gates OK.",
-      "duration": 76684
+      "output": "graphrag.semantic zod config + project-generator. Testes semantic-config.test.ts. Gates OK.",
+      "duration": 65340
     },
-    "task-704": {
+    "task-802": {
       "status": "DONE",
-      "output": "dare graph drift subcomando: detectDrift, --strict exit 7, --format json, --modules. Testes graph-drift.test.ts. Gates OK.",
-      "duration": 66594
+      "output": "hybrid.ts: hybridSearch RRF keyword+vector+graph, fallback sem embedder. Testes hybrid.test.ts. Gates OK.",
+      "duration": 63341
     },
-    "task-705": {
+    "task-804": {
       "status": "DONE",
-      "output": "drift-regression.test.ts + fixture drift-graph.json (5 invariantes N-1). vitest drift-regression OK.",
-      "duration": 63539
+      "output": "no-heavy-dep-in-core.test.ts bloqueia imports pesados fora embeddings.ts. Gates OK.",
+      "duration": 61068
     },
-    "task-706": {
+    "task-805": {
       "status": "DONE",
-      "output": "CHANGELOG [3.10.0] drift gate, docs-site cli-reference (graph drift) + configuration (drift block), ROADMAP/README. verify-docs-coverage OK.",
-      "duration": 65694
+      "output": "GraphNode.vector + loadVectors em backends. Testes vector-persistence.test.ts. Gates OK.",
+      "duration": 61815
+    },
+    "task-806": {
+      "status": "DONE",
+      "output": "graph-rag searchNodes/locate híbrido + fallback keyword + MCP graph_locate. Testes hybrid-integration.test.ts. Gates OK.",
+      "duration": 62618
+    },
+    "task-807": {
+      "status": "DONE",
+      "output": "incremental-index.ts: re-embed só quando contentHash muda. Integrado execute/graph ingest. Testes incremental-index.test.ts. Gates OK.",
+      "duration": 68648
+    },
+    "task-809": {
+      "status": "DONE",
+      "output": "semantic-regression.test.ts + fixture (5 invariantes N-1). vitest semantic-regression OK.",
+      "duration": 67157
+    },
+    "task-810": {
+      "status": "DONE",
+      "output": "CHANGELOG semantic + drift [3.10.0], docs graphrag.semantic + query --semantic, ROADMAP/README. verify-docs-coverage OK.",
+      "duration": 64741
     }
   }
 }

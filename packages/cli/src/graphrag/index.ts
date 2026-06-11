@@ -4,7 +4,7 @@ export { Neo4jGraph, Neo4jQueryError, parseNodeFromRecord, parseEdgeFromRecord }
 export type { Neo4jConfig } from './neo4j-graph.js';
 export { traverse, locate } from './traverse.js';
 export { createGraph, loadGraphConfig } from './factory.js';
-export type { KnowledgeGraph } from './knowledge-graph.js';
+export type { KnowledgeGraph, VectorRow } from './knowledge-graph.js';
 export type { GraphConfig, GraphBackend } from './factory.js';
 export type {
   GraphNode,

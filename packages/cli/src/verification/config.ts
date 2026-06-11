@@ -68,6 +68,22 @@ export const driftConfigSchema = z
 export type DriftConfig = z.infer<typeof driftConfigSchema>;
 export const DRIFT_DEFAULTS: DriftConfig = driftConfigSchema.parse({});
 
+export const semanticConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    model: z.string().default('all-MiniLM-L6-v2'),
+    modelHash: z.string().optional(),
+    rrfK: z
+      .number()
+      .int()
+      .positive('rrfK must be a positive integer')
+      .default(60),
+  })
+  .strict();
+
+export type SemanticConfig = z.infer<typeof semanticConfigSchema>;
+export const SEMANTIC_DEFAULTS: SemanticConfig = semanticConfigSchema.parse({});
+
 const formalGateSchema = z
   .object({
     enabled: z.boolean().default(DEFAULTS.formal.enabled),
@@ -204,6 +220,16 @@ export class DriftConfigError extends Error {
   }
 }
 
+export class SemanticConfigError extends Error {
+  readonly issues: ReadonlyArray<{ path: string; message: string }>;
+
+  constructor(issues: ReadonlyArray<{ path: string; message: string }>) {
+    super(`Invalid semantic config: ${issues.map((i) => `${i.path}: ${i.message}`).join('; ')}`);
+    this.name = 'SemanticConfigError';
+    this.issues = issues;
+  }
+}
+
 function isVerificationBlockAbsent(raw: unknown): boolean {
   if (raw === undefined || raw === null) return true;
   if (typeof raw !== 'object') return false;
@@ -216,6 +242,21 @@ function isDriftBlockAbsent(raw: unknown): boolean {
   if (typeof raw !== 'object') return false;
   const rec = raw as Record<string, unknown>;
   return !('drift' in rec) || rec.drift === undefined;
+}
+
+function isSemanticBlockAbsent(raw: unknown): boolean {
+  if (raw === undefined || raw === null) return true;
+  if (typeof raw !== 'object') return false;
+  const rec = raw as Record<string, unknown>;
+  if (!('graphrag' in rec) || rec.graphrag === undefined) return true;
+
+  const graphrag = rec.graphrag;
+  if (typeof graphrag !== 'object' || graphrag === null || Array.isArray(graphrag)) {
+    return true;
+  }
+
+  const graphragRec = graphrag as Record<string, unknown>;
+  return !('semantic' in graphragRec) || graphragRec.semantic === undefined;
 }
 
 function zodIssues(
@@ -264,6 +305,41 @@ export function seedDriftDefaultsIfAbsent(
   return true;
 }
 
+/** Serializable defaults for dare.config.json (new projects + migrations). */
+export function defaultSemanticConfigForProject(): SemanticConfig {
+  return structuredClone(SEMANTIC_DEFAULTS);
+}
+
+/**
+ * Inserts `graphrag.semantic` when absent.
+ * Returns true when the block was added.
+ */
+export function seedSemanticDefaultsIfAbsent(
+  cfg: Record<string, unknown>,
+): boolean {
+  const existing = cfg.graphrag;
+  if (existing === undefined) {
+    cfg.graphrag = {
+      backend: 'sqlite',
+      semantic: defaultSemanticConfigForProject(),
+    };
+    return true;
+  }
+
+  if (typeof existing !== 'object' || existing === null || Array.isArray(existing)) {
+    cfg.graphrag = {
+      backend: existing,
+      semantic: defaultSemanticConfigForProject(),
+    };
+    return true;
+  }
+
+  const graphrag = existing as Record<string, unknown>;
+  if (graphrag.semantic !== undefined) return false;
+  graphrag.semantic = defaultSemanticConfigForProject();
+  return true;
+}
+
 export function parseVerificationConfig(raw: unknown): VerificationConfig {
   if (isVerificationBlockAbsent(raw)) {
     return { ...DEFAULTS, enabled: false };
@@ -289,6 +365,23 @@ export function parseDriftConfig(raw: unknown): DriftConfig {
   const result = driftConfigSchema.safeParse(block);
   if (!result.success) {
     throw new DriftConfigError(zodIssues(result.error));
+  }
+  return result.data;
+}
+
+/**
+ * Parse and validate `graphrag.semantic` from an already-parsed dare.config.json object.
+ */
+export function parseSemanticConfig(raw: unknown): SemanticConfig {
+  if (isSemanticBlockAbsent(raw)) {
+    return defaultSemanticConfigForProject();
+  }
+
+  const graphragBlock = (raw as Record<string, unknown>).graphrag as Record<string, unknown>;
+  const semanticBlock = graphragBlock.semantic;
+  const result = semanticConfigSchema.safeParse(semanticBlock);
+  if (!result.success) {
+    throw new SemanticConfigError(zodIssues(result.error));
   }
   return result.data;
 }

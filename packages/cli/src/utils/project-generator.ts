@@ -32,6 +32,7 @@ import {
 } from './stack-bootstrap.js';
 import {
   defaultDriftConfigForProject,
+  defaultSemanticConfigForProject,
   defaultVerificationConfigForProject,
 } from '../verification/config.js';
 import { defaultHookConfigForProject } from '../hooks/config.js';
@@ -69,6 +70,26 @@ export interface ProjectConfig {
   cratePrefix?: string;
 }
 
+function normalizeGraphRagBackend(raw: unknown): ProjectConfig['graphrag'] {
+  if (raw === 'sqlite' || raw === 'json' || raw === 'neo4j') {
+    return raw;
+  }
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    const backend = (raw as Record<string, unknown>).backend;
+    if (backend === 'sqlite' || backend === 'json' || backend === 'neo4j') {
+      return backend;
+    }
+  }
+  return 'sqlite';
+}
+
+function buildGraphRagConfig(backend: ProjectConfig['graphrag']): Record<string, unknown> {
+  return {
+    backend,
+    semantic: defaultSemanticConfigForProject(),
+  };
+}
+
 export async function generateProjectStructure(config: ProjectConfig): Promise<void> {
   const { outputDir, name, structure, backend, frontend, ide, graphrag, mcp } = config;
 
@@ -93,7 +114,7 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     backend,
     frontend,
     ide,
-    graphrag,
+    graphrag: buildGraphRagConfig(graphrag),
     mcp,
     toolchain: config.toolchain ?? 'auto',
     version: getFrameworkVersion(),
@@ -235,7 +256,17 @@ export async function installDareToExistingProject(
   await fs.ensureDir(path.join(outputDir, 'DARE'));
   await fs.ensureDir(path.join(outputDir, 'DARE', 'EXECUTION'));
 
-  const configData: Record<string, unknown> = { name, structure, backend, frontend, ide, graphrag, mcp, version: getFrameworkVersion(), installedAt: new Date().toISOString() };
+  const configData: Record<string, unknown> = {
+    name,
+    structure,
+    backend,
+    frontend,
+    ide,
+    graphrag: buildGraphRagConfig(graphrag),
+    mcp,
+    version: getFrameworkVersion(),
+    installedAt: new Date().toISOString(),
+  };
   if (structure === 'mcp-server') {
     configData.mcpTransport = config.mcpTransport;
     configData.mcpLanguage = config.mcpLanguage;
@@ -311,7 +342,7 @@ export async function ensureDareSkills(targetDir: string): Promise<void> {
       backend: cfg.backend,
       frontend: cfg.frontend,
       ide,
-      graphrag: cfg.graphrag ?? 'sqlite',
+      graphrag: normalizeGraphRagBackend(cfg.graphrag),
       mcp: cfg.mcp ?? false,
       mcpTransport: cfg.mcpTransport,
       mcpLanguage: cfg.mcpLanguage,
@@ -343,7 +374,7 @@ export async function ensureDareSkills(targetDir: string): Promise<void> {
       name,
       structure: 'backend',
       ide: 'hybrid',
-      graphrag: 'sqlite',
+      graphrag: buildGraphRagConfig('sqlite'),
       mcp: false,
       version: getFrameworkVersion(),
       installedAt: new Date().toISOString(),

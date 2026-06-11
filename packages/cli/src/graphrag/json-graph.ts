@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import type {
   KnowledgeGraph,
+  VectorRow,
   GraphNode,
   GraphEdge,
   NodeType,
@@ -65,11 +66,13 @@ export class JsonGraph implements KnowledgeGraph {
           ...existing,
           label: node.label,
           description: node.description,
+          vector: node.vector ?? existing.vector,
           metadata: node.metadata ?? existing.metadata ?? {},
           updatedAt: now,
         }
       : {
           ...node,
+          vector: node.vector,
           metadata: node.metadata ?? {},
           createdAt: node.createdAt ?? now,
           updatedAt: now,
@@ -206,6 +209,17 @@ export class JsonGraph implements KnowledgeGraph {
     const direct = this.nodes.get(directId);
     if (direct?.type === 'code_symbol') return direct as CodeSymbolNode;
     return null;
+  }
+
+  loadVectors(): VectorRow[] {
+    const vectors: VectorRow[] = [];
+    for (const node of this.nodes.values()) {
+      if (!Array.isArray(node.vector) || node.vector.length === 0) continue;
+      const parsed = node.vector.map((entry) => Number(entry));
+      if (parsed.some((entry) => !Number.isFinite(entry))) continue;
+      vectors.push({ id: node.id, v: new Float32Array(parsed) });
+    }
+    return vectors;
   }
 
   close(): void {
