@@ -9,11 +9,9 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
-## [3.10.0] — Unreleased
+## [3.10.0] — 2026-06-10
 
 Release **Drift Gate** + **Local Semantic Search** — detecção de drift spec↔código e retrieval híbrido no GraphRAG.
-
-> Trocar `Unreleased` pela data ao publicar.
 
 ### ✨ Adicionado — Drift gate
 
