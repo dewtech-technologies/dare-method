@@ -1,0 +1,60 @@
+name: 'DARE Gate'
+description: 'Run a DARE deterministic gate with GitHub annotations and optional PR comment'
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  gate:
+    description: 'Gate to run: review | guard | drift | bench'
+    required: true
+  args:
+    description: 'Extra CLI arguments passed to the gate command'
+    required: false
+    default: ''
+  fail-on:
+    description: 'Exit policy: none | warn | error (default none — comment only)'
+    required: false
+    default: 'none'
+  comment:
+    description: 'Post/update idempotent PR comment (true/false)'
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install DARE CLI
+      shell: bash
+      run: |
+        if [ -f "${{ github.workspace }}/packages/cli/dist/bin/dare.js" ]; then
+          npm install -g "${{ github.workspace }}/packages/cli"
+        else
+          npm install -g @dewtech/dare-cli@latest
+        fi
+
+    - name: Run DARE gate
+      shell: bash
+      run: |
+        COMMENT_FLAG=""
+        if [ "${{ inputs.comment }}" = "true" ]; then
+          COMMENT_FLAG="--comment"
+        fi
+        case "${{ inputs.gate }}" in
+          review|guard|bench)
+            dare ${{ inputs.gate }} ${{ inputs.args }} --format github $COMMENT_FLAG --fail-on ${{ inputs.fail-on }}
+            ;;
+          drift)
+            dare graph drift ${{ inputs.args }} --format github $COMMENT_FLAG --fail-on ${{ inputs.fail-on }}
+            ;;
+          *)
+            echo "Unsupported gate: ${{ inputs.gate }}"
+            exit 1
+            ;;
+        esac
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+# Required workflow job permissions when using this action:
+#   pull-requests: write
+#   contents: read

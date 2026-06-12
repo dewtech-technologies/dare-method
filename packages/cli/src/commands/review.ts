@@ -3,6 +3,13 @@ import chalk from 'chalk';
 import path from 'path';
 import { runReview } from '../utils/ReviewRunner.js';
 import type { ReviewReport, Violation } from '../types/Review.types.js';
+import {
+  applyCiGateOutput,
+  parseCiFormat,
+  parseFailOn,
+  resolveVerdictFromCounts,
+  violationsToFindings,
+} from '../reporters/ci-gate.js';
 
 /**
  * `dare review <task-id>` — runs the static analyzer (and optionally a
@@ -30,7 +37,9 @@ export const reviewCommand = new Command('review')
     '--from-agent <path>',
     'Caminho para JSON com SemanticVerdict produzido pelo agente IDE',
   )
-  .option('--format <fmt>', 'Saída: human | json', 'human')
+  .option('--format <fmt>', 'Saída: human | json | github', 'human')
+  .option('--comment', 'Post idempotent PR comment (requires GITHUB_TOKEN + PR context)', false)
+  .option('--fail-on <mode>', 'Exit policy: none | warn | error', 'none')
   .action(
     async (
       taskId: string,
@@ -39,10 +48,22 @@ export const reviewCommand = new Command('review')
         errorsOnly: boolean;
         files?: string[];
         fromAgent?: string;
-        format: 'human' | 'json';
+        format: string;
+        comment: boolean;
+        failOn: string;
       },
     ) => {
       const projectRoot = process.cwd();
+      const format = parseCiFormat(options.format);
+      if (!format) {
+        console.error(chalk.red(`❌ --format must be human, json, or github (got "${options.format}")`));
+        process.exit(1);
+      }
+      const failOn = parseFailOn(options.failOn);
+      if (!failOn) {
+        console.error(chalk.red(`❌ --fail-on must be none, warn, or error (got "${options.failOn}")`));
+        process.exit(1);
+      }
 
       let report: ReviewReport;
       try {
@@ -52,7 +73,7 @@ export const reviewCommand = new Command('review')
           fromAgent: options.fromAgent,
           strict: options.strict,
           errorsOnly: options.errorsOnly,
-          format: options.format,
+          format: format === 'github' ? 'human' : format,
         });
       } catch (err) {
         console.error(
@@ -61,12 +82,32 @@ export const reviewCommand = new Command('review')
         process.exit(1);
       }
 
-      if (options.format === 'json') {
+      const allViolations = report.reports.flatMap((r) => r.violations);
+      const findings = violationsToFindings(allViolations, projectRoot);
+      const verdict = resolveVerdictFromCounts(report.totals.errors, report.totals.warnings);
+
+      if (format === 'json') {
         process.stdout.write(JSON.stringify(report, null, 2) + '\n');
-        process.exit(report.failed ? 1 : 0);
+      } else {
+        printHumanReport(report, options.errorsOnly);
       }
 
-      printHumanReport(report, options.errorsOnly);
+      const ciMode = format === 'github' || options.comment || failOn !== 'none';
+
+      if (ciMode) {
+        const exitCode = await applyCiGateOutput({
+          gate: 'review',
+          format,
+          comment: options.comment,
+          failOn,
+          findings,
+          verdict,
+          cwd: projectRoot,
+        });
+        process.exit(exitCode);
+        return;
+      }
+
       process.exit(report.failed ? 1 : 0);
     },
   );

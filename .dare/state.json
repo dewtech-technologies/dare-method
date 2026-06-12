@@ -1,59 +1,52 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-12T02:06:40.125Z",
+  "updatedAt": "2026-06-12T02:49:53.407Z",
   "tasks": {
-    "task-1001": {
+    "task-1101": {
       "status": "DONE",
-      "output": "telemetry/aggregator.ts + aggregator.test.ts: aggregateTelemetry read-only, dag/gates/cost/emptyHints. vitest aggregator 3/3.",
-      "duration": 59973,
+      "output": "reporters/github.ts: emitAnnotations + upsertPrComment. github-reporter 5/5.",
+      "duration": 73598,
       "dependsOn": []
     },
-    "task-1002": {
+    "task-1102": {
       "status": "DONE",
-      "output": "http/app.ts createApp + refactor mcp-server/server.ts. shared-app 4/4 + mcp tests verdes.",
-      "duration": 59101,
-      "dependsOn": []
-    },
-    "task-1003": {
-      "status": "DONE",
-      "output": "dashboard/routes.ts: GET /dashboard, /api/telemetry, /dashboard/assets/* confinados. dashboard-routes 6/6.",
-      "duration": 59826,
+      "output": "--format github/--comment/--fail-on em review, guard, graph drift. gate-flags 5/5.",
+      "duration": 67290,
       "dependsOn": [
-        "task-1001",
-        "task-1002"
+        "task-1101"
       ]
     },
-    "task-1004": {
+    "task-1103": {
       "status": "DONE",
-      "output": "commands/dashboard.ts + bin/dare.ts + skill /dare-dashboard 3 IDEs. dashboard-command 4/4 + ide-command-parity OK.",
-      "duration": 62871,
+      "output": "action.yml composite + templates/.github/workflows/dare-pr.yml. verify-actions-pinned OK.",
+      "duration": 71769,
       "dependsOn": [
-        "task-1003"
+        "task-1102"
       ]
     },
-    "task-1005": {
+    "task-1104": {
       "status": "DONE",
-      "output": "templates/dashboard index.html + app.js + style.css vanilla. dashboard-front 3/3.",
-      "duration": 59520,
+      "output": "dogfood job dare-pr-dogfood em ci.yml (PRs, fail-on none). verify-actions-pinned OK.",
+      "duration": 96826,
       "dependsOn": [
-        "task-1003"
+        "task-1103"
       ]
     },
-    "task-1006": {
+    "task-1105": {
       "status": "DONE",
-      "output": "dashboard-regression.test.ts: 401, read-only, assets confinados, emptyHints. 4/4 + ide-command-parity.",
-      "duration": 60591,
+      "output": "ci-pr-regression.test.ts: annotations, marker upsert, fail-on none, sanitize, action.yml. 6/6.",
+      "duration": 68613,
       "dependsOn": [
-        "task-1004",
-        "task-1005"
+        "task-1102",
+        "task-1103"
       ]
     },
-    "task-1007": {
+    "task-1106": {
       "status": "DONE",
-      "output": "CHANGELOG 3.11.0 dashboard + docs-site/cli-reference.md dare dashboard. ide-command-parity OK.",
-      "duration": 59906,
+      "output": "CHANGELOG 3.11.0 CI/PR + docs-site (flags + GitHub Action). verify-docs-coverage OK.",
+      "duration": 67600,
       "dependsOn": [
-        "task-1006"
+        "task-1105"
       ]
     }
   }

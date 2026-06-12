@@ -15,6 +15,14 @@ Release **Dynamic DAG** — replan estrutural com sub-DAGs aninhados em runtime 
 
 > Trocar `Unreleased` pela data ao publicar.
 
+### ✨ Adicionado — CI/PR Integration
+
+- **`--format github`** nos gates `review`, `guard` e `graph drift` — emite anotações no formato nativo do GitHub Actions (`::error` / `::warning`).
+- **`--comment`** — cria ou atualiza um único comentário no PR (marker `<!-- dare-report -->`, idempotente).
+- **`--fail-on none|warn|error`** — controla exit code (default `none`: comenta sem bloquear).
+- **Composite Action** `action.yml` — `dare <gate>` com annotations + comentário opcional; template `dare-pr.yml` para novos projetos.
+- **Dogfood** — job no CI do DARE roda a action em PRs (`fail-on: none`).
+
 ### ✨ Adicionado — Local Telemetry Dashboard
 
 - **`dare dashboard`** — dashboard local read-only em `127.0.0.1:4100` (default); imprime URL + token; abre navegador (`--no-open` para desabilitar).

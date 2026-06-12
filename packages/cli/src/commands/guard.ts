@@ -11,6 +11,14 @@ import { runGuardPipeline } from '../guard/pipeline.js';
 import { classify, signArtifact } from '../guard/provenance.js';
 import type { GuardResult } from '../guard/types.js';
 import { safeSpawn } from '../exec/safe-spawn.js';
+import {
+  applyCiGateOutput,
+  guardResultsToFindings,
+  guardVerdictToGateVerdict,
+  parseCiFormat,
+  parseFailOn,
+  worstGuardVerdict,
+} from '../reporters/ci-gate.js';
 
 type UnicodeMode = 'strip' | 'block';
 type OutputFormat = 'human' | 'json';
@@ -22,6 +30,8 @@ interface GuardCommandOptions {
   format?: string;
   sign?: boolean;
   unicode?: string;
+  comment?: boolean;
+  failOn?: string;
 }
 
 export interface RunGuardOptions {
@@ -354,7 +364,9 @@ export const guardCommand = new Command('guard')
   .option('--staged', 'Scan staged files from git index', false)
   .option('--all', 'Scan trusted paths and DARE artifacts', false)
   .option('--strict', 'Treat WARN as FAIL for exit code', false)
-  .option('--format <fmt>', 'Output format: human | json', 'human')
+  .option('--format <fmt>', 'Output format: human | json | github', 'human')
+  .option('--comment', 'Post idempotent PR comment (requires GITHUB_TOKEN + PR context)', false)
+  .option('--fail-on <mode>', 'Exit policy: none | warn | error', 'none')
   .option('--sign', 'Sign trusted artifacts and emit .minisig files', false)
   .option('--unicode <mode>', 'Unicode mode override: strip | block')
   .action(async (target: string | undefined, options: GuardCommandOptions) => {
@@ -365,9 +377,14 @@ export const guardCommand = new Command('guard')
       process.exit(1);
     }
 
-    const format = parseOutputFormat(options.format);
+    const format = parseCiFormat(options.format);
     if (!format) {
-      console.error(`Error: --format must be "human" or "json" (got "${options.format}")`);
+      console.error(`Error: --format must be "human", "json", or "github" (got "${options.format}")`);
+      process.exit(1);
+    }
+    const failOn = parseFailOn(options.failOn);
+    if (!failOn) {
+      console.error(`Error: --fail-on must be "none", "warn", or "error" (got "${options.failOn}")`);
       process.exit(1);
     }
 
@@ -420,6 +437,24 @@ export const guardCommand = new Command('guard')
         strict: Boolean(options.strict),
         unicodeMode,
       });
+    }
+
+    const findings = guardResultsToFindings(results, cwd);
+    const verdict = guardVerdictToGateVerdict(worstGuardVerdict(results));
+    const ciMode = format === 'github' || Boolean(options.comment) || failOn !== 'none';
+
+    if (ciMode) {
+      const exitCode = await applyCiGateOutput({
+        gate: 'guard',
+        format,
+        comment: Boolean(options.comment),
+        failOn,
+        findings,
+        verdict,
+        cwd,
+      });
+      process.exit(exitCode);
+      return;
     }
 
     process.exit(computeExitCode(results, Boolean(options.strict)));

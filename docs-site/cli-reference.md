@@ -185,12 +185,14 @@ dare guard --all [--unicode strip|block] [--sign]
 | `[path]` | argumento | — | Arquivo ou diretório a auditar. |
 | `--staged` | boolean | `false` | Audita arquivos staged no git. |
 | `--all` | boolean | `false` | Audita artefatos DARE conhecidos. |
-| `--strict` | boolean | `false` | WARN também retorna exit 6. |
-| `--format <fmt>` | string | `human` | `human` ou `json`. |
+| `--strict` | boolean | `false` | WARN também retorna exit 6 (legado; prefira `--fail-on`). |
+| `--format <fmt>` | string | `human` | `human`, `json` ou `github` (annotations Actions). |
+| `--comment` | boolean | `false` | Comentário idempotente no PR (`GITHUB_TOKEN` + contexto de PR). |
+| `--fail-on <mode>` | string | `none` | Exit: `none` (sempre 0), `warn` (≠0 em WARN+), `error` (≠0 só em FAIL). |
 | `--sign` | boolean | `false` | Assina path em `guard.trustedPaths` (`.minisig`). |
 | `--unicode <mode>` | string | (config) | `strip` ou `block`. |
 
-**Exit codes:** `0` PASS ou WARN; `6` FAIL (ou WARN com `--strict`).
+**CI:** `dare guard --all --format github --comment --fail-on none` emite annotations + atualiza comentário sem bloquear o PR.
 
 ## `dare dashboard`
 
@@ -331,7 +333,9 @@ dare graph drift --modules src/auth
 | Flag | Tipo | Default | Descrição |
 |------|------|---------|-----------|
 | `--strict` | boolean | `false` | Exit **7** quando contagens excedem limiares de `drift` em `dare.config.json`. |
-| `--format <fmt>` | string | `human` | `human` ou `json` (`DriftReport`). |
+| `--format <fmt>` | string | `human` | `human`, `json` ou `github` (annotations Actions). |
+| `--comment` | boolean | `false` | Comentário idempotente no PR. |
+| `--fail-on <mode>` | string | `none` | Exit: `none` \| `warn` \| `error`. |
 | `--modules <list>` | string | — | Filtra por paths (validados com path-safety). |
 
 **Veredito `drift-fail`:** `orphan-requirement` > `maxOrphanReqs` OU `orphan-code` > `maxOrphanCode` OU (`failOnStale` && `stale` > 0). Sem `--strict`, exit 0 mesmo com findings.
@@ -428,7 +432,30 @@ dare review task-001 --strict --format json
 | `--errors-only` | boolean | `false` | Suprime warnings na saída humana. |
 | `--files <files...>` | string[] | — | Lista explícita de arquivos a analisar (ignora spec/git). |
 | `--from-agent <path>` | string | — | Caminho para JSON com `SemanticVerdict` produzido pelo agente IDE. |
-| `--format <fmt>` | string | `human` | Saída: `human` \| `json`. |
+| `--format <fmt>` | string | `human` | Saída: `human`, `json` ou `github` (annotations Actions). |
+| `--comment` | boolean | `false` | Comentário idempotente no PR. |
+| `--fail-on <mode>` | string | `none` | Exit: `none` \| `warn` \| `error`. |
+
+## GitHub Action (`action.yml`)
+
+Composite action na raiz do repositório DARE para rodar gates em PRs com annotations e comentário idempotente.
+
+```yaml
+permissions:
+  pull-requests: write
+  contents: read
+
+steps:
+  - uses: actions/checkout@<SHA>
+  - uses: dewtech-technologies/dare-method@main
+    with:
+      gate: guard          # review | guard | drift | bench
+      args: '--all'
+      fail-on: none        # none | warn | error
+      comment: 'true'
+```
+
+Template opcional: `packages/cli/templates/.github/workflows/dare-pr.yml` (gerado no scaffold).
 
 ## `dare refine`
 

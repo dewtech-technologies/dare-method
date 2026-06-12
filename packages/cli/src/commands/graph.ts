@@ -6,6 +6,12 @@ import { convertYamlToDag } from '../utils/dag-converter.js';
 import { ingestDag } from '../dag-runner/graph-ingest.js';
 import { ingestRequirements } from '../graphrag/requirement-ingest.js';
 import { detectDrift, type DriftConfig, type DriftKind, type DriftReport } from '../graphrag/drift.js';
+import {
+  applyCiGateOutput,
+  driftFindingsToFindings,
+  parseCiFormat,
+  parseFailOn,
+} from '../reporters/ci-gate.js';
 import { runIncrementalSemanticIndex } from '../graphrag/incremental-index.js';
 import { loadAndApplyState } from '../dag-runner/state-store.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
@@ -305,12 +311,26 @@ graphCommand
   .command('drift')
   .description('Detect requirement/code drift from the graph')
   .option('--strict', 'Exit with code 7 when drift thresholds fail')
-  .option('--format <fmt>', 'Output format: human | json', 'human')
+  .option('--format <fmt>', 'Output format: human | json | github', 'human')
+  .option('--comment', 'Post idempotent PR comment (requires GITHUB_TOKEN + PR context)', false)
+  .option('--fail-on <mode>', 'Exit policy: none | warn | error', 'none')
   .option('--modules <list>', 'Limit traversal to modules (comma-separated relative paths)')
-  .action(async (options: { strict?: boolean; format?: string; modules?: string }) => {
-    const format = parseDriftFormat(options.format);
+  .action(async (options: {
+    strict?: boolean;
+    format?: string;
+    modules?: string;
+    comment?: boolean;
+    failOn?: string;
+  }) => {
+    const format = parseCiFormat(options.format);
     if (!format) {
-      console.error(chalk.red(`Unsupported format "${options.format}". Use: human | json.`));
+      console.error(chalk.red(`Unsupported format "${options.format}". Use: human | json | github.`));
+      process.exit(1);
+      return;
+    }
+    const failOn = parseFailOn(options.failOn);
+    if (!failOn) {
+      console.error(chalk.red(`--fail-on must be none, warn, or error (got "${options.failOn}")`));
       process.exit(1);
       return;
     }
@@ -336,6 +356,7 @@ graphCommand
       throw err;
     }
 
+    const cwd = process.cwd();
     await withGraph(async (graph) => {
       const targetGraph = modules && modules.length > 0 ? scopeGraphToModules(graph, modules) : graph;
       const report = detectDrift(targetGraph, driftConfig);
@@ -343,12 +364,32 @@ graphCommand
 
       if (format === 'json') {
         console.log(JSON.stringify(report));
-      } else {
+      } else if (format === 'human' || format === 'github') {
         printDriftReport(report, driftFail, modules);
       }
 
-      if (driftFail && options.strict) {
+      const findings = driftFindingsToFindings(report.findings);
+      const verdict = driftFail ? 'fail' : findings.length > 0 ? 'warn' : 'pass';
+      const ciMode = format === 'github' || Boolean(options.comment) || failOn !== 'none';
+
+      if (options.strict && driftFail) {
         process.exit(DRIFT_FAIL_EXIT);
+        return;
+      }
+
+      if (ciMode) {
+        const exitCode = await applyCiGateOutput({
+          gate: 'drift',
+          format,
+          comment: Boolean(options.comment),
+          failOn,
+          findings,
+          verdict,
+          cwd,
+        });
+        if (exitCode !== 0) {
+          process.exit(exitCode);
+        }
         return;
       }
     });
