@@ -192,6 +192,31 @@ dare guard --all [--unicode strip|block] [--sign]
 
 **Exit codes:** `0` PASS ou WARN; `6` FAIL (ou WARN com `--strict`).
 
+## `dare dashboard`
+
+Sobe um dashboard local de telemetria (read-only, loopback + token). Reusa o hardening do MCP server.
+
+```bash
+dare dashboard [--port <n>] [--no-open]
+```
+
+| Flag | Tipo | Default | Descrição |
+|------|------|---------|-----------|
+| `--port <n>` | number | `4100` | Porta HTTP em `127.0.0.1`. |
+| `--no-open` | boolean | `false` | Não abre o navegador automaticamente. |
+
+**Rotas (read-only, atrás do auth):**
+
+| Método | Rota | Resposta |
+|--------|------|----------|
+| GET | `/dashboard` | HTML estático (painéis DAG, gates, custo, best-of-N, guard/drift). |
+| GET | `/api/telemetry` | JSON `TelemetrySnapshot` agregado do GraphRAG + `.dare/state.json`. |
+| GET | `/dashboard/assets/*` | CSS/JS confinados a `templates/dashboard/` (path-safety). |
+
+**Token:** `DARE_MCP_TOKEN` ou UUID gerado na subida (mesma política do MCP).
+
+**Skill IDE:** `/dare-dashboard` (Claude, Cursor, Antigravity).
+
 ## `dare graph`
 
 Inspeciona e visualiza o knowledge graph DARE. Possui subcomandos.

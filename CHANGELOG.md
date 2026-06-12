@@ -15,6 +15,14 @@ Release **Dynamic DAG** — replan estrutural com sub-DAGs aninhados em runtime 
 
 > Trocar `Unreleased` pela data ao publicar.
 
+### ✨ Adicionado — Local Telemetry Dashboard
+
+- **`dare dashboard`** — dashboard local read-only em `127.0.0.1:4100` (default); imprime URL + token; abre navegador (`--no-open` para desabilitar).
+- **`GET /api/telemetry`** — snapshot JSON agregado do GraphRAG (`aggregateTelemetry`: DAG, gates, custo, best-of-N, guard/drift).
+- **`GET /dashboard`** — front vanilla (`templates/dashboard/`) sem bundler/framework.
+- **`createApp` compartilhado** — MCP e dashboard montam rotas no mesmo Express (auth/cors/helmet reusados).
+- **`/dare-dashboard`** — skill/comando nas 3 IDEs (parity verde).
+
 ### ✨ Adicionado — Dynamic DAG
 
 - **`REPLAN` → splice de sub-DAG** — veredito `REPLAN` da decay policy gera sub-tasks via `refine --split` e insere no DAG ativo em runtime; a task pai retoma após as filhas concluírem.

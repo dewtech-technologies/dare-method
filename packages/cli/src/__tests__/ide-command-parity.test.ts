@@ -39,6 +39,7 @@ const CLI_COMMANDS: Record<string, string> = {
   steering: 'dare-steering',
   hooks: 'dare-hooks',
   guard: 'dare-guard',
+  dashboard: 'dare-dashboard',
   patterns: 'dare-patterns',
   skill: 'dare-skill',
   welcome: 'dare-welcome',

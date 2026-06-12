@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DARE Telemetry</title>
+  <link rel="stylesheet" href="/dashboard/assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>DARE Telemetry</h1>
+    <p class="subtitle">Local read-only dashboard</p>
+  </header>
+
+  <main id="app">
+    <section id="empty-hints" class="panel hints hidden" aria-live="polite"></section>
+
+    <section id="dag-panel" class="panel">
+      <h2>DAG Progress</h2>
+      <div id="dag-summary" class="metrics"></div>
+      <div id="dag-chart" class="chart"></div>
+    </section>
+
+    <section id="gates-panel" class="panel">
+      <h2>Verification Gates</h2>
+      <div id="gates-summary" class="metrics"></div>
+      <div id="gates-chart" class="chart"></div>
+    </section>
+
+    <section id="cost-panel" class="panel">
+      <h2>Cost</h2>
+      <div id="cost-summary" class="metrics"></div>
+      <div id="cost-chart" class="chart"></div>
+      <table id="cost-table" class="data-table">
+        <thead><tr><th>Task</th><th>USD</th><th>Tokens</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="bestof-panel" class="panel hidden">
+      <h2>Best-of-N</h2>
+      <div id="bestof-summary" class="metrics"></div>
+    </section>
+
+    <section id="guard-panel" class="panel hidden">
+      <h2>Guard</h2>
+      <div id="guard-summary" class="metrics"></div>
+      <div id="guard-chart" class="chart"></div>
+    </section>
+
+    <section id="drift-panel" class="panel hidden">
+      <h2>Drift</h2>
+      <div id="drift-summary" class="metrics"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span id="status-line">Loading…</span>
+  </footer>
+
+  <script src="/dashboard/assets/app.js"></script>
+</body>
+</html>

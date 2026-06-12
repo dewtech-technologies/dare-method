@@ -1,61 +1,59 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-12T01:48:54.992Z",
+  "updatedAt": "2026-06-12T02:06:40.125Z",
   "tasks": {
-    "task-901": {
+    "task-1001": {
       "status": "DONE",
-      "output": "sub-dag.ts + sub-dag.test.ts: spliceSubDag, nestingDepth, CycleError, MaxDepthError, idempotência, rollback. vitest sub-dag 5/5.",
-      "duration": 121677,
+      "output": "telemetry/aggregator.ts + aggregator.test.ts: aggregateTelemetry read-only, dag/gates/cost/emptyHints. vitest aggregator 3/3.",
+      "duration": 59973,
       "dependsOn": []
     },
-    "task-902": {
+    "task-1002": {
       "status": "DONE",
-      "output": "loop.maxDepth em config (default 2) + maxdepth-config.test.ts. vitest maxdepth-config 3/3.",
-      "duration": 60778,
+      "output": "http/app.ts createApp + refactor mcp-server/server.ts. shared-app 4/4 + mcp tests verdes.",
+      "duration": 59101,
       "dependsOn": []
     },
-    "task-903": {
+    "task-1003": {
       "status": "DONE",
-      "output": "REPLAN→splice em execute.ts: decideNextAction, refine split, spliceSubDag, escalate MaxDepth/Cycle. replan-splice 5/5.",
-      "duration": 59561,
+      "output": "dashboard/routes.ts: GET /dashboard, /api/telemetry, /dashboard/assets/* confinados. dashboard-routes 6/6.",
+      "duration": 59826,
       "dependsOn": [
-        "task-901",
-        "task-902"
+        "task-1001",
+        "task-1002"
       ]
     },
-    "task-904": {
+    "task-1004": {
       "status": "DONE",
-      "output": "refine --split --apply injeta sub-DAG via spliceSubDag + persist. refine-apply 4/4.",
-      "duration": 59002,
+      "output": "commands/dashboard.ts + bin/dare.ts + skill /dare-dashboard 3 IDEs. dashboard-command 4/4 + ide-command-parity OK.",
+      "duration": 62871,
       "dependsOn": [
-        "task-901"
+        "task-1003"
       ]
     },
-    "task-905": {
+    "task-1005": {
       "status": "DONE",
-      "output": "Nesting persistido em state.json; dag viz agrupa sub-tasks; --status mostra nesting. persist-viz 3/3.",
-      "duration": 60321,
+      "output": "templates/dashboard index.html + app.js + style.css vanilla. dashboard-front 3/3.",
+      "duration": 59520,
       "dependsOn": [
-        "task-901",
-        "task-903"
+        "task-1003"
       ]
     },
-    "task-906": {
+    "task-1006": {
       "status": "DONE",
-      "output": "dynamic-dag-regression.test.ts: 6 invariantes (replan, cycle, maxDepth, flat, idempotent, deterministic). vitest 6/6.",
-      "duration": 59217,
+      "output": "dashboard-regression.test.ts: 401, read-only, assets confinados, emptyHints. 4/4 + ide-command-parity.",
+      "duration": 60591,
       "dependsOn": [
-        "task-903",
-        "task-904",
-        "task-905"
+        "task-1004",
+        "task-1005"
       ]
     },
-    "task-907": {
+    "task-1007": {
       "status": "DONE",
-      "output": "CHANGELOG 3.11.0 + docs-site (maxDepth, refine --apply, viz nesting) + README/ROADMAP. verify-docs-coverage OK.",
-      "duration": 59231,
+      "output": "CHANGELOG 3.11.0 dashboard + docs-site/cli-reference.md dare dashboard. ide-command-parity OK.",
+      "duration": 59906,
       "dependsOn": [
-        "task-906"
+        "task-1006"
       ]
     }
   }
