@@ -1,23 +1,23 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-11T22:27:08.019Z",
+  "updatedAt": "2026-06-12T01:48:54.992Z",
   "tasks": {
     "task-901": {
       "status": "DONE",
-      "output": "sub-dag.ts + sub-dag.test.ts: spliceSubDag, nestingDepth, CycleError, MaxDepthError, idempotência, rollback. Gates task: tsc + vitest sub-dag OK.",
-      "duration": 87958,
+      "output": "sub-dag.ts + sub-dag.test.ts: spliceSubDag, nestingDepth, CycleError, MaxDepthError, idempotência, rollback. vitest sub-dag 5/5.",
+      "duration": 121677,
       "dependsOn": []
     },
     "task-902": {
       "status": "DONE",
-      "output": "loop.maxDepth em config.ts (default 2) + maxdepth-config.test.ts. Gates task: tsc + vitest maxdepth-config OK.",
-      "duration": 56873,
+      "output": "loop.maxDepth em config (default 2) + maxdepth-config.test.ts. vitest maxdepth-config 3/3.",
+      "duration": 60778,
       "dependsOn": []
     },
     "task-903": {
       "status": "DONE",
-      "output": "REPLAN→splice em execute.ts: decideNextAction, refine split, spliceSubDag, escalate MaxDepth/Cycle. Testes replan-splice 5/5.",
-      "duration": 64261,
+      "output": "REPLAN→splice em execute.ts: decideNextAction, refine split, spliceSubDag, escalate MaxDepth/Cycle. replan-splice 5/5.",
+      "duration": 59561,
       "dependsOn": [
         "task-901",
         "task-902"
@@ -25,16 +25,16 @@
     },
     "task-904": {
       "status": "DONE",
-      "output": "refine --split --apply injeta sub-DAG via spliceSubDag + persist. Testes refine-apply 4/4.",
-      "duration": 68051,
+      "output": "refine --split --apply injeta sub-DAG via spliceSubDag + persist. refine-apply 4/4.",
+      "duration": 59002,
       "dependsOn": [
         "task-901"
       ]
     },
     "task-905": {
       "status": "DONE",
-      "output": "Nesting persistido em state.json com round-trip; dag viz agrupa sub-tasks; --status mostra nesting. Testes persist-viz 3/3.",
-      "duration": 78764,
+      "output": "Nesting persistido em state.json; dag viz agrupa sub-tasks; --status mostra nesting. persist-viz 3/3.",
+      "duration": 60321,
       "dependsOn": [
         "task-901",
         "task-903"
@@ -43,7 +43,7 @@
     "task-906": {
       "status": "DONE",
       "output": "dynamic-dag-regression.test.ts: 6 invariantes (replan, cycle, maxDepth, flat, idempotent, deterministic). vitest 6/6.",
-      "duration": 70825,
+      "duration": 59217,
       "dependsOn": [
         "task-903",
         "task-904",
@@ -53,7 +53,7 @@
     "task-907": {
       "status": "DONE",
       "output": "CHANGELOG 3.11.0 + docs-site (maxDepth, refine --apply, viz nesting) + README/ROADMAP. verify-docs-coverage OK.",
-      "duration": 62538,
+      "duration": 59231,
       "dependsOn": [
         "task-906"
       ]

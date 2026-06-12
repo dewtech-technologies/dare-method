@@ -1,16 +1,13 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+import { type Express, type Request, type Response, type NextFunction } from 'express';
 import fs from 'fs-extra';
-import helmet from 'helmet';
 import pino from 'pino';
+import { createApp, finalizeApp } from '../http/app.js';
 import { assertRelativeSafe, PathEscapeError, resolveSafePath } from '../utils/path-safety.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
 import type { EdgeType, LocateOptions, LocateResult, NodeType } from '../graphrag/types.js';
-import { createAuthMiddleware } from './middleware/auth.js';
-import { createCorsMiddleware } from './middleware/cors.js';
-import { createErrorHandler } from './middleware/error-handler.js';
 import { loadSteeringFiles } from '../steering/loader.js';
 import { resolveSteeringForFile } from '../steering/resolver.js';
 
@@ -144,20 +141,12 @@ export function createMcpServer(
   options: McpServerOptions = {},
 ): Express {
   const authToken = options.authToken ?? process.env.DARE_MCP_TOKEN ?? 'dare-mcp-dev-token';
-  const bodyLimit = process.env.DARE_MCP_BODY_LIMIT || '1mb';
 
-  const app: Express = express();
-  app.set('trust proxy', true);
-
-  app.use(
-    createAuthMiddleware({
-      token: authToken,
-      allowLoopbackWithoutToken: options.allowLoopbackWithoutToken ?? true,
-    }),
-  );
-  app.use(createCorsMiddleware());
-  app.use(helmet());
-  app.use(express.json({ limit: bodyLimit }));
+  const app = createApp({
+    token: authToken,
+    projectRoot,
+    allowLoopbackWithoutToken: options.allowLoopbackWithoutToken ?? true,
+  });
 
   app.use((req, _res, next) => {
     const body = req.body as ContextQuery | undefined;
@@ -523,7 +512,5 @@ export function createMcpServer(
     });
   });
 
-  app.use(createErrorHandler(logger));
-
-  return app;
+  return finalizeApp(app);
 }
