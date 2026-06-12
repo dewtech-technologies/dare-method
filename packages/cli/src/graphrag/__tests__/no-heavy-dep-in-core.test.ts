@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const pkgRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const ALLOWED_REL = path.join('src', 'graphrag', 'embeddings.ts');
 const FORBIDDEN =
-  /(?:import|require)\s*\(?['"](?:onnxruntime|@xenova\/transformers)|from\s+['"](?:onnxruntime|@xenova\/transformers)/;
+  /(?:import|require)\s*\(?['"](?:onnxruntime|@xenova\/transformers|@huggingface\/transformers)|from\s+['"](?:onnxruntime|@xenova\/transformers|@huggingface\/transformers)/;
 
 function walkTsFiles(dir: string, base = pkgRoot): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -45,7 +45,7 @@ describe('no-heavy-dep-in-core', () => {
   });
 
   it('detects_planted_import', () => {
-    const transformersImport = "import { pipeline } from '@xenova/transformers';";
+    const transformersImport = "import { pipeline } from '@huggingface/transformers';";
     const onnxRequire = "const ort = require('onnxruntime');";
     expect(FORBIDDEN.test(transformersImport)).toBe(true);
     expect(FORBIDDEN.test(onnxRequire)).toBe(true);

@@ -247,7 +247,7 @@ dare graph query "login flow" --semantic
 | `-t, --type <type>` | string | — | Restringe a um tipo de nó. |
 | `--semantic` | boolean | `false` | Usa retrieval híbrido (RRF keyword+vetor+grafo) quando `graphrag.semantic.enabled` e runtime instalado; fallback keyword se ausente. |
 
-> **Ativar busca semântica:** `npm i @xenova/transformers` (optional) + `"graphrag": { "semantic": { "enabled": true } }` em `dare.config.json`.
+> **Ativar busca semântica:** `npm i @huggingface/transformers` (optional) + `"graphrag": { "semantic": { "enabled": true } }` em `dare.config.json`.
 
 ### `dare graph viz`
 

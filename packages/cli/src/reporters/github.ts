@@ -29,10 +29,12 @@ export interface PrCommentInput {
 export function sanitizeFindingText(text: string): string {
   let out = text.replace(/\r\n/g, '\n');
   out = out.replace(/\b[A-Za-z0-9_=-]{16,}\b/g, '[REDACTED]');
-  out = out.replace(/[A-Za-z]:\\[^\s:]+/g, (match) => path.basename(match));
+  // OS-independent: na CI (Linux) path.basename é POSIX e não trata `\` como separador,
+  // deixando paths Windows passarem. Usar win32/posix explicitamente.
+  out = out.replace(/[A-Za-z]:\\[^\s:]+/g, (match) => path.win32.basename(match));
   out = out.replace(/(?:^|\s)\/[^\s:]+/g, (match) => {
     const trimmed = match.trim();
-    return ` ${path.basename(trimmed)}`;
+    return ` ${path.posix.basename(trimmed)}`;
   });
   if (out.length > 500) {
     return `${out.slice(0, 500)}...`;

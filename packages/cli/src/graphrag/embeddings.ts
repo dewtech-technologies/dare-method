@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-const DEFAULT_RUNTIME_PACKAGE = '@xenova/transformers';
+const DEFAULT_RUNTIME_PACKAGE = '@huggingface/transformers';
 
 export interface SemanticConfig {
   readonly model: string;

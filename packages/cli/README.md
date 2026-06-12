@@ -168,7 +168,7 @@ Pick **one** of the two paths per stack:
 
 > **v3.11.0:** **Dynamic DAG** — `REPLAN` splice de sub-DAG em runtime (`refine --split` + `spliceSubDag`); `verification.loop.maxDepth` (default **2**, excedeu → `ESCALATE`); `dare refine --split --apply` (modo manual); `dare dag viz` agrupa sub-DAGs (`subgraph Sub-DAG: <pai>` em Mermaid/DOT/Excalidraw); estado persiste em `dare-dag.yaml` + `.dare/state.json`.
 
-> **v3.10.0:** **Drift Gate** — `dare graph drift` (exit **7** com `--strict`). **Local Semantic Search** — retrieval híbrido RRF, `graphrag.semantic` opt-in, `@xenova/transformers` optionalDep lazy, `dare graph query --semantic`, indexação incremental por `contentHash`.
+> **v3.10.0:** **Drift Gate** — `dare graph drift` (exit **7** com `--strict`). **Local Semantic Search** — retrieval híbrido RRF, `graphrag.semantic` opt-in, `@huggingface/transformers` optionalDep lazy, `dare graph query --semantic`, indexação incremental por `contentHash`.
 
 > **v3.9.0:** **Secure Autonomous Executor + Agentic-chain Security Gate** — `dare execute --agent` (driver plugável, SDK como `optionalDependency` lazy; `--budget-tokens`, `--require-approval rank|none`, `--on-fail replan|escalate|stop`, `--dry-run`; telemetria de custo no GraphRAG; gate `no-llm-in-core`) **+** `dare guard` (unicode-audit + scan heurístico + proveniência Ed25519/minisign-compat + trust boundaries control/data; exit code **6** em FAIL; pré-flight do `dare execute --agent`; bloco `guard` em `dare.config.json`, opt-in `enabled:false`).
 

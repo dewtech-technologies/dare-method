@@ -244,7 +244,7 @@ Detalhes em [Referência da CLI › `dare graph query`](cli-reference.md#dare-gr
 | `modelHash` | `string` | — | Hash pinado do modelo (RS-01). |
 | `rrfK` | `number` | `60` | Constante k do Reciprocal Rank Fusion. |
 
-Instale o runtime opcional: `npm i @xenova/transformers`. Sem o pacote, o caminho cai para keyword.
+Instale o runtime opcional: `npm i @huggingface/transformers`. Sem o pacote, o caminho cai para keyword.
 
 ### `drift`
 

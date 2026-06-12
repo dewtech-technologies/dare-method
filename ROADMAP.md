@@ -32,7 +32,7 @@ Este documento descreve o que está **shipped**, o que está **em desenvolviment
 **Local Semantic Search** — retrieval híbrido no GraphRAG.
 
 - ✅ **RRF** — keyword + vetor + proximidade no grafo
-- ✅ **`graphrag.semantic`** opt-in + `@xenova/transformers` lazy optionalDep
+- ✅ **`graphrag.semantic`** opt-in + `@huggingface/transformers` lazy optionalDep
 - ✅ **`dare graph query --semantic`** + fallback keyword
 - ✅ **Indexação incremental** por `contentHash`
 

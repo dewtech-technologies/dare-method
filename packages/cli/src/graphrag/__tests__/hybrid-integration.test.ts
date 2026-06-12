@@ -131,7 +131,7 @@ describe('hybrid integration', () => {
     try {
       const { EmbeddingModelMissingError } = await import('../embeddings.js');
       mocks.loadEmbedder.mockRejectedValueOnce(
-        new EmbeddingModelMissingError('@xenova/transformers'),
+        new EmbeddingModelMissingError('@huggingface/transformers'),
       );
       const logSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
