@@ -41,6 +41,14 @@ const ENV_ALLOWLIST = new Set([
   'ProgramW6432',
 ]);
 
+function isGitConfigEnv(key: string): boolean {
+  return (
+    key === 'GIT_CONFIG_COUNT' ||
+    /^GIT_CONFIG_KEY_\d+$/.test(key) ||
+    /^GIT_CONFIG_VALUE_\d+$/.test(key)
+  );
+}
+
 function appendCapped(buffer: string, chunk: string, max: number): string {
   if (buffer.length >= max) return buffer;
   return (buffer + chunk).slice(0, max);
@@ -56,7 +64,7 @@ export function sanitizeEnv(
   const out: NodeJS.ProcessEnv = {};
   for (const [key, value] of Object.entries(source)) {
     if (value === undefined) continue;
-    if (ENV_ALLOWLIST.has(key)) {
+    if (ENV_ALLOWLIST.has(key) || isGitConfigEnv(key)) {
       out[key] = value;
       continue;
     }

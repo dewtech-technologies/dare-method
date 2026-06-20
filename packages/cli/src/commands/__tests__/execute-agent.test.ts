@@ -109,6 +109,54 @@ describe('dare execute --agent', () => {
     expect(stderr).toBe('');
   });
 
+  it('codex_provider_drives_dag_to_done', async () => {
+    await writeDag([{ id: 'task-codex' }]);
+    await fs.writeJson(
+      path.join(projectRoot, 'dare.config.json'),
+      {
+        agent: {
+          provider: 'codex',
+          model: 'gpt-5.4',
+        },
+      },
+      { spaces: 2 },
+    );
+
+    const safeSpawn = await import('../../exec/safe-spawn.js');
+    const spawnSpy = vi.spyOn(safeSpawn, 'safeSpawn').mockResolvedValue({
+      code: 0,
+      stdout: [
+        JSON.stringify({
+          type: 'item.completed',
+          item: { type: 'agent_message', text: 'codex implemented task' },
+        }),
+        JSON.stringify({
+          type: 'turn.completed',
+          usage: { input_tokens: 12, output_tokens: 3 },
+        }),
+      ].join('\n'),
+      stderr: '',
+      timedOut: false,
+    });
+
+    const execute = await loadExecute();
+    await run(execute, ['--agent', '--require-approval', 'none', '--no-graph']);
+
+    const state = (await fs.readJson(path.join(projectRoot, '.dare', 'state.json'))) as {
+      tasks: Record<string, { status: string; tokens?: number; output?: string }>;
+    };
+    expect(spawnSpy).toHaveBeenCalledWith(
+      'codex',
+      expect.arrayContaining(['exec', '--json', '--model', 'gpt-5.4']),
+      expect.objectContaining({ cwd: expect.stringContaining('task-codex') }),
+    );
+    expect(state.tasks['task-codex']?.status).toBe('DONE');
+    expect(state.tasks['task-codex']?.tokens).toBe(15);
+    expect(state.tasks['task-codex']?.output).toContain('codex implemented task');
+    expect(exitCode).toBeUndefined();
+    expect(stderr).toBe('');
+  });
+
   it('reuses_decideNextAction', async () => {
     await writeDag([{ id: 'task-fail' }]);
     await fs.ensureDir(path.join(projectRoot, '.dare'));

@@ -139,6 +139,49 @@ ${mcp ? `- Query MCP Server at http://localhost:3000 for context
 `;
 }
 
+export function generateCodexRules(config: TemplateConfig): string {
+  const { backend, frontend, graphrag, mcp } = config;
+
+  return `# AGENTS.md
+
+## DARE Methodology
+You are Codex working in a DARE project from the terminal.
+
+- Design lives in \`DARE/DESIGN.md\`
+- Architecture and task graph live in \`DARE/BLUEPRINT.md\`, \`DARE/TASKS.md\`, and \`DARE/dare-dag.yaml\`
+- Execution details live in \`DARE/EXECUTION/\`
+- Repository skills live in \`.agents/skills\` and may be invoked explicitly with \`$skill-name\`
+
+## Terminal-First Workflow
+- Prefer \`dare <command>\` over IDE chat workflows.
+- For autonomous execution, use \`dare execute --agent --driver codex\`.
+- For one-off Codex runs, use \`codex exec --sandbox workspace-write --ask-for-approval never "<task>"\`.
+- Keep changes scoped to the selected task and summarize what changed.
+
+## Core Rules
+- Always read \`DARE/BLUEPRINT.md\` before implementing a feature.
+- Check \`DARE/dare-dag.yaml\` task dependencies before editing.
+- Never mark a task DONE unless the Ralph Loop passes.
+- Do not fabricate implementation progress. If blocked, report the blocker.
+- Use \`dare review\`, \`dare validate\`, and \`dare guard\` when the task touches shared behavior, task state, or agent-facing artifacts.
+
+## Stack
+${backend ? `- Backend: ${backend}` : ''}
+${frontend ? `- Frontend: ${frontend}` : ''}
+
+## Context (${graphrag})
+${mcp ? `- Prefer querying the DARE MCP/context server for targeted context.
+- Avoid reading large files when a focused graph/context query is enough.` : '- Use `DARE/BLUEPRINT.md` as the primary source of context.'}
+
+## Ralph Loop
+Before completing a task:
+1. Build
+2. Test
+3. Lint
+4. Mark DONE only after all gates pass
+`;
+}
+
 export function generateMcpCursorRules(config: McpTemplateConfig): string {
   const { mcpTransport = 'stdio', mcpLanguage = 'node-ts', mcpFeatures = ['tools'], graphrag, mcp } = config;
   const featuresStr = mcpFeatures.join(', ');
@@ -237,6 +280,41 @@ ${mcp ? `- Query MCP Server at http://localhost:3000 for project context` : '- R
 - Update task status in DARE/TASKS.md in real-time
 - Run Ralph Loop before marking any task as DONE
 - Request human review for transport or auth design decisions
+`;
+}
+
+export function generateMcpCodexRules(config: McpTemplateConfig): string {
+  const { mcpTransport = 'stdio', mcpLanguage = 'node-ts', mcpFeatures = ['tools'], graphrag, mcp } = config;
+
+  return `# AGENTS.md
+
+## DARE Methodology
+You are Codex implementing an MCP server from the terminal.
+
+- Design lives in \`DARE/DESIGN.md\`
+- Architecture and tool contracts live in \`DARE/BLUEPRINT.md\`
+- Task order lives in \`DARE/dare-dag.yaml\`
+- Repository skills live in \`.agents/skills\`
+
+## MCP Server
+- Language: ${mcpLanguage}
+- Transport: ${mcpTransport}
+- Features: ${mcpFeatures.join(', ')}
+
+## Terminal-First Workflow
+- Prefer \`dare <command>\` over IDE chat workflows.
+- For autonomous execution, use \`dare execute --agent --driver codex\`.
+- For one-off Codex runs, use \`codex exec --sandbox workspace-write --ask-for-approval never "<task>"\`.
+
+## Implementation Rules
+- Every tool must have a strict input schema.
+- Return structured content, not ad hoc strings, unless the protocol requires text.
+- Test tool contracts with an MCP inspector or equivalent smoke test.
+- Never expose secrets through tool outputs or resources.
+- Do not mark DONE until build, tests, lint, and MCP inspection pass.
+
+## Context (${graphrag})
+${mcp ? '- Prefer targeted DARE MCP/context queries over rereading large files.' : '- Use `DARE/BLUEPRINT.md` as the primary source of context.'}
 `;
 }
 

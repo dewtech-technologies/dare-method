@@ -179,6 +179,7 @@ export const initCommand = new Command('init')
         message: 'Primary IDE / Agent:',
         choices: [
           { name: '🤖 Claude Code', value: 'claude-code' },
+          { name: '⌨️  Codex CLI', value: 'codex' },
           { name: '🖱️  Cursor', value: 'cursor' },
           { name: '🚀 Antigravity', value: 'antigravity' },
           { name: '🔀 Cursor + Antigravity (Hybrid)', value: 'hybrid' },

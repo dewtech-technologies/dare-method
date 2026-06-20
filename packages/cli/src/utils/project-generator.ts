@@ -16,6 +16,8 @@ import {
   generateSharedConfig,
   generateMcpCursorRules,
   generateMcpAntigravityRules,
+  generateCodexRules,
+  generateMcpCodexRules,
   generateClaudeCodeRules,
   generateMcpClaudeCodeRules,
   generateClaudeCommands,
@@ -47,7 +49,7 @@ export interface ProjectConfig {
   mcpTransport?: 'stdio' | 'sse' | 'http-stream';
   mcpLanguage?: 'node-ts' | 'python' | 'rust' | 'go';
   mcpFeatures?: ('tools' | 'resources' | 'prompts')[];
-  ide: 'cursor' | 'antigravity' | 'hybrid' | 'claude-code' | 'claude-hybrid';
+  ide: 'cursor' | 'antigravity' | 'hybrid' | 'claude-code' | 'claude-hybrid' | 'codex';
   graphrag: 'sqlite' | 'json' | 'neo4j';
   mcp: boolean;
   outputDir: string;
@@ -197,6 +199,11 @@ export async function generateProjectStructure(config: ProjectConfig): Promise<v
     await generateClaudeFiles(outputDir, config);
   }
 
+  // Codex CLI files
+  if (ide === 'codex') {
+    await generateCodexFiles(outputDir, config);
+  }
+
   // Antigravity rules
   if (ide === 'antigravity' || ide === 'hybrid') {
     const antigravityContent = structure === 'mcp-server'
@@ -314,6 +321,10 @@ export async function installIdeFiles(
   if (ide === 'claude-code' || ide === 'claude-hybrid') {
     await generateClaudeFiles(outputDir, { ...config, outputDir });
   }
+
+  if (ide === 'codex') {
+    await generateCodexFiles(outputDir, { ...config, outputDir });
+  }
 }
 
 /**
@@ -358,7 +369,7 @@ export async function ensureDareSkills(targetDir: string): Promise<void> {
   await fs.writeFile(path.join(targetDir, 'DARE', 'README.md'), generateSharedConfig(name));
   await writeDareTemplates(targetDir);
 
-  for (const ide of ['hybrid', 'claude-code'] as const) {
+  for (const ide of ['hybrid', 'claude-code', 'codex'] as const) {
     await installIdeFiles(targetDir, {
       name,
       structure: 'backend',
@@ -689,6 +700,22 @@ async function writeAntigravityFiles(dir: string, _config: ProjectConfig): Promi
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: write dare-graph.yml — graphrag configuration
 // ─────────────────────────────────────────────────────────────────────────────
+async function generateCodexFiles(dir: string, config: ProjectConfig): Promise<void> {
+  const { structure, backend, frontend, graphrag, mcp } = config;
+  const content = structure === 'mcp-server'
+    ? generateMcpCodexRules({
+        mcpTransport: config.mcpTransport,
+        mcpLanguage: config.mcpLanguage,
+        mcpFeatures: config.mcpFeatures,
+        graphrag,
+        mcp,
+      })
+    : generateCodexRules({ backend, frontend, graphrag, mcp });
+
+  await fs.writeFile(path.join(dir, 'AGENTS.md'), content);
+  await writeAntigravityFiles(dir, config);
+}
+
 async function writeGraphragConfig(dir: string, config: ProjectConfig): Promise<void> {
   const { graphrag } = config;
 

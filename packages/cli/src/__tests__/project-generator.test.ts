@@ -63,6 +63,27 @@ describe('project-generator — verification block', () => {
     expect(cfg.verification).toEqual(DEFAULTS);
   });
 
+  it('should_generate_codex_agents_file_and_repo_skills', async () => {
+    const appDir = path.join(tmpRoot, 'codex-app');
+    await generateProjectStructure({
+      name: 'codex-app',
+      structure: 'backend',
+      backend: 'node-nestjs',
+      outputDir: appDir,
+      skipBootstrap: true,
+      ide: 'codex',
+      graphrag: 'sqlite',
+      mcp: false,
+    });
+
+    expect(await fs.pathExists(path.join(appDir, 'AGENTS.md'))).toBe(true);
+    expect(await fs.pathExists(path.join(appDir, '.agents', 'skills', 'dare-execute', 'SKILL.md'))).toBe(
+      true,
+    );
+    const agents = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf-8');
+    expect(agents).toContain('dare execute --agent --driver codex');
+  });
+
   it('should_add_verification_on_update_when_absent', async () => {
     const cfgPath = path.join(tmpRoot, 'dare.config.json');
     await fs.writeJSON(

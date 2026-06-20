@@ -231,6 +231,7 @@ models:
   cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
   claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
   antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+  codex:       { HIGH: gpt-5.5,           MED: gpt-5.5,          LOW: gpt-5.4-mini }
 
 tasks:
 ${tasksYaml}

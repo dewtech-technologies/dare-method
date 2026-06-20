@@ -42,7 +42,7 @@ export interface AgentRunResult {
 }
 
 export interface AgentDriver {
-  /** 'mock' | 'noop' | 'claude' */
+  /** 'mock' | 'noop' | 'claude' | 'codex' */
   readonly id: string;
   readonly requiresNetwork: boolean;
   run(input: AgentRunInput): Promise<AgentRunResult>;

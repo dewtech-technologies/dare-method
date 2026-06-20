@@ -25,7 +25,7 @@ import { ingestTask } from './graph-ingest.js';
 import type { KnowledgeGraph } from '../graphrag/knowledge-graph.js';
 
 export type Complexity = 'LOW' | 'MED' | 'HIGH';
-export type RunnerName = 'cursor' | 'claude' | 'antigravity';
+export type RunnerName = 'cursor' | 'claude' | 'antigravity' | 'codex';
 export type TaskStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'SKIPPED';
 
 export interface DagTask {

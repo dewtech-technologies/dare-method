@@ -46,6 +46,12 @@ describe('ensureDareSkills — brownfield projects', () => {
       expect((await fs.readdir(skills)).length).toBeGreaterThan(0);
     });
 
+    it('installs Codex AGENTS.md guidance', async () => {
+      const agents = path.join(dir, 'AGENTS.md');
+      expect(await fs.pathExists(agents)).toBe(true);
+      expect(await fs.readFile(agents, 'utf-8')).toContain('dare execute --agent --driver codex');
+    });
+
     it('creates the DARE/ working dir', async () => {
       expect(await fs.pathExists(path.join(dir, 'DARE', 'EXECUTION'))).toBe(true);
     });
