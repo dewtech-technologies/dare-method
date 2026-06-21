@@ -6,7 +6,7 @@
 Expõe `dare patterns` — mineração determinística de padrões brownfield.
 
 ```bash
-dare patterns [--check] [--dir <path>] [--modules <csv>] [--inject]
+dare patterns [--check] [--dir <path>] [--modules <csv>] [--inject] [--ast]
 ```
 
 Gera `DARE/PATTERNS.md` + `patterns-facts.json`. Sem LLM no CLI.

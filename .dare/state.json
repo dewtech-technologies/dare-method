@@ -1,86 +1,84 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-21T03:31:14.495Z",
+  "updatedAt": "2026-06-21T05:07:20.658Z",
   "tasks": {
-    "task-1401": {
+    "task-1501": {
       "status": "DONE",
-      "output": "ast foundation: types, loader, grammar-map, paths, copy-ast-grammars, optionalDeps",
-      "duration": 93972,
+      "output": "ast/conventions/ foundation: types.ts, merge-facts.ts, scan.ts, parse-file.ts (walkScannedFile), merge-facts.test.ts",
+      "duration": 80730,
       "dependsOn": []
     },
-    "task-1402": {
+    "task-1502": {
       "status": "DONE",
-      "output": "ast/merge.ts + tests",
-      "duration": 76466,
+      "output": "dna-extract.ts hybrid AST slice + mergeDnaFacts in dna-detector detectDnaDetailed",
+      "duration": 80972,
       "dependsOn": [
-        "task-1401"
+        "task-1501"
       ]
     },
-    "task-1403": {
+    "task-1503": {
       "status": "DONE",
-      "output": "extractDataModelDetailed hybrid pipeline",
-      "duration": 76017,
+      "output": "commands/dna.ts --ast flag, extraction metadata in dna-facts.json",
+      "duration": 78806,
       "dependsOn": [
-        "task-1402"
+        "task-1502"
       ]
     },
-    "task-1404": {
+    "task-1504": {
       "status": "DONE",
-      "output": "reverse --ast flag wired",
-      "duration": 78309,
+      "output": "patterns-extract.ts AST pattern mining + scan integration",
+      "duration": 75743,
       "dependsOn": [
-        "task-1403"
+        "task-1501"
       ]
     },
-    "task-1405": {
+    "task-1505": {
       "status": "DONE",
-      "output": "typescript AST queries F-01 F-02 F-05",
-      "duration": 74443,
+      "output": "mergePatternsFacts hybrid merge in pattern-detector detectPatternsDetailed",
+      "duration": 76586,
       "dependsOn": [
-        "task-1403"
+        "task-1504"
       ]
     },
-    "task-1406": {
+    "task-1506": {
       "status": "DONE",
-      "output": "python AST F-03",
-      "duration": 73599,
+      "output": "commands/patterns.ts --ast flag, extraction metadata in patterns-facts.json",
+      "duration": 76648,
       "dependsOn": [
-        "task-1403"
+        "task-1505"
       ]
     },
-    "task-1407": {
+    "task-1507": {
       "status": "DONE",
-      "output": "php AST F-04",
-      "duration": 74083,
+      "output": "dna-ast.test.ts + fixtures F-D01..F-D03 green",
+      "duration": 80051,
       "dependsOn": [
-        "task-1403"
+        "task-1503"
       ]
     },
-    "task-1408": {
+    "task-1508": {
       "status": "DONE",
-      "output": "go ruby rust P2",
-      "duration": 74025,
+      "output": "patterns-ast.test.ts + fixtures F-P01..F-P03 green",
+      "duration": 78663,
       "dependsOn": [
-        "task-1405",
-        "task-1406",
-        "task-1407"
+        "task-1506"
       ]
     },
-    "task-1409": {
+    "task-1509": {
       "status": "DONE",
-      "output": "brownfield-ast-regression tests",
-      "duration": 79204,
+      "output": "brownfield-ast-dna-patterns-regression.test.ts — baseline regex-only locked",
+      "duration": 76866,
       "dependsOn": [
-        "task-1404",
-        "task-1408"
+        "task-1503",
+        "task-1506"
       ]
     },
-    "task-1410": {
+    "task-1510": {
       "status": "DONE",
-      "output": "v3.14.0 release docs bump",
-      "duration": 79784,
+      "output": "CHANGELOG [3.15.0], ROADMAP, README, docs-site/brownfield.md, skills 3 IDEs, bump 3.15.0",
+      "duration": 75594,
       "dependsOn": [
-        "task-1409"
+        "task-1509"
       ]
     }
   }

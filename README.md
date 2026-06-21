@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.14.0** — última feature: **Brownfield AST** — `dare reverse --deep --ast` com extração híbrida tree-sitter (WASM) + regex; baseline v3.13 inalterado sem `--ast`. Antes: CLI-only cleanup (v3.13.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.15.0** — última feature: **Brownfield AST em DNA + Patterns** — `dare dna --ast` e `dare patterns --ast` com extração híbrida tree-sitter (WASM) + regex; baseline v3.14 inalterado sem `--ast`. Antes: Brownfield AST em reverse (v3.14.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·

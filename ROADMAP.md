@@ -1,12 +1,22 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.14.0
+> **Status atual:** v3.15.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
 
 ---
+
+## ✅ Shipped — v3.15.0
+
+**Brownfield AST em DNA + Patterns** — estende `--ast` para convenções e pattern mining.
+
+- ✅ **`dare dna --ast`** — merge superset AST ∪ regex (camadas, libs, DI); baseline v3.14 inalterado sem `--ast`
+- ✅ **`dare patterns --ast`** — idioms estruturais (Nest module, controller→service, Zod) + regex
+- ✅ **`ast/conventions/`** — scan, merge-facts, extractors; reutiliza loader/grammars v3.14
+- ✅ **`extraction` metadata** — em `dna-facts.json` e `patterns-facts.json`
+- ✅ **Regressão N-1** — `brownfield-ast-dna-patterns-regression.test.ts` trava path regex-only
 
 ## ✅ Shipped — v3.14.0
 
@@ -174,11 +184,10 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 
 ---
 
-## 🔮 Planejado — v3.15+
+## 🔮 Planejado — v3.16+
 
 ### Brownfield AST — próximas iterações
 
-- [ ] AST em `dare dna` / `dare patterns` (backlog pós-v3.14)
 - [ ] Default-on `--ast` após soak de perf/tarball
 
 ## 🔮 Planejado — v3.3.x+

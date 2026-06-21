@@ -1,0 +1,120 @@
+title: "Brownfield AST DNA+Patterns — Development Tasks"
+version: "3.15.0"
+generated: "2026-06-21T01:45:00Z"
+
+# Feature: brownfield-ast-dna-patterns
+# Branch:  feat/v3.15-brownfield-ast-dna-patterns
+# Design:  DARE/DESIGN-Feature-brownfield-ast-dna-patterns.md
+# Blueprint: DARE/BLUEPRINT-Feature-brownfield-ast-dna-patterns.md
+#
+# Regra de ouro: regex baseline; --ast enriquece DNA/Patterns; reutiliza loader v3.14. Bloco 15xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+  codex:       { HIGH: gpt-5.5,           MED: gpt-5.5,          LOW: gpt-5.4-mini }
+
+tasks:
+  - id: task-1501
+    title: "ast/conventions — types + merge-facts"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1501-conventions-foundation.md
+    subtask_prompt: |
+      Criar ast/conventions/types.ts, merge-facts.ts (BLUEPRINT §3.1–3.4). Tipos DnaAstSlice,
+      PatternsAstSlice, ConventionExtractionMeta. mergeDnaFacts, mergePatternsFacts (dedupe id,
+      union evidence). Testes merge básicos. Reutilizar ast/walk.ts. Gates: tsc; vitest run
+      ast-conventions-merge. Leia: task-1501-conventions-foundation.md.
+
+  - id: task-1502
+    title: "dna-detector — pipeline híbrido AST"
+    depends_on: [task-1501]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1502-dna-hybrid.md
+    subtask_prompt: |
+      Implementar ast/conventions/dna-extract.ts + estender dna-detector.ts: DetectDnaOptions,
+      detectDnaDetailed, detectDna backward compat (BLUEPRINT §3.5–3.6). Pipeline: regex sempre;
+      se opts.ast => extractDnaWithAst + mergeDnaFacts. Gates: vitest run dna. Leia: task-1502.
+
+  - id: task-1503
+    title: "dna.ts — flag --ast + extraction facts"
+    depends_on: [task-1502]
+    complexity: MED
+    spec_file: EXECUTION/task-1503-dna-ast-flag.md
+    subtask_prompt: |
+      Adicionar --ast em commands/dna.ts; repassar opts para detectDnaDetailed. dna-facts.json
+      bloco extraction quando --ast. --check --ast preview counts. Gates: vitest run dna.
+      Leia: task-1503-dna-ast-flag.md.
+
+  - id: task-1504
+    title: "ast/conventions/patterns-extract"
+    depends_on: [task-1501]
+    complexity: MED
+    spec_file: EXECUTION/task-1504-patterns-extract.md
+    subtask_prompt: |
+      ast/conventions/patterns-extract.ts: extractPatternsWithAst — Nest @Module, controller DI
+      multi-linha, z.object multi-linha (BLUEPRINT §3.3, F-P01..F-P03). Gates: vitest run
+      ast-patterns-extract. Leia: task-1504-patterns-extract.md.
+
+  - id: task-1505
+    title: "pattern-detector — pipeline híbrido AST"
+    depends_on: [task-1504]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1505-patterns-hybrid.md
+    subtask_prompt: |
+      Estender pattern-detector.ts: DetectPatternsOptions, detectPatternsDetailed, merge com regex
+      rules existentes (BLUEPRINT §3.6). detectPatterns() backward compat. Gates: vitest run
+      pattern-detector patterns. Leia: task-1505-patterns-hybrid.md.
+
+  - id: task-1506
+    title: "patterns.ts — flag --ast + extraction facts"
+    depends_on: [task-1505]
+    complexity: MED
+    spec_file: EXECUTION/task-1506-patterns-ast-flag.md
+    subtask_prompt: |
+      --ast em commands/patterns.ts; patterns-facts.json extraction meta. --check --ast preview.
+      Gates: vitest run patterns. Leia: task-1506-patterns-ast-flag.md.
+
+  - id: task-1507
+    title: "dna AST tests — fixtures F-D01..F-D03"
+    depends_on: [task-1503]
+    complexity: MED
+    spec_file: EXECUTION/task-1507-dna-ast-tests.md
+    subtask_prompt: |
+      Fixtures + ast/conventions/__tests__/dna-ast.test.ts — F-D01 Nest module, F-D02 typeorm
+      import, F-D03 constructor DI. Gates: vitest run dna-ast. Leia: task-1507-dna-ast-tests.md.
+
+  - id: task-1508
+    title: "patterns AST tests — fixtures F-P01..F-P03"
+    depends_on: [task-1506]
+    complexity: MED
+    spec_file: EXECUTION/task-1508-patterns-ast-tests.md
+    subtask_prompt: |
+      Fixtures + ast/conventions/__tests__/patterns-ast.test.ts — F-P01 controller-service,
+      F-P02 zod object, F-P03 nest module. Gates: vitest run patterns-ast. Leia: task-1508.
+
+  - id: task-1509
+    title: "brownfield-ast-dna-patterns-regression"
+    depends_on: [task-1503, task-1506]
+    complexity: MED
+    spec_file: EXECUTION/task-1509-dna-patterns-regression.md
+    subtask_prompt: |
+      brownfield-ast-dna-patterns-regression.test.ts: default sem --ast = v3.14 behavior (F-R01).
+      no-llm-in-core + patterns-no-llm verdes. Gates: vitest run brownfield-ast-dna-patterns-regression.
+      Leia: task-1509-dna-patterns-regression.md.
+
+  - id: task-1510
+    title: "CHANGELOG + ROADMAP + bump v3.15.0"
+    depends_on: [task-1509]
+    complexity: MED
+    spec_file: EXECUTION/task-1510-release-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.15.0]: dare dna --ast, dare patterns --ast. docs-site/brownfield.md. Skills
+      dare-dna/dare-patterns citam --ast. ROADMAP Shipped v3.15.0. Bump 3.15.0. Tag APÓS bump.
+      Gates: verify-docs-coverage; pnpm test. Leia: task-1510-release-docs.md.

@@ -14,7 +14,8 @@ extraiu os fatos. Sua função é redigir o "como esse codebase faz as coisas" q
 respeitar — para o agente seguir o padrão da casa, não o default genérico do DARE.
 
 > Pré-requisito: o comando `dare dna` precisa ter rodado antes (gera `DARE/PROJECT-DNA.md` e
-> `DARE/dna-facts.json`). Se não existirem, peça ao usuário para rodar `dare dna` primeiro.
+> `DARE/dna-facts.json`). Use `dare dna --ast` para extração híbrida tree-sitter + regex (opt-in, v3.15+).
+> Se não existirem, peça ao usuário para rodar `dare dna` primeiro.
 
 ## Quando usar esta skill
 
