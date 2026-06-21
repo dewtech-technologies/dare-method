@@ -1,12 +1,21 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.12.0
+> **Status atual:** v3.13.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
 
 ---
+
+## ✅ Shipped — v3.13.0
+
+**CLI-only cleanup** — monorepo enxuto, doc pública unificada.
+
+- ✅ **Removidos dirs legados MkDocs + landing** — pré-v3.8 (~42 arquivos)
+- ✅ **Doc canônica** — `docs-site/` (GitHub Pages); `docs/` raiz = RFC/metodologia interna
+- ✅ **Workspaces alinhados** — só `packages/cli` publicável
+- ✅ **Testes `cli-only-invariants`** — impede regressão estrutural
 
 ## ✅ Shipped — v3.12.0
 
@@ -155,6 +164,12 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 
 ---
 
+## 🔮 Planejado — v3.14+
+
+### Brownfield AST (tree-sitter)
+
+- [ ] Extração estrutural via AST para `dare reverse --deep` (substitui heurísticas regex onde aplicável)
+
 ## 🔮 Planejado — v3.3.x+
 
 ### Novas implementations (IDEs/agentes)
@@ -180,6 +195,15 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 ## 📚 Histórico de releases
 
 Resumo cronológico de todas as releases. Detalhes completos em [`CHANGELOG.md`](CHANGELOG.md).
+
+### v3.13.0 (2026-06) — CLI-only cleanup
+Remove dirs legados MkDocs + landing (pré-v3.8); monorepo com único pacote npm `@dewtech/dare-cli`. Doc pública canônica em `docs-site/` (GitHub Pages). Testes `cli-only-invariants` travam dirs removidos e links.
+
+### v3.12.0 (2026-06) — Terminal Agent Parity
+`dare <cmd> --ai` ≡ `/dare-<cmd>` em 8 comandos semânticos; drivers `cursor`/`antigravity` no `execute --agent`; apply completo de `migrate`/`review`; `dare ai doctor` com capacidades.
+
+### v3.11.0 (2026-06) — Dynamic DAG
+Replan estrutural com sub-DAGs aninhados (`REPLAN` splice), `verification.loop.maxDepth`, `dare refine --split --apply`, nesting visual no `dag viz`.
 
 ### v3.2.0 (2026-06) — Paridade total CLI ↔ IDE + coleta determinística
 Todo comando do CLI vira `/dare-*` nas 3 IDEs (teste `ide-command-parity` trava o contrato). `dare reverse`/`dna` coletam dados reais (endpoints/entidades) por padrão — os artefatos brownfield deixam de ser esqueleto. Correções de extração determinística em `utils/datamodel.ts`.

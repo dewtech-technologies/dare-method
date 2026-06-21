@@ -9,6 +9,26 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.13.0] — 2026-06-21
+
+Release **CLI-only cleanup** — monorepo enxuto com um único pacote npm publicável.
+
+### 🗑️ Removido — Legado pré-v3.8
+
+- **`packages/docs/`** — MkDocs legado (Docker/K8s/workflow próprios); conteúdo já coberto por `docs-site/`.
+- **`packages/website/`** — landing HTML estática legada (Docker/K8s/workflow próprios).
+
+### 🔧 Melhorado — Estrutura do monorepo
+
+- **CLI-only** — `@dewtech/dare-cli` em `packages/cli/` é o único pacote com `package.json` sob `packages/`.
+- **Workspaces root** — removido `packages/stacks/*` morto de `package.json`.
+- **Doc pública canônica** — `docs-site/` + GitHub Pages (`.github/workflows/docs.yml`); `docs/` raiz permanece arquivo interno (RFC/metodologia).
+
+### ✨ Adicionado — Gates estruturais
+
+- **`cli-only-invariants.test.ts`** — dirs legados ausentes; paths obrigatórios presentes; zero refs a paths removidos.
+- **`cli-only-regression.test.ts`** — `verify-docs-coverage` verde; só `packages/cli` publicável.
+
 ## [3.12.0] — 2026-06-20
 
 Release **Terminal Agent Parity** — um comando, dois gatilhos (`dare <cmd> --ai` ≡ `/dare-<cmd>`), quatro providers no terminal.
