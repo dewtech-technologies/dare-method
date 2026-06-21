@@ -71,6 +71,7 @@ import type {
   VerificationResult,
 } from '../verification/types.js';
 import { runBestOfN } from '../verification/best-of-n/runner.js';
+import { normalizeProviderName } from '../ai/config.js';
 import {
   NoViableCandidateError,
   selectByPareto,
@@ -451,12 +452,27 @@ export async function resolveDriver(
   });
 }
 
+function agentProviderFromAiDefault(rawConfig: Record<string, unknown>): AgentProviderName | null {
+  if (typeof rawConfig.ai !== 'object' || rawConfig.ai === null) return null;
+  const ai = rawConfig.ai as Record<string, unknown>;
+  if (typeof ai.defaultProvider !== 'string') return null;
+  const normalized = normalizeProviderName(ai.defaultProvider);
+  if (normalized === 'codex') return 'codex';
+  if (normalized === 'claude-code') return 'claude';
+  if (normalized === 'mock') return 'mock';
+  return null;
+}
+
 function parseAgentProvider(raw: string | undefined): AgentProviderName | null {
   if (!raw) return null;
-  const normalized = raw.trim().toLowerCase();
-  if (normalized === 'claude' || normalized === 'claude-sdk') return 'claude';
-  if (normalized === 'codex' || normalized === 'codex-cli') return 'codex';
-  if (normalized === 'mock' || normalized === 'dry-run') return 'mock';
+  const normalized = normalizeProviderName(raw);
+  if (normalized === 'mock') return 'mock';
+  if (normalized === 'codex') return 'codex';
+  if (normalized === 'claude-code') return 'claude';
+  if (raw.trim().toLowerCase() === 'claude' || raw.trim().toLowerCase() === 'claude-sdk') {
+    return 'claude';
+  }
+  if (raw.trim().toLowerCase() === 'dry-run') return 'mock';
   return null;
 }
 
@@ -643,7 +659,9 @@ async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> 
         : typeof agent.driver === 'string'
           ? agent.driver
           : undefined,
-    ) ?? 'claude';
+    ) ??
+    agentProviderFromAiDefault(rawConfig) ??
+    'claude';
   const model =
     typeof agent.model === 'string' && agent.model.trim().length > 0
       ? agent.model

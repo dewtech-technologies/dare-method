@@ -29,6 +29,8 @@ import type {
 import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
 import type { AiCommandOptions } from '../ai/types.js';
 import { maybeRunAiEnrichment } from '../ai/pipeline.js';
+import { splitProposalFromRefineSemantic } from '../ai/refine-bridge.js';
+import { RefineSemanticSchema } from '../ai/schemas.js';
 
 /**
  * `dare refine <task-id>` — measures complexity of a task and (optionally)
@@ -101,13 +103,19 @@ refineCommand.action(
       if (options.split && aiOpts.enabled) {
         const specPath = await findSpecFile(projectRoot, taskId);
         const spec = specPath ? await fs.readFile(specPath, 'utf-8') : '';
-        await maybeRunAiEnrichment({
+        const enrichment = await maybeRunAiEnrichment({
           enabled: true,
           provider: aiOpts.provider,
           command: 'refine',
           cwd: projectRoot,
           facts: { taskId, report, proposal, spec },
         });
+        if (enrichment?.data) {
+          proposal = splitProposalFromRefineSemantic(
+            taskId,
+            RefineSemanticSchema.parse(enrichment.data),
+          );
+        }
       }
 
       let agentVerdict: RefineVerdict | undefined;

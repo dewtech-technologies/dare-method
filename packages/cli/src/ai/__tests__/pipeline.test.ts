@@ -51,4 +51,31 @@ describe('ai pipeline', () => {
     const ideia = await fs.readFile(path.join(tmpDir, 'DARE', 'IDEIA.md'), 'utf-8');
     expect(ideia).toContain('Test system');
   });
+
+  it('enriches_blueprint_and_writes_blueprint_md', async () => {
+    setMockProviderFactoryForTests(
+      () =>
+        new MockAiProvider(() => ({
+          ok: true,
+          provider: 'mock',
+          raw: '{}',
+          data: {
+            architectureSummary: 'Modular monolith with API layer',
+            keyDecisions: ['Use PostgreSQL', 'Expose REST first'],
+          },
+        })),
+    );
+    await fs.ensureDir(path.join(tmpDir, 'DARE'));
+
+    const result = await runCommandEnrichment({
+      command: 'blueprint',
+      cwd: tmpDir,
+      facts: { design: '# DESIGN' },
+      provider: 'mock',
+    });
+
+    expect(result.ok).toBe(true);
+    const blueprint = await fs.readFile(path.join(tmpDir, 'DARE', 'BLUEPRINT.md'), 'utf-8');
+    expect(blueprint).toContain('Modular monolith');
+  });
 });

@@ -14,6 +14,7 @@ import {
   MigrateSemanticSchema,
   DesignSemanticSchema,
   PatternsSemanticSchema,
+  BlueprintSemanticSchema,
 } from './schemas.js';
 import type { AiCommandName, EnrichmentResult } from './types.js';
 
@@ -106,6 +107,8 @@ async function applyEnrichment(
       return applyDesignEnrichment(cwd, data as z.infer<typeof DesignSemanticSchema>);
     case 'patterns':
       return applyPatternsEnrichment(cwd, data as z.infer<typeof PatternsSemanticSchema>);
+    case 'blueprint':
+      return applyBlueprintEnrichment(cwd, data as z.infer<typeof BlueprintSemanticSchema>);
     default:
       return writeGenericEnrichment(cwd, command, data);
   }
@@ -303,6 +306,37 @@ async function applyPatternsEnrichment(
     );
     await fs.writeFile(patternsPath, content);
   }
+  return artifactPath;
+}
+
+async function applyBlueprintEnrichment(
+  cwd: string,
+  semantic: z.infer<typeof BlueprintSemanticSchema>,
+): Promise<string> {
+  const dareDir = path.join(cwd, 'DARE');
+  const artifactPath = path.join(dareDir, 'blueprint-semantic.json');
+  await fs.writeJSON(artifactPath, semantic, { spaces: 2 });
+
+  const blueprintPath = path.join(dareDir, 'BLUEPRINT.md');
+  const decisions = semantic.keyDecisions.map((d) => `- ${d}`).join('\n');
+  const risks =
+    semantic.risks && semantic.risks.length > 0
+      ? `\n## Risks\n${semantic.risks.map((r) => `- ${r}`).join('\n')}\n`
+      : '';
+  const taskNotes = semantic.taskNotes ? `\n## Task Notes\n${semantic.taskNotes}\n` : '';
+
+  const body = `# BLUEPRINT
+
+## Architecture Overview
+${semantic.architectureSummary}
+
+## Key Decisions
+${decisions}
+${risks}${taskNotes}
+---
+*Enriched by DARE AI — ${new Date().toISOString()}*
+`;
+  await fs.writeFile(blueprintPath, body);
   return artifactPath;
 }
 
