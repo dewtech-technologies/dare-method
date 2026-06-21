@@ -1,5 +1,5 @@
 import type { AiConfig } from './config.js';
-import { normalizeProviderName } from './config.js';
+import { resolveProviderName } from './resolve.js';
 import type { AiProviderName, ProviderStatus } from './types.js';
 import {
   AntigravityCliAiProvider,
@@ -51,7 +51,7 @@ export function resolveProvider(
   config: AiConfig,
   override?: string,
 ): { name: AiProviderName; provider: AiProvider } {
-  const name = normalizeProviderName(override) ?? config.defaultProvider;
+  const name = resolveProviderName(override, config);
   return { name, provider: createProvider(name, config) };
 }
 

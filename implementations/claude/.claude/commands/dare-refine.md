@@ -1,5 +1,8 @@
 # Comando: /dare-refine
 
+> **Equivalente no terminal:** `dare refine <task-id> --split --ai`
+
+
 ## Descrição
 
 Analisa a complexidade de uma task e, quando alta, **quebra em sub-tasks menores** com escopo bem delimitado. Pode ser chamada:

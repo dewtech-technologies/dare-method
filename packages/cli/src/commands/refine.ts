@@ -106,6 +106,7 @@ refineCommand.action(
         const enrichment = await maybeRunAiEnrichment({
           enabled: true,
           provider: aiOpts.provider,
+          json: aiOpts.json,
           command: 'refine',
           cwd: projectRoot,
           facts: { taskId, report, proposal, spec },

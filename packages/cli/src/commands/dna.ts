@@ -58,6 +58,7 @@ dnaCommand.action(async (opts: DnaOptions) => {
       await maybeRunAiEnrichment({
         enabled: aiOpts.enabled,
         provider: aiOpts.provider,
+        json: aiOpts.json,
         command: 'dna',
         cwd: targetDir,
         facts,

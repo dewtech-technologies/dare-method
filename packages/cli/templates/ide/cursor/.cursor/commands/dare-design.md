@@ -1,5 +1,8 @@
 # Comando: /dare-design
 
+> **Equivalente no terminal:** `dare design "<description>" --ai`
+
+
 ## Descrição
 Inicia o Método DARE (fase Design) gerando `DARE/DESIGN.md` a partir de uma ideia inicial.
 

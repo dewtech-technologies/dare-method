@@ -252,6 +252,84 @@ describe('dare execute --agent', () => {
     expect(exitCode).toBeUndefined();
   });
 
+  it('cursor_provider_drives_dag_to_done', async () => {
+    await writeDag([{ id: 'task-cursor' }]);
+    await fs.writeJson(
+      path.join(projectRoot, 'dare.config.json'),
+      { agent: { provider: 'cursor-cli' } },
+      { spaces: 2 },
+    );
+
+    const safeSpawn = await import('../../exec/safe-spawn.js');
+    const spawnSpy = vi.spyOn(safeSpawn, 'safeSpawn').mockResolvedValue({
+      code: 0,
+      stdout: 'cursor implemented task',
+      stderr: '',
+      timedOut: false,
+    });
+
+    const execute = await loadExecute();
+    await run(execute, ['--agent', '--require-approval', 'none', '--no-graph']);
+
+    expect(spawnSpy).toHaveBeenCalledWith(
+      'cursor-agent',
+      expect.arrayContaining(['-p', expect.any(String), '--output-format', 'text']),
+      expect.objectContaining({ cwd: expect.stringContaining('task-cursor') }),
+    );
+    const state = (await fs.readJson(path.join(projectRoot, '.dare', 'state.json'))) as {
+      tasks: Record<string, { status: string; output?: string }>;
+    };
+    expect(state.tasks['task-cursor']?.status).toBe('DONE');
+    expect(state.tasks['task-cursor']?.output).toContain('cursor implemented task');
+  });
+
+  it('antigravity_provider_drives_dag_to_done', async () => {
+    await writeDag([{ id: 'task-antigravity' }]);
+    await fs.writeJson(
+      path.join(projectRoot, 'dare.config.json'),
+      { agent: { provider: 'antigravity-cli' } },
+      { spaces: 2 },
+    );
+
+    const safeSpawn = await import('../../exec/safe-spawn.js');
+    const spawnSpy = vi.spyOn(safeSpawn, 'safeSpawn').mockResolvedValue({
+      code: 0,
+      stdout: 'antigravity implemented task',
+      stderr: '',
+      timedOut: false,
+    });
+
+    const execute = await loadExecute();
+    await run(execute, ['--agent', '--require-approval', 'none', '--no-graph']);
+
+    expect(spawnSpy).toHaveBeenCalledWith(
+      'antigravity',
+      expect.arrayContaining(['-p', expect.any(String), '--output-format', 'text']),
+      expect.objectContaining({ cwd: expect.stringContaining('task-antigravity') }),
+    );
+    const state = (await fs.readJson(path.join(projectRoot, '.dare', 'state.json'))) as {
+      tasks: Record<string, { status: string; output?: string }>;
+    };
+    expect(state.tasks['task-antigravity']?.status).toBe('DONE');
+    expect(state.tasks['task-antigravity']?.output).toContain('antigravity implemented task');
+  });
+
+  it('unknown_driver_exits_with_clear_error', async () => {
+    await writeDag([{ id: 'task-unknown' }]);
+    const execute = await loadExecute();
+    await run(execute, [
+      '--agent',
+      '--driver',
+      'not-a-real-driver',
+      '--require-approval',
+      'none',
+      '--no-graph',
+    ]);
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain('--driver must be one of:');
+  });
+
   it('missing_sdk_exits_1', async () => {
     await writeDag([{ id: 'task-sdk' }]);
     const claude = await import('../../agent/drivers/claude.js');

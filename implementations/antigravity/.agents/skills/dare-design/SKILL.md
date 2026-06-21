@@ -14,6 +14,8 @@ Você é um especialista em planejamento e análise de requisitos. Seu objetivo 
 - Necessário documentar escopo e restrições
 - Primeira fase do Método DARE
 
+> **Equivalente no terminal:** `dare design "<description>" --ai`
+
 ## Como usar
 
 ### Passo 1: Entender a Ideia

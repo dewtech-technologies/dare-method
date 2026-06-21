@@ -96,6 +96,7 @@ ${questionnaireBlock}---
     await maybeRunAiEnrichment({
       enabled: aiOpts.enabled,
       provider: aiOpts.provider,
+      json: aiOpts.json,
       command: 'design',
       cwd: process.cwd(),
       facts: aiFacts,

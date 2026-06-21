@@ -72,6 +72,9 @@ dare reverse --deep --modules auth,billing
 | `--no-excalidraw` | boolean | (gera) | Pula a geração do canvas de arquitetura `.excalidraw` editável. |
 | `--report` | boolean | — | Calcula o relatório de confiança + matriz code-spec a partir de specs já marcados. |
 | `--deep` | boolean | — | Também extrai ERD + superfície de API (determinístico) e faz scaffold de domain-rules / state-machines / permissions / C4. |
+| `--ai` | boolean | `false` | Enrichment terminal após heurística (equivale a `/dare-reverse` na IDE). |
+| `--provider <name>` | string | config | Override do provider (`codex`, `claude-code`, `cursor-cli`, `antigravity-cli`, `mock`). |
+| `--json` | boolean | `false` | Com `--ai`, emite `EnrichmentResult` JSON estruturado. |
 
 ## `dare dna`
 
@@ -85,6 +88,7 @@ dare dna --check
 |------|------|---------|-----------|
 | `-d, --dir <path>` | string | dir atual | Diretório alvo. |
 | `--check` | boolean | — | Só mostra convenções detectadas, sem escrever artefatos. |
+| `--ai` / `--provider` / `--json` | — | — | Mesmo contrato de paridade terminal que `dare reverse --ai` (ver [`dare ai`](#dare-ai)). |
 
 ## `dare migrate`
 
@@ -402,6 +406,28 @@ Mostra versão, paths e a integridade DARE do projeto atual. (Sem flags.)
 dare info
 ```
 
+## `dare ai`
+
+Providers **terminal-first** para enrichment semântico e diagnóstico de CLIs. Paridade com
+skills `/dare-*` da IDE — ver [Agentes › Paridade terminal ↔ chat](agents.md#paridade-terminal--chat).
+
+```bash
+dare ai doctor
+dare ai doctor --json
+dare ai providers
+dare ai run --command reverse --facts DARE/REVERSE/reverse-facts.json --json
+```
+
+| Subcomando | Descrição |
+|---|---|
+| `doctor` | Probe de CLIs + capacidade `enrichment` / `execution` por provider. |
+| `providers` | Lista nomes suportados (`codex`, `claude-code`, `cursor-cli`, `antigravity-cli`, `mock`). |
+| `run` | Enrichment one-off com validação JSON Schema. |
+| `prompt` | Renderiza prompt de enrichment (debug). |
+
+Flags compartilhadas nos comandos semânticos: `--ai`, `--provider <name>`, `--json`
+(precedência: `--provider` > `ai.defaultProvider` > `codex`).
+
 ## `dare update`
 
 Atualiza o setup do projeto para a versão atual do DARE CLI.
@@ -435,6 +461,7 @@ dare review task-001 --strict --format json
 | `--format <fmt>` | string | `human` | Saída: `human`, `json` ou `github` (annotations Actions). |
 | `--comment` | boolean | `false` | Comentário idempotente no PR. |
 | `--fail-on <mode>` | string | `none` | Exit: `none` \| `warn` \| `error`. |
+| `--ai` / `--provider` / `--json` | — | — | Veredito semântico via terminal; grava `review-semantic.json` (ver [`dare ai`](#dare-ai)). |
 
 ## GitHub Action (`action.yml`)
 

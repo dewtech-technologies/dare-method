@@ -8,15 +8,18 @@ export function addAiOptions(cmd: Command): Command {
     .option(
       '--provider <name>',
       'AI provider override (codex, claude-code, cursor-cli, antigravity-cli, mock)',
-    );
+    )
+    .option('--json', 'Emit structured EnrichmentResult JSON when --ai is used', false);
 }
 
 export function aiOptionsFromFlags(flags: AiCommandOptions): {
   enabled: boolean;
   provider?: string;
+  json?: boolean;
 } {
   return {
     enabled: Boolean(flags.ai),
     provider: flags.provider?.trim() || undefined,
+    json: Boolean(flags.json),
   };
 }

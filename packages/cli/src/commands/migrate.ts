@@ -105,6 +105,7 @@ migrateCommand.action(async (opts: MigrateOptions) => {
       await maybeRunAiEnrichment({
         enabled: aiOpts.enabled,
         provider: aiOpts.provider,
+        json: aiOpts.json,
         command: 'migrate',
         cwd: targetDir,
         facts,

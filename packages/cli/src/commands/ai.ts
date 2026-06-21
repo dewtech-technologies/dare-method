@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
 import { loadAiConfig, normalizeProviderName } from '../ai/config.js';
+import { capabilitiesForProvider } from '../ai/capabilities.js';
 import { buildEnrichmentPrompt } from '../ai/prompts.js';
 import { runCommandEnrichment } from '../ai/pipeline.js';
 import { probeAllProviders, resolveProvider, listProviderNames } from '../ai/registry.js';
@@ -31,17 +32,28 @@ aiCommand
     const cwd = path.resolve(opts.dir ?? process.cwd());
     const config = await loadAiConfig(cwd);
     const statuses = await probeAllProviders(config);
+    const withCapabilities = statuses.map((status) => ({
+      ...status,
+      capabilities: capabilitiesForProvider(status.name),
+    }));
 
     if (opts.json) {
-      console.log(JSON.stringify({ defaultProvider: config.defaultProvider, providers: statuses }, null, 2));
+      console.log(
+        JSON.stringify({ defaultProvider: config.defaultProvider, providers: withCapabilities }, null, 2),
+      );
       return;
     }
 
     console.log(chalk.blue.bold('\n🩺 DARE AI — provider doctor\n'));
     console.log(chalk.gray(`  Default: ${config.defaultProvider}\n`));
-    for (const status of statuses) {
+    for (const status of withCapabilities) {
       const icon = status.availability === 'available' ? chalk.green('✓') : chalk.red('✗');
       console.log(`  ${icon} ${chalk.bold(status.name)} (${status.command})`);
+      console.log(
+        chalk.gray(
+          `      enrichment: ${status.capabilities.enrichment ? 'yes' : 'no'} · execution: ${status.capabilities.execution ? 'yes' : 'no'}`,
+        ),
+      );
       console.log(chalk.gray(`      ${status.detail}\n`));
     }
   });

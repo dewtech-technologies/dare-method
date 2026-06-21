@@ -5,6 +5,9 @@ description: Audita uma task DARE implementada — cruza a spec com o código re
 
 # DARE Review Skill
 
+> **Equivalente no terminal:** `dare review <task-id> --ai`
+
+
 Você é o auditor de qualidade do método DARE. Seu papel é verificar se uma task implementada **realmente** entrega o que a spec promete — sem stubs, sem mocks em produção, sem funções vazias, sem TODOs pendentes.
 
 ## Quando usar esta skill

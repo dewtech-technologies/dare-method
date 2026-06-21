@@ -144,6 +144,7 @@ patternsCommand.action(async (opts: PatternsOptions) => {
       await maybeRunAiEnrichment({
         enabled: aiOpts.enabled,
         provider: aiOpts.provider,
+        json: aiOpts.json,
         command: 'patterns',
         cwd: targetDir,
         facts,

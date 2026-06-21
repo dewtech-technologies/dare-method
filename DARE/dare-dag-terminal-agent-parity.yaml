@@ -1,0 +1,147 @@
+title: "Terminal ↔ Chat Parity — Development Tasks"
+version: "3.12.0"
+generated: "2026-06-20T00:00:00Z"
+
+# Feature: terminal-agent-parity
+# Branch:  codex/cli-core-agent-providers
+# Design:  DARE/DESIGN-Feature-terminal-agent-parity.md
+# Blueprint: DARE/BLUEPRINT-Feature-terminal-agent-parity.md
+#
+# Regra de ouro: heurística sempre roda (determinística); IA é camada opcional validada por schema.
+# Terminal `dare <cmd> --ai` ≡ chat `/dare-<cmd>`. Sem SDK de LLM no core (só claude.ts). Bloco de IDs: 12xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+  codex:       { HIGH: gpt-5.5,           MED: gpt-5.5,          LOW: gpt-5.4-mini }
+
+tasks:
+  # ─── Fase 1: fundação (rank 0 paralelo) ──────────────────────────────────
+  - id: task-1201
+    title: "ai/resolve.ts — resolução única de provider"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1201-resolve-provider.md
+    subtask_prompt: |
+      Criar packages/cli/src/ai/resolve.ts (BLUEPRINT §3.1). resolveProviderName(flag, config): precedência
+      flag --provider > config.ai.defaultProvider > 'codex'. providerToDriverId(name): codex->codex,
+      claude-code->claude, cursor-cli->cursor, antigravity-cli->antigravity, mock->mock. Refatorar
+      commands/execute.ts e ai/pipeline.ts para usarem este helper (sem duplicar lógica). Determinístico.
+      Testes: ai/__tests__/resolve.test.ts (precedência + mapeamento). Gates: tsc; vitest run resolve.
+      Leia: DARE/EXECUTION/task-1201-resolve-provider.md.
+
+  - id: task-1202
+    title: "ai/parity.ts — contrato de paridade terminal/chat"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1202-parity-contract.md
+    subtask_prompt: |
+      Criar packages/cli/src/ai/parity.ts (BLUEPRINT §3.2). PARITY_CONTRACTS: para cada AiCommandName
+      (reverse, dna, migrate, design, patterns, blueprint, review, refine) declarar skillSlug, terminal,
+      artifacts[] e schemaFields[]. parityFor(command). Os schemaFields devem bater com ai/schemas.ts.
+      Testes: ai/__tests__/parity.test.ts (todo comando semântico tem contrato; campos batem com schema).
+      Gates: tsc; vitest run parity. Leia: DARE/EXECUTION/task-1202-parity-contract.md.
+
+  # ─── Fase 2: execução multi-provider ─────────────────────────────────────
+  - id: task-1203
+    title: "agent/drivers/cursor.ts + antigravity.ts — drivers de execução"
+    depends_on: [task-1201]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1203-execution-drivers.md
+    subtask_prompt: |
+      Criar packages/cli/src/agent/drivers/cursor.ts e antigravity.ts (BLUEPRINT §3.3). Implementam
+      AgentDriver via safeSpawn (subprocess do cursor-agent / antigravity em modo não-interativo no worktree).
+      Reusar o padrão do codex.ts (argv, parse de saída, abort/timeout, failureSignature). requiresNetwork=true.
+      Sem SDK no core (manter no-llm-in-core verde). Testes: cursor-driver.test.ts, antigravity-driver.test.ts
+      (argv correto; abort; exit≠0 => failed). Gates: tsc; vitest run cursor-driver antigravity-driver.
+      Leia: DARE/EXECUTION/task-1203-execution-drivers.md.
+
+  - id: task-1204
+    title: "execute.ts — selecionar cursor/antigravity como driver"
+    depends_on: [task-1201, task-1203]
+    complexity: MED
+    spec_file: EXECUTION/task-1204-execute-wiring.md
+    subtask_prompt: |
+      Modificar packages/cli/src/commands/execute.ts (BLUEPRINT §4). resolveDriver aceita 'cursor' e
+      'antigravity' (via providerToDriverId/resolve.ts). --driver valida os 4 providers + mock. Provider
+      ausente => mensagem clara (RF-08). dare execute --agent --driver cursor|antigravity roda ou falha
+      explicitamente. Compat: sem flag/config nova => caminho atual (claude/codex/mock) intacto.
+      Testes: estender execute-agent.test.ts (cursor/antigravity drivem DAG). Gates: tsc; vitest run execute-agent.
+      Leia: DARE/EXECUTION/task-1204-execute-wiring.md.
+
+  # ─── Fase 3: apply completo (migrate/review) + --json uniforme ────────────
+  - id: task-1205
+    title: "pipeline — apply completo de migrate e review"
+    depends_on: [task-1202]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1205-migrate-review-apply.md
+    subtask_prompt: |
+      Modificar packages/cli/src/ai/pipeline.ts (BLUEPRINT §3.4). applyMigrateEnrichment: reescrever
+      DARE/MIGRATION/MIGRATION.md mesclando strategySummary/riskAreas/parityNotes/blockingGaps.
+      applyReviewEnrichment: gravar review-semantic.json E permitir que dare review --ai injete o veredito
+      no fluxo sem exigir --from-agent. Atualizar applyEnrichment switch. Output validado por schema (RS-01).
+      Testes: estender ai/__tests__/pipeline.test.ts (migrate reescreve MIGRATION.md; review injeta veredito).
+      Gates: tsc; vitest run pipeline. Leia: DARE/EXECUTION/task-1205-migrate-review-apply.md.
+
+  - id: task-1206
+    title: "--json uniforme + ai doctor reporta capacidade"
+    depends_on: [task-1201, task-1205]
+    complexity: MED
+    spec_file: EXECUTION/task-1206-json-doctor.md
+    subtask_prompt: |
+      Garantir --json em todos os comandos com --ai (reverse, dna, migrate, design, patterns, blueprint,
+      review, refine) emitindo EnrichmentResult estruturado (RF-07). dare ai doctor (commands/ai.ts) reporta
+      capacidade por provider: enrichment e execução (RF-05). Usar resolve.ts. Testes: ai-command.test.ts +
+      um teste por comando para --ai --json. Gates: tsc; vitest run ai-command. Leia: DARE/EXECUTION/task-1206-json-doctor.md.
+
+  # ─── Fase 4: paridade & doutrina ─────────────────────────────────────────
+  - id: task-1207
+    title: "skills /dare-* citam o equivalente terminal (--ai)"
+    depends_on: [task-1202]
+    complexity: LOW
+    spec_file: EXECUTION/task-1207-skills-terminal-ref.md
+    subtask_prompt: |
+      Atualizar implementations/{claude,cursor,antigravity}/.../dare-<cmd> para cada comando semântico
+      citar `dare <cmd> --ai` como caminho terminal equivalente (RF-06). Sincroniza p/ templates no build.
+      Não remover nenhuma skill (O-04). Gates: tsx scripts/sync-implementations.ts; vitest run ide-command-parity.
+      Leia: DARE/EXECUTION/task-1207-skills-terminal-ref.md.
+
+  - id: task-1208
+    title: "terminal-parity.test.ts — paridade por capacidade"
+    depends_on: [task-1202, task-1205, task-1207]
+    complexity: MED
+    spec_file: EXECUTION/task-1208-parity-test.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/terminal-parity.test.ts. Para cada ParityContract: existe a skill
+      /dare-<cmd> nas 3 IDEs; o comando expõe --ai e --provider; os schemaFields existem em ai/schemas.ts;
+      o pipeline aplica nos artifacts declarados. Trava o contrato (RNF-05). Gates: vitest run terminal-parity.
+      Leia: DARE/EXECUTION/task-1208-parity-test.md.
+
+  # ─── Fase N-1: auditoria + docs ──────────────────────────────────────────
+  - id: task-1209
+    title: "auditoria N-1 — terminal-parity-regression.test.ts"
+    depends_on: [task-1204, task-1206, task-1208]
+    complexity: MED
+    spec_file: EXECUTION/task-1209-parity-regression.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/terminal-parity-regression.test.ts. Prova: heurística roda sem --ai
+      (determinístico); --ai sem provider disponível => exit≠0 (RF-08); 4 providers selecionáveis; sem SDK
+      no core (no-llm-in-core verde); chat não regrediu (ide-command-parity verde). Gates: vitest run
+      terminal-parity-regression. Leia: DARE/EXECUTION/task-1209-parity-regression.md.
+
+  - id: task-1210
+    title: "CHANGELOG + docs (terminal parity)"
+    depends_on: [task-1209]
+    complexity: LOW
+    spec_file: EXECUTION/task-1210-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.12.0]: paridade terminal↔chat — --ai em todos os comandos, cursor/antigravity como
+      drivers de execução, apply de migrate/review, resolução única de provider. Documentar em docs-site
+      (configuration + agents) o contrato de paridade e os 4 providers. Gates: verify-docs-coverage.
+      Leia: DARE/EXECUTION/task-1210-docs.md.

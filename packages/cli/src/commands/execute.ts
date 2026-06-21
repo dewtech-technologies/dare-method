@@ -46,6 +46,9 @@ import {
   type CodexApproval,
   type CodexSandbox,
 } from '../agent/drivers/codex.js';
+import { createCursorCliDriver } from '../agent/drivers/cursor.js';
+import { createAntigravityCliDriver } from '../agent/drivers/antigravity.js';
+import { parseAiConfig, resolveProviderConfig } from '../ai/config.js';
 import { runIncrementalSemanticIndex } from '../graphrag/incremental-index.js';
 import {
   gateToAspect,
@@ -71,7 +74,12 @@ import type {
   VerificationResult,
 } from '../verification/types.js';
 import { runBestOfN } from '../verification/best-of-n/runner.js';
-import { normalizeProviderName } from '../ai/config.js';
+import {
+  parseAgentDriverOverride,
+  resolveAgentDriverId,
+  formatKnownDrivers,
+  type AgentDriverId,
+} from '../ai/resolve.js';
 import {
   NoViableCandidateError,
   selectByPareto,
@@ -237,6 +245,8 @@ interface AgentRuntimeConfig {
   readonly codexSandbox?: CodexSandbox;
   readonly codexApproval?: CodexApproval;
   readonly timeoutSeconds?: number;
+  readonly cursorCommand?: string;
+  readonly antigravityCommand?: string;
   readonly guard: GuardConfig;
 }
 
@@ -273,7 +283,7 @@ interface RefineSplitResult {
 }
 
 const GUARD_FAIL_EXIT_CODE = 6;
-type AgentProviderName = 'claude' | 'codex' | 'mock';
+type AgentProviderName = AgentDriverId;
 const DEFAULT_AGENT_MODEL = 'claude-sonnet-4-5';
 
 const ZERO_USAGE: TokenUsage = {
@@ -445,6 +455,20 @@ export async function resolveDriver(
       timeoutSeconds: config.timeoutSeconds,
     });
   }
+  if (provider === 'cursor') {
+    return createCursorCliDriver({
+      command: config.cursorCommand,
+      model: config.model || undefined,
+      timeoutSeconds: config.timeoutSeconds,
+    });
+  }
+  if (provider === 'antigravity') {
+    return createAntigravityCliDriver({
+      command: config.antigravityCommand,
+      model: config.model || undefined,
+      timeoutSeconds: config.timeoutSeconds,
+    });
+  }
   return createClaudeDriver({
     model: config.model || DEFAULT_AGENT_MODEL,
     apiKeyEnv: config.apiKeyEnv,
@@ -452,28 +476,8 @@ export async function resolveDriver(
   });
 }
 
-function agentProviderFromAiDefault(rawConfig: Record<string, unknown>): AgentProviderName | null {
-  if (typeof rawConfig.ai !== 'object' || rawConfig.ai === null) return null;
-  const ai = rawConfig.ai as Record<string, unknown>;
-  if (typeof ai.defaultProvider !== 'string') return null;
-  const normalized = normalizeProviderName(ai.defaultProvider);
-  if (normalized === 'codex') return 'codex';
-  if (normalized === 'claude-code') return 'claude';
-  if (normalized === 'mock') return 'mock';
-  return null;
-}
-
 function parseAgentProvider(raw: string | undefined): AgentProviderName | null {
-  if (!raw) return null;
-  const normalized = normalizeProviderName(raw);
-  if (normalized === 'mock') return 'mock';
-  if (normalized === 'codex') return 'codex';
-  if (normalized === 'claude-code') return 'claude';
-  if (raw.trim().toLowerCase() === 'claude' || raw.trim().toLowerCase() === 'claude-sdk') {
-    return 'claude';
-  }
-  if (raw.trim().toLowerCase() === 'dry-run') return 'mock';
-  return null;
+  return parseAgentDriverOverride(raw);
 }
 
 function parseRequireApprovalMode(raw: string | undefined): RequireApprovalMode | null {
@@ -652,16 +656,14 @@ async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> 
     typeof rawConfig.agent === 'object' && rawConfig.agent !== null
       ? (rawConfig.agent as Record<string, unknown>)
       : {};
-  const provider =
-    parseAgentProvider(
-      typeof agent.provider === 'string'
-        ? agent.provider
-        : typeof agent.driver === 'string'
-          ? agent.driver
-          : undefined,
-    ) ??
-    agentProviderFromAiDefault(rawConfig) ??
-    'claude';
+  const provider = resolveAgentDriverId(
+    rawConfig,
+    typeof agent.provider === 'string'
+      ? agent.provider
+      : typeof agent.driver === 'string'
+        ? agent.driver
+        : undefined,
+  );
   const model =
     typeof agent.model === 'string' && agent.model.trim().length > 0
       ? agent.model
@@ -713,6 +715,18 @@ async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> 
         ? codex.timeoutSeconds
         : undefined;
 
+  const aiConfig = parseAiConfig(rawConfig);
+  const cursorSettings = resolveProviderConfig<{ command?: string; timeoutSeconds?: number }>(
+    aiConfig,
+    'cursor-cli',
+  );
+  const antigravitySettings = resolveProviderConfig<{ command?: string; timeoutSeconds?: number }>(
+    aiConfig,
+    'antigravity-cli',
+  );
+  const cursorCommand = cursorSettings.command?.trim() || undefined;
+  const antigravityCommand = antigravitySettings.command?.trim() || undefined;
+
   return {
     provider,
     model,
@@ -721,7 +735,12 @@ async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> 
     codexCommand,
     codexSandbox,
     codexApproval,
-    timeoutSeconds,
+    timeoutSeconds:
+      timeoutSeconds ??
+      cursorSettings.timeoutSeconds ??
+      antigravitySettings.timeoutSeconds,
+    cursorCommand,
+    antigravityCommand,
     guard,
   };
 }
@@ -877,7 +896,7 @@ async function handleAgent(
   if (options.driver && !parseAgentProvider(options.driver)) {
     console.error(
       chalk.red(
-        `Error: --driver must be 'claude', 'codex' or 'mock' (got '${options.driver}')`,
+        `Error: --driver must be one of: ${formatKnownDrivers()} (got '${options.driver}')`,
       ),
     );
     process.exit(1);

@@ -157,6 +157,7 @@ reverseCommand.action(async (opts: ReverseOptions) => {
         await maybeRunAiEnrichment({
           enabled: true,
           provider: aiOpts.provider,
+          json: aiOpts.json,
           command: 'reverse',
           cwd: targetDir,
           facts: factsWithModel,

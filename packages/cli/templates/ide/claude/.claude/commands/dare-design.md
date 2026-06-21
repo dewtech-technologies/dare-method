@@ -2,6 +2,8 @@
 
 Gera ou atualiza o `DARE/DESIGN.md` a partir de uma descrição do projeto ou feature.
 
+> **Equivalente no terminal:** `dare design "<description>" --ai`
+
 ## Como usar
 
 ```

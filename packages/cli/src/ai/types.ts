@@ -31,6 +31,12 @@ export interface ProviderStatus {
   readonly command: string;
   readonly detail: string;
   readonly requiresNetwork: boolean;
+  readonly capabilities?: ProviderCapabilities;
+}
+
+export interface ProviderCapabilities {
+  readonly enrichment: boolean;
+  readonly execution: boolean;
 }
 
 export interface AgentRequest {
@@ -63,4 +69,5 @@ export interface EnrichmentResult {
 export interface AiCommandOptions {
   readonly ai?: boolean;
   readonly provider?: string;
+  readonly json?: boolean;
 }

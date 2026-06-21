@@ -15,6 +15,8 @@ import {
   DesignSemanticSchema,
   PatternsSemanticSchema,
   BlueprintSemanticSchema,
+  ReviewSemanticSchema,
+  RefineSemanticSchema,
 } from './schemas.js';
 import type { AiCommandName, EnrichmentResult } from './types.js';
 
@@ -109,6 +111,10 @@ async function applyEnrichment(
       return applyPatternsEnrichment(cwd, data as z.infer<typeof PatternsSemanticSchema>);
     case 'blueprint':
       return applyBlueprintEnrichment(cwd, data as z.infer<typeof BlueprintSemanticSchema>);
+    case 'review':
+      return applyReviewEnrichment(cwd, data as z.infer<typeof ReviewSemanticSchema>);
+    case 'refine':
+      return applyRefineEnrichment(cwd, data as z.infer<typeof RefineSemanticSchema>);
     default:
       return writeGenericEnrichment(cwd, command, data);
   }
@@ -237,21 +243,69 @@ async function applyMigrateEnrichment(
   semantic: z.infer<typeof MigrateSemanticSchema>,
 ): Promise<string> {
   const dareDir = path.join(cwd, 'DARE');
+  const migrationDir = path.join(dareDir, 'MIGRATION');
+  await fs.ensureDir(migrationDir);
   const artifactPath = path.join(dareDir, 'migrate-semantic.json');
   await fs.writeJSON(artifactPath, semantic, { spaces: 2 });
 
-  const migrationPath = path.join(dareDir, 'MIGRATION', 'MIGRATION.md');
-  if (await fs.pathExists(migrationPath)) {
-    let content = await fs.readFile(migrationPath, 'utf-8');
-    content = replaceFirstAgentBlock(content, semantic.strategySummary);
+  const migrationPath = path.join(migrationDir, 'MIGRATION.md');
+  if (!(await fs.pathExists(migrationPath))) {
+    const body = `# MIGRATION
+
+## Estratégia de Migração
+${semantic.strategySummary}
+
+## Registro de Risco
+${semantic.riskAreas.map((r) => `- ${r}`).join('\n')}
+
+## Notas de Paridade
+${semantic.parityNotes}
+${semantic.blockingGaps?.length ? `\n## Blocking Gaps\n${semantic.blockingGaps.map((g) => `- ${g}`).join('\n')}` : ''}
+`;
+    await fs.writeFile(migrationPath, body);
+    return artifactPath;
+  }
+
+  let content = await fs.readFile(migrationPath, 'utf-8');
+  content = replaceAgentComment(content, 'big-bang', semantic.strategySummary);
+  content = replaceAgentComment(
+    content,
+    'riscos',
+    semantic.riskAreas.map((r) => `- ${r}`).join('\n'),
+  );
+  content = replaceAgentComment(content, 'paridade', semantic.parityNotes);
+  if (semantic.blockingGaps?.length) {
     content = replaceAgentComment(
       content,
-      'riscos',
-      semantic.riskAreas.map((r) => `- ${r}`).join('\n'),
+      'tratamento',
+      semantic.blockingGaps.map((g) => `- ${g}`).join('\n'),
     );
-    await fs.writeFile(migrationPath, content);
   }
+  await fs.writeFile(migrationPath, content);
   return artifactPath;
+}
+
+async function applyReviewEnrichment(
+  cwd: string,
+  semantic: z.infer<typeof ReviewSemanticSchema>,
+): Promise<string> {
+  const dareDir = path.join(cwd, 'DARE');
+  await fs.ensureDir(dareDir);
+  const artifactPath = path.join(dareDir, 'review-semantic.json');
+  const verdict = {
+    passed: semantic.passed,
+    unmetCriteria: semantic.unmetCriteria,
+    ...(semantic.notes ? { notes: semantic.notes } : {}),
+  };
+  await fs.writeJSON(artifactPath, verdict, { spaces: 2 });
+  return artifactPath;
+}
+
+async function applyRefineEnrichment(
+  cwd: string,
+  semantic: z.infer<typeof RefineSemanticSchema>,
+): Promise<string> {
+  return writeGenericEnrichment(cwd, 'refine', semantic);
 }
 
 async function applyDesignEnrichment(
@@ -348,10 +402,10 @@ export async function maybeRunAiEnrichment(args: {
   facts: unknown;
   deep?: boolean;
   extra?: string;
+  json?: boolean;
 }): Promise<EnrichmentResult | null> {
   if (!args.enabled) return null;
 
-  const spinner = ora(`AI enrichment (${args.command})...`).start();
   const result = await runCommandEnrichment({
     command: args.command,
     cwd: args.cwd,
@@ -361,6 +415,13 @@ export async function maybeRunAiEnrichment(args: {
     extra: args.extra,
   });
 
+  if (args.json) {
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.ok) process.exit(1);
+    return result;
+  }
+
+  const spinner = ora(`AI enrichment (${args.command})...`).start();
   if (result.ok) {
     spinner.succeed(chalk.green(`AI enrichment OK (${result.provider}) → ${result.artifactPath}`));
     return result;

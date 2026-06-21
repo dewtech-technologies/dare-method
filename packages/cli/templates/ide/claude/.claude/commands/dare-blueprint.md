@@ -4,6 +4,8 @@ Gera **somente** `DARE/BLUEPRINT.md` a partir do `DARE/DESIGN.md`.
 
 > Tasks, DAG e specs de execução são geradas depois com `/dare-tasks`, após aprovação humana do Blueprint.
 
+> **Equivalente no terminal:** `dare blueprint --ai`
+
 ## Como usar
 
 ```

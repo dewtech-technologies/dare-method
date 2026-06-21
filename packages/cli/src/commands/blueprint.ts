@@ -144,6 +144,7 @@ blueprintCommand.action(async (designFile: string, options: { force: boolean } &
     await maybeRunAiEnrichment({
       enabled: aiOpts.enabled,
       provider: aiOpts.provider,
+      json: aiOpts.json,
       command: 'blueprint',
       cwd: process.cwd(),
       facts: { designFile: designPath, design: designText, sampleTasks },
