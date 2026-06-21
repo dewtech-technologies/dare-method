@@ -28,8 +28,11 @@ import {
   aggregate,
   type SpecConfidence,
 } from '../utils/confidence.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
 
-interface ReverseOptions {
+interface ReverseOptions extends AiCommandOptions {
   dir?: string;
   check?: boolean;
   modules?: string;
@@ -47,8 +50,11 @@ export const reverseCommand = new Command('reverse')
   .option('--modules <list>', 'Limit to specific modules (comma-separated ids/names)')
   .option('--no-excalidraw', 'Skip generating the editable .excalidraw architecture canvas')
   .option('--report', 'Compute the confidence report + code-spec matrix from already-marked specs')
-  .option('--deep', 'Also extract ERD + API surface (deterministic) and scaffold domain-rules / state-machines / permissions / C4')
-  .action(async (opts: ReverseOptions) => {
+  .option('--deep', 'Also extract ERD + API surface (deterministic) and scaffold domain-rules / state-machines / permissions / C4');
+
+addAiOptions(reverseCommand);
+
+reverseCommand.action(async (opts: ReverseOptions) => {
     const targetDir = path.resolve(opts.dir ?? process.cwd());
 
     // ── Report mode: parse markers from existing specs, no code re-scan ────
@@ -145,6 +151,20 @@ export const reverseCommand = new Command('reverse')
         await writeDeepArtifacts(targetDir, reverseDir, facts, model);
       }
 
+      const aiOpts = aiOptionsFromFlags(opts);
+      if (aiOpts.enabled) {
+        writeSpinner.stop();
+        await maybeRunAiEnrichment({
+          enabled: true,
+          provider: aiOpts.provider,
+          command: 'reverse',
+          cwd: targetDir,
+          facts: factsWithModel,
+          deep: opts.deep,
+        });
+        writeSpinner.start('Finalizing...');
+      }
+
       writeSpinner.succeed(
         chalk.green(
           `IDEIA.md + module specs generated (${model.endpoints.length} endpoints, ${model.entities.length} entities).`,
@@ -167,9 +187,16 @@ export const reverseCommand = new Command('reverse')
     if (opts.deep) {
       console.log(`  ${chalk.gray('·')} DARE/REVERSE/ erd.md · api-surface.md · domain-rules.md · state-machines.md · permissions.md · c4/`);
     }
+    if (aiOptionsFromFlags(opts).enabled) {
+      console.log(`  ${chalk.gray('·')} DARE/REVERSE/semantic-enrichment.json`);
+    }
 
     console.log(chalk.cyan('\n📋 Next steps:\n'));
-    console.log(`  ${chalk.gray('1.')} Run /dare-reverse in your IDE to fill the inferred sections (purpose, flows).`);
+    if (aiOptionsFromFlags(opts).enabled) {
+      console.log(`  ${chalk.gray('1.')} Review DARE/REVERSE/semantic-enrichment.json and IDEIA.md — heuristics + AI merged.`);
+    } else {
+      console.log(`  ${chalk.gray('1.')} Run \`dare reverse --ai\` or /dare-reverse to fill inferred sections.`);
+    }
     console.log(`  ${chalk.gray('2.')} Review DARE/IDEIA.md and correct any wrong inference.`);
     console.log(`  ${chalk.gray('3.')} Promote to a DESIGN with: dare design "<what this project does>"\n`);
   });

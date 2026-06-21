@@ -14,11 +14,14 @@ import {
 import { ensureDareSkills } from '../utils/project-generator.js';
 import { createGraph, loadGraphConfig } from '../graphrag/index.js';
 import { ingestPatterns } from '../graphrag/pattern-ingest.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
 
 const DIR_ESCAPE_MSG =
   "Error: --dir must stay within the project (no '..' or absolute escape)";
 
-interface PatternsOptions {
+interface PatternsOptions extends AiCommandOptions {
   dir?: string;
   check?: boolean;
   modules?: string;
@@ -91,8 +94,11 @@ export const patternsCommand = new Command('patterns')
   .option('-d, --dir <path>', 'Target directory (default: current directory)')
   .option('--check', 'Only show detected patterns without writing artifacts')
   .option('--modules <list>', 'Limit to specific modules (comma-separated ids/names)')
-  .option('--inject', 'Confirm PATTERNS.md as steering base (idempotent, preserves user steering)')
-  .action(async (opts: PatternsOptions) => {
+  .option('--inject', 'Confirm PATTERNS.md as steering base (idempotent, preserves user steering)');
+
+addAiOptions(patternsCommand);
+
+patternsCommand.action(async (opts: PatternsOptions) => {
     let targetDir: string;
     try {
       targetDir = resolveTargetDir(opts);
@@ -133,6 +139,15 @@ export const patternsCommand = new Command('patterns')
       await fs.writeJSON(path.join(dareDir, 'patterns-facts.json'), facts, { spaces: 2 });
       await fs.writeFile(path.join(dareDir, 'PATTERNS.md'), renderPatternsSkeleton(facts));
       writeSpinner.succeed(chalk.green('PATTERNS.md generated.'));
+
+      const aiOpts = aiOptionsFromFlags(opts);
+      await maybeRunAiEnrichment({
+        enabled: aiOpts.enabled,
+        provider: aiOpts.provider,
+        command: 'patterns',
+        cwd: targetDir,
+        facts,
+      });
     } catch (err) {
       writeSpinner.fail(chalk.red('Failed to write pattern artifacts'));
       console.error(err);

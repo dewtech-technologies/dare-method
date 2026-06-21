@@ -8,6 +8,9 @@ import {
   buildDesignQuestionnaire,
   renderDesignQuestionnaireBlock,
 } from '../utils/design-questionnaire.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
 
 function staticDesignContent(description: string): string {
   return `# DESIGN
@@ -39,8 +42,11 @@ export const designCommand = new Command('design')
   .option(
     '--interactive',
     'Emit deterministic planning questionnaire from dna/patterns facts (no LLM)',
-  )
-  .action(async (description: string, opts: { interactive?: boolean }) => {
+  );
+
+addAiOptions(designCommand);
+
+designCommand.action(async (description: string, opts: { interactive?: boolean } & AiCommandOptions) => {
     console.log(chalk.blue.bold('\n📐 DARE Framework - Design Phase\n'));
 
     const dareDir = path.resolve(process.cwd(), 'DARE');
@@ -78,6 +84,22 @@ ${questionnaireBlock}---
 
     const designPath = path.join(dareDir, 'DESIGN.md');
     await fs.writeFile(designPath, designContent);
+
+    const dnaPath = path.join(dareDir, 'dna-facts.json');
+    const patternsPath = path.join(dareDir, 'patterns-facts.json');
+    const aiFacts = {
+      description,
+      dna: (await fs.pathExists(dnaPath)) ? await fs.readJson(dnaPath) : null,
+      patterns: (await fs.pathExists(patternsPath)) ? await fs.readJson(patternsPath) : null,
+    };
+    const aiOpts = aiOptionsFromFlags(opts);
+    await maybeRunAiEnrichment({
+      enabled: aiOpts.enabled,
+      provider: aiOpts.provider,
+      command: 'design',
+      cwd: process.cwd(),
+      facts: aiFacts,
+    });
 
     console.log(chalk.green(`✅ DESIGN.md created at ${designPath}`));
     console.log(chalk.cyan('\nNext: dare blueprint\n'));

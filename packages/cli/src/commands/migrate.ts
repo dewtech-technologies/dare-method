@@ -15,8 +15,11 @@ import {
   type MigrationFacts,
 } from '../utils/migration.js';
 import { ensureDareSkills } from '../utils/project-generator.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
 
-interface MigrateOptions {
+interface MigrateOptions extends AiCommandOptions {
   dir?: string;
   to?: string;
   check?: boolean;
@@ -28,8 +31,11 @@ export const migrateCommand = new Command('migrate')
   )
   .option('-d, --dir <path>', 'Target directory (default: current directory)')
   .option('--to <stack>', 'Target stack (e.g. go-gin, rust-axum, node-nestjs, python-fastapi)')
-  .option('--check', 'Show source/target/modules/blocking gaps without writing artifacts')
-  .action(async (opts: MigrateOptions) => {
+  .option('--check', 'Show source/target/modules/blocking gaps without writing artifacts');
+
+addAiOptions(migrateCommand);
+
+migrateCommand.action(async (opts: MigrateOptions) => {
     const targetDir = path.resolve(opts.dir ?? process.cwd());
 
     console.log(chalk.blue.bold('\n🚚 DARE Framework - Migration (Phase 2)\n'));
@@ -94,6 +100,15 @@ export const migrateCommand = new Command('migrate')
         await fs.writeFile(path.join(parityDir, parityFeatureFilename(mod)), renderParityFeature(mod));
       }
       spinner.succeed(chalk.green('Migration plan generated.'));
+
+      const aiOpts = aiOptionsFromFlags(opts);
+      await maybeRunAiEnrichment({
+        enabled: aiOpts.enabled,
+        provider: aiOpts.provider,
+        command: 'migrate',
+        cwd: targetDir,
+        facts,
+      });
     } catch (err) {
       spinner.fail(chalk.red('Failed to write migration artifacts'));
       console.error(err);

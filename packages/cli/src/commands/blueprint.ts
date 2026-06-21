@@ -4,6 +4,9 @@ import fs from 'fs-extra';
 import path from 'path';
 import { renderDagMermaid } from './dag.js';
 import { convertYamlToDag } from '../utils/dag-converter.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
 
 /**
  * `dare blueprint` — gera o esqueleto dos 4 artefatos da fase de Architect:
@@ -22,8 +25,11 @@ import { convertYamlToDag } from '../utils/dag-converter.js';
 export const blueprintCommand = new Command('blueprint')
   .description('Scaffold BLUEPRINT.md, dare-dag.yaml, TASKS.md and EXECUTION/task-*.md from DESIGN.md')
   .argument('[design-file]', 'Path to DESIGN.md', 'DARE/DESIGN.md')
-  .option('-f, --force', 'Overwrite existing files', false)
-  .action(async (designFile: string, options: { force: boolean }) => {
+  .option('-f, --force', 'Overwrite existing files', false);
+
+addAiOptions(blueprintCommand);
+
+blueprintCommand.action(async (designFile: string, options: { force: boolean } & AiCommandOptions) => {
     console.log(chalk.blue.bold('\n🏗️  DARE Framework - Blueprint Phase\n'));
 
     const dareDir = path.resolve(process.cwd(), 'DARE');
@@ -132,7 +138,18 @@ export const blueprintCommand = new Command('blueprint')
     console.log(`   ${chalk.cyan('DARE/TASKS.md')}                 - Human-readable task table`);
     console.log(`   ${chalk.cyan('DARE/EXECUTION/task-*.md')}      - One spec per task (${sampleTasks.length} files)`);
     console.log(`   ${chalk.cyan('DARE/dag-graph.mmd')}            - Mermaid visualization of the DAG\n`);
-    console.log(chalk.gray('Tip: real content is filled in by the AI agent (use /dare-blueprint, /generate-blueprint or the dare-blueprint skill).'));
+
+    const aiOpts = aiOptionsFromFlags(options);
+    const designText = await fs.readFile(designPath, 'utf-8');
+    await maybeRunAiEnrichment({
+      enabled: aiOpts.enabled,
+      provider: aiOpts.provider,
+      command: 'blueprint',
+      cwd: process.cwd(),
+      facts: { designFile: designPath, design: designText, sampleTasks },
+    });
+
+    console.log(chalk.gray('Tip: use --ai for terminal enrichment or /dare-blueprint in your IDE.'));
     console.log(chalk.gray('Tip: open DARE/dag-graph.mmd in your editor with a Mermaid preview to see the static graph.'));
     console.log(chalk.cyan('\nNext: dare execute --next\n'));
   });
