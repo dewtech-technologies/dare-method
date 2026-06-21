@@ -1,52 +1,86 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-12T02:49:53.407Z",
+  "updatedAt": "2026-06-21T03:31:14.495Z",
   "tasks": {
-    "task-1101": {
+    "task-1401": {
       "status": "DONE",
-      "output": "reporters/github.ts: emitAnnotations + upsertPrComment. github-reporter 5/5.",
-      "duration": 73598,
+      "output": "ast foundation: types, loader, grammar-map, paths, copy-ast-grammars, optionalDeps",
+      "duration": 93972,
       "dependsOn": []
     },
-    "task-1102": {
+    "task-1402": {
       "status": "DONE",
-      "output": "--format github/--comment/--fail-on em review, guard, graph drift. gate-flags 5/5.",
-      "duration": 67290,
+      "output": "ast/merge.ts + tests",
+      "duration": 76466,
       "dependsOn": [
-        "task-1101"
+        "task-1401"
       ]
     },
-    "task-1103": {
+    "task-1403": {
       "status": "DONE",
-      "output": "action.yml composite + templates/.github/workflows/dare-pr.yml. verify-actions-pinned OK.",
-      "duration": 71769,
+      "output": "extractDataModelDetailed hybrid pipeline",
+      "duration": 76017,
       "dependsOn": [
-        "task-1102"
+        "task-1402"
       ]
     },
-    "task-1104": {
+    "task-1404": {
       "status": "DONE",
-      "output": "dogfood job dare-pr-dogfood em ci.yml (PRs, fail-on none). verify-actions-pinned OK.",
-      "duration": 96826,
+      "output": "reverse --ast flag wired",
+      "duration": 78309,
       "dependsOn": [
-        "task-1103"
+        "task-1403"
       ]
     },
-    "task-1105": {
+    "task-1405": {
       "status": "DONE",
-      "output": "ci-pr-regression.test.ts: annotations, marker upsert, fail-on none, sanitize, action.yml. 6/6.",
-      "duration": 68613,
+      "output": "typescript AST queries F-01 F-02 F-05",
+      "duration": 74443,
       "dependsOn": [
-        "task-1102",
-        "task-1103"
+        "task-1403"
       ]
     },
-    "task-1106": {
+    "task-1406": {
       "status": "DONE",
-      "output": "CHANGELOG 3.11.0 CI/PR + docs-site (flags + GitHub Action). verify-docs-coverage OK.",
-      "duration": 67600,
+      "output": "python AST F-03",
+      "duration": 73599,
       "dependsOn": [
-        "task-1105"
+        "task-1403"
+      ]
+    },
+    "task-1407": {
+      "status": "DONE",
+      "output": "php AST F-04",
+      "duration": 74083,
+      "dependsOn": [
+        "task-1403"
+      ]
+    },
+    "task-1408": {
+      "status": "DONE",
+      "output": "go ruby rust P2",
+      "duration": 74025,
+      "dependsOn": [
+        "task-1405",
+        "task-1406",
+        "task-1407"
+      ]
+    },
+    "task-1409": {
+      "status": "DONE",
+      "output": "brownfield-ast-regression tests",
+      "duration": 79204,
+      "dependsOn": [
+        "task-1404",
+        "task-1408"
+      ]
+    },
+    "task-1410": {
+      "status": "DONE",
+      "output": "v3.14.0 release docs bump",
+      "duration": 79784,
+      "dependsOn": [
+        "task-1409"
       ]
     }
   }

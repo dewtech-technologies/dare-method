@@ -15,6 +15,7 @@
 
 import type { DetectedProject } from './project-detector.js';
 import type { ModuleGraph, ModuleInfo, SizeBucket } from './module-detector.js';
+import type { ExtractionMeta } from '../ast/types.js';
 import type { DataModel, Entity, Endpoint } from './datamodel.js';
 import {
   renderGraphMermaid,
@@ -41,6 +42,7 @@ export interface ReverseFacts {
     totalLoc: number;
   };
   modules: ModuleInfo[];
+  extraction?: ExtractionMeta;
 }
 
 /** Same palette as the DAG complexity legend, repurposed for module size. */

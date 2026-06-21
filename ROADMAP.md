@@ -1,12 +1,22 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.13.0
+> **Status atual:** v3.14.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
 
 ---
+
+## ✅ Shipped — v3.14.0
+
+**Brownfield AST** — extração híbrida tree-sitter + regex em `dare reverse --deep --ast`.
+
+- ✅ **`--ast` opt-in** — baseline regex inalterado sem a flag; merge superset AST ∪ regex ∪ SQL/Prisma
+- ✅ **Camada `packages/cli/src/ast/`** — lazy loader WASM, merge dedupe, queries P1 (TS/JS, Python, PHP) + P2 (Go, Ruby, Rust)
+- ✅ **`reverse-facts.json.extraction`** — metadata auditável (ast vs regex counts, langs carregadas)
+- ✅ **`optionalDependencies`** — `web-tree-sitter` + `tree-sitter-wasms`; fallback silencioso se ausentes
+- ✅ **Regressão N-1** — `brownfield-ast-regression.test.ts` trava path regex-only
 
 ## ✅ Shipped — v3.13.0
 
@@ -164,11 +174,12 @@ Toda skill listada existe em formato nativo de Antigravity (`.agents/skills/<nam
 
 ---
 
-## 🔮 Planejado — v3.14+
+## 🔮 Planejado — v3.15+
 
-### Brownfield AST (tree-sitter)
+### Brownfield AST — próximas iterações
 
-- [ ] Extração estrutural via AST para `dare reverse --deep` (substitui heurísticas regex onde aplicável)
+- [ ] AST em `dare dna` / `dare patterns` (backlog pós-v3.14)
+- [ ] Default-on `--ast` após soak de perf/tarball
 
 ## 🔮 Planejado — v3.3.x+
 
