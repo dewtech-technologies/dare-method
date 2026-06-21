@@ -1,2 +1,3 @@
+# v3.13+: monorepo CLI-only — único pacote publicável em packages/cli
 packages:
   - 'packages/*'

@@ -1,0 +1,94 @@
+title: "CLI-only Cleanup — Development Tasks"
+version: "3.13.0"
+generated: "2026-06-20T00:00:00Z"
+
+# Feature: cli-only-cleanup
+# Branch:  feat/v3.13-cli-only
+# Design:  DARE/DESIGN-Feature-cli-only-cleanup.md
+# Blueprint: DARE/BLUEPRINT-Feature-cli-only-cleanup.md
+#
+# Regra de ouro: zero mudança funcional no CLI — delete estrutural + links + gates. Bloco de IDs: 13xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+  codex:       { HIGH: gpt-5.5,           MED: gpt-5.5,          LOW: gpt-5.4-mini }
+
+tasks:
+  # ─── Fase 1: auditoria doc (rank 0) ───────────────────────────────────────
+  - id: task-1301
+    title: "auditoria doc — paridade packages/docs → docs-site"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1301-doc-parity-audit.md
+    subtask_prompt: |
+      Executar checklist BLUEPRINT §3.3 / DESIGN RF-08. Comparar conteúdo de packages/docs/docs/*
+      com docs-site/ (getting-started, cli-reference, utilities, stacks, agents). Se
+      contributing/publish-a-skill faltar em docs-site/utilities.md, migrar parágrafo mínimo.
+      NÃO deletar packages/docs nesta task — só auditar e migrar gap. Registrar conclusão em
+      comentário no PR ou nota no output. Gates: node scripts/verify-docs-coverage.mjs.
+      Leia: DARE/EXECUTION/task-1301-doc-parity-audit.md.
+
+  # ─── Fase 2: delete legado ───────────────────────────────────────────────
+  - id: task-1302
+    title: "remover packages/docs e packages/website"
+    depends_on: [task-1301]
+    complexity: LOW
+    spec_file: EXECUTION/task-1302-delete-legacy-packages.md
+    subtask_prompt: |
+      Remover inteiramente packages/docs/ e packages/website/ (RF-01, RF-02). Inclui Dockerfiles,
+      nginx, k8s, .github/workflows/docker-build.yml internos. Confirmar git ls-files vazio para ambos.
+      NÃO tocar docs-site/, docs/ raiz, mkdocs.yml, .github/workflows/docs.yml. Gates: git status limpo;
+      pnpm --filter @dewtech/dare-cli build. Leia: DARE/EXECUTION/task-1302-delete-legacy-packages.md.
+
+  # ─── Fase 3: links + workspace (rank paralelo) ───────────────────────────
+  - id: task-1303
+    title: "auditoria de links — README, ROADMAP, implementations"
+    depends_on: [task-1302]
+    complexity: MED
+    spec_file: EXECUTION/task-1303-link-audit.md
+    subtask_prompt: |
+      RF-03: rg packages/docs|packages/website em tracked files (allowlist CHANGELOG, DESIGN*, BLUEPRINT*).
+      Corrigir README.md (reforçar link GitHub Pages docs-site), ROADMAP.md, packages/cli/README.md,
+      implementations/*/README.md se citarem paths removidos. Preservar links para docs/ raiz (RFC).
+      Gates: rg → 0 matches fora da allowlist. Leia: DARE/EXECUTION/task-1303-link-audit.md.
+
+  - id: task-1304
+    title: "limpar workspaces root (package.json)"
+    depends_on: [task-1302]
+    complexity: LOW
+    spec_file: EXECUTION/task-1304-workspace-cleanup.md
+    subtask_prompt: |
+      Remover packages/stacks/* de package.json workspaces se diretório não existir. Opcional: comentário
+      em pnpm-workspace.yaml que packages/* = só cli após v3.13. Sem alterar packages/cli/package.json
+      funcional. Gates: pnpm install --frozen-lockfile; pnpm -r build. Leia: DARE/EXECUTION/task-1304-workspace-cleanup.md.
+
+  # ─── Fase 4: invariantes ─────────────────────────────────────────────────
+  - id: task-1305
+    title: "cli-only-invariants.test.ts + regressão doc"
+    depends_on: [task-1303, task-1304]
+    complexity: MED
+    spec_file: EXECUTION/task-1305-invariants-test.md
+    subtask_prompt: |
+      Criar packages/cli/src/__tests__/cli-only-invariants.test.ts (dirs ausentes; zero refs).
+      Criar cli-only-regression.test.ts ou estender invariantes: verify-docs-coverage import/exec verde.
+      RF-06. Gates: vitest run cli-only-invariants; node scripts/verify-docs-coverage.mjs.
+      Leia: DARE/EXECUTION/task-1305-invariants-test.md.
+
+  # ─── Fase N-1: release ───────────────────────────────────────────────────
+  - id: task-1306
+    title: "CHANGELOG + ROADMAP + bump v3.13.0"
+    depends_on: [task-1305]
+    complexity: MED
+    spec_file: EXECUTION/task-1306-release-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.13.0]: removed packages/docs e packages/website; monorepo CLI-only. ROADMAP Shipped
+      v3.13.0. Bump package.json root + packages/cli para 3.13.0. README banner v3.13.0. Ordem release:
+      bump commit ANTES da tag v3.13.0. Gates: verify-docs-coverage; mkdocs build --strict; vitest run.
+      Leia: DARE/EXECUTION/task-1306-release-docs.md.

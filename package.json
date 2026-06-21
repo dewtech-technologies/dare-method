@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-framework",
-  "version": "3.12.0",
+  "version": "3.13.0",
   "description": "DARE Framework - Distributed AI-assisted Requirements Engineering",
   "private": true,
   "type": "module",
@@ -10,8 +10,7 @@
     "pnpm": ">=9.0.0"
   },
   "workspaces": [
-    "packages/*",
-    "packages/stacks/*"
+    "packages/*"
   ],
   "scripts": {
     "dev": "pnpm --recursive --parallel dev",

@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.12.0** — última feature: **Terminal Agent Parity** — `dare <cmd> --ai` ≡ `/dare-<cmd>` em 8 comandos semânticos; drivers `cursor`/`antigravity` no `execute --agent`; `dare ai doctor` com capacidades enrichment/execução. Antes: Dynamic DAG (v3.11.0 — `REPLAN` splice de sub-DAG), Drift Gate + Local Semantic Search (v3.10.0), Secure Autonomous Executor (v3.9.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.13.0** — última feature: **CLI-only cleanup** — monorepo enxuto (legado MkDocs/landing removido); doc pública canônica em `docs-site/` (GitHub Pages); testes `cli-only-invariants` travam a estrutura. Antes: Terminal Agent Parity (v3.12.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
@@ -817,6 +817,10 @@ O método **não é um framework experimental** — é o padrão pelo qual a Dew
 ---
 
 ## 📚 Documentação
+
+**Doc pública de usuário (canônica):** [docs-site/](docs-site/) publicada em [GitHub Pages](https://dewtech-technologies.github.io/dare-method/) (PT · [EN](https://dewtech-technologies.github.io/dare-method/en/) · [ES](https://dewtech-technologies.github.io/dare-method/es/)) — CLI, stacks, agents, configuration.
+
+Arquivo interno (RFC, metodologia, índice de skills):
 
 - 📖 [Metodologia detalhada](docs/methodology.md)
 - 🎭 [Ralph Loop em profundidade](docs/ralph-loop.md)

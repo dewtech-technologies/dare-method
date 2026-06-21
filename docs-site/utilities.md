@@ -138,6 +138,18 @@ dare skill publish ./minha-skill --remote --token "$GITHUB_TOKEN"
 !!! note "Local vs. remoto"
     Por padrão, `publish` grava no **registry local**. Para distribuir uma skill ao registry **remoto** (Vercel), passe `--remote` junto com `--token <github-token>` — o token é obrigatório nesse modo. Use `--dry-run` para validar e listar os arquivos antes de publicar de fato.
 
+### Publicar uma skill (contribuidores)
+
+Skills estendem o DARE com prompts, gates e templates de domínio. Qualquer desenvolvedor pode publicar no registry local ou remoto.
+
+1. Crie um diretório com `skill.yml` (manifesto obrigatório — licença **MIT**), `SKILL.md` e os arquivos da skill.
+2. Valide sem publicar: `dare skill publish ./minha-skill --dry-run`.
+3. Publique localmente (`~/.dare/registry/`) ou remotamente com `--remote --token "$GITHUB_TOKEN"`.
+
+Campos mínimos em `skill.yml`: `name`, `version`, `description`, `author`, `license`, `dare_version`. Veja skills oficiais em `implementations/*/.agents/skills/` e o índice interno `docs/skills/INDEX.md`.
+
+**Checklist antes de publicar:** manifesto válido · README com instalação e exemplos · `dare skill publish --dry-run` sem erros · SemVer (`MAJOR.MINOR.PATCH`) · licença MIT.
+
 ## Comandos relacionados
 
 - `dare hooks validate` — valida o schema da config de hooks e o allowlist (determinístico). Ver [Referência da CLI](cli-reference.md#dare-hooks).
