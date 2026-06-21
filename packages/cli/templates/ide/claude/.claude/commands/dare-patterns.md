@@ -8,6 +8,7 @@ Descobre padrões recorrentes no codebase (`dare patterns`) — determinístico,
 ```bash
 dare patterns
 dare patterns --check
+dare patterns --ast
 dare patterns --dir ./packages/api
 dare patterns --inject
 ```

@@ -8,6 +8,9 @@ import type { Marker } from './confidence.js';
 import type { DnaFacts } from './dna-detector.js';
 import { isTestFile, SUPPORTED_EXTENSIONS, inString } from './static-analyzer.js';
 import { detectModules, type ModuleInfo } from './module-detector.js';
+import { extractPatternsWithAst } from '../ast/conventions/patterns-extract.js';
+import { mergePatternsFacts } from '../ast/conventions/merge-facts.js';
+import type { ConventionExtractionMeta } from '../ast/conventions/types.js';
 
 export type PatternKind =
   | 'inferred-layer'
@@ -391,7 +394,18 @@ function filterAndSort(patterns: DiscoveredPattern[], rules: readonly PatternRul
     });
 }
 
-export async function detectPatterns(
+export interface DetectPatternsOptions {
+  readonly ast?: boolean;
+  readonly maxFileBytes?: number;
+  readonly modulesOnly?: readonly string[];
+}
+
+export interface DetectPatternsResult {
+  readonly facts: PatternsFacts;
+  readonly extraction?: ConventionExtractionMeta;
+}
+
+async function detectPatternsRegex(
   root: string,
   dna: DnaFacts | null,
   opts?: { modulesOnly?: readonly string[] },
@@ -410,8 +424,44 @@ export async function detectPatterns(
   }
 
   return {
-    generatedAt: dna?.generatedAt ?? '1970-01-01T00:00:00.000Z',
+    generatedAt: dna?.generatedAt ?? new Date().toISOString(),
     fileInventorySource: source,
     patterns: filterAndSort(raw, PATTERN_RULES),
   };
+}
+
+export async function detectPatternsDetailed(
+  root: string,
+  dna: DnaFacts | null,
+  opts?: DetectPatternsOptions,
+): Promise<DetectPatternsResult> {
+  const regexFacts = await detectPatternsRegex(root, dna, { modulesOnly: opts?.modulesOnly });
+  if (!opts?.ast) return { facts: regexFacts };
+
+  const { files, modules } = await loadFileInventory(root, { modulesOnly: opts?.modulesOnly });
+  const astResult = await extractPatternsWithAst({
+    root,
+    files,
+    modules,
+    maxFileBytes: opts.maxFileBytes,
+  });
+
+  const merged = mergePatternsFacts(regexFacts, astResult.slice);
+  const extraction: ConventionExtractionMeta = {
+    mode: 'hybrid',
+    astEnabled: true,
+    astAvailable: astResult.astAvailable,
+    astPatternCount: astResult.slice.patterns.length,
+    regexPatternCount: regexFacts.patterns.length,
+  };
+
+  return { facts: merged, extraction };
+}
+
+export async function detectPatterns(
+  root: string,
+  dna: DnaFacts | null,
+  opts?: { modulesOnly?: readonly string[] },
+): Promise<PatternsFacts> {
+  return (await detectPatternsDetailed(root, dna, opts)).facts;
 }

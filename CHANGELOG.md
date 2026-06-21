@@ -9,6 +9,26 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.15.0] — 2026-06-21
+
+Release **Brownfield AST em DNA + Patterns** — estende a extração híbrida tree-sitter (WASM) de v3.14 para `dare dna` e `dare patterns`.
+
+### ✨ Adicionado — AST híbrido em convenções
+
+- **`dare dna --ast`** — merge superset AST ∪ regex para camadas, bibliotecas e padrões DI; baseline v3.14 inalterado sem `--ast`.
+- **`dare patterns --ast`** — pattern mining estrutural (Nest `@Module`, controller→service DI, `z.object`) + regex.
+- **`dna-facts.json` / `patterns-facts.json`** — bloco `extraction` com metadata (`mode`, `astEnabled`, contagens).
+- **Camada `ast/conventions/`** — scan, merge-facts, extractors DNA/patterns; reutiliza loader/grammars v3.14 (sem novas optionalDependencies).
+
+### 🔧 Melhorado — Extração multi-linha
+
+- Imports TypeORM multi-linha; `@Module({ imports: [...] })` em blocos separados; constructor DI em controllers Nest.
+
+### ✅ Gates
+
+- **`dna-ast.test.ts`**, **`patterns-ast.test.ts`** — fixtures F-D01..F-D03, F-P01..F-P03.
+- **`brownfield-ast-dna-patterns-regression.test.ts`** — trava baseline regex-only.
+
 ## [3.14.0] — 2026-06-21
 
 Release **Brownfield AST** — extração híbrida tree-sitter (WASM) opt-in em `dare reverse --deep`.

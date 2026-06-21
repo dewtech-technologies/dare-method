@@ -122,6 +122,7 @@ Extrai **como este projeto faz as coisas**, para que features novas sigam o esti
 ```bash
 dare dna           # PROJECT-DNA.md + dna-facts.json
 dare dna --check   # só o relatório de convenções; não escreve
+dare dna --ast     # híbrido tree-sitter + regex (superset, opt-in)
 dare dna --dir ./service
 ```
 
@@ -129,6 +130,7 @@ dare dna --dir ./service
 |---|---|---|---|
 | `-d, --dir <path>` | string | cwd | Diretório alvo. |
 | `--check` | boolean | `false` | Só mostra as convenções detectadas; não escreve artefatos. |
+| `--ast` | boolean | `false` | Ativa extração **tree-sitter (WASM)** e faz merge superset com regex. Grava bloco `extraction` em `dna-facts.json`. Reutiliza grammars v3.14; fallback silencioso se WASM ausente. |
 
 ### O que extrai
 
@@ -142,7 +144,7 @@ dare dna --dir ./service
 | **Libraries** | ORM (Prisma/TypeORM/Sequelize/Drizzle/SQLx/Diesel/SeaORM/SQLAlchemy/Eloquent/ActiveRecord), HTTP (NestJS/Express/Fastify/Axum/FastAPI/Laravel), Auth (Passport/JWT/Sanctum/Devise), Validation (Zod/class-validator/Joi/Yup/Pydantic). |
 | **Commits** | Amostra ~100 commits via `git log`; classifica como Conventional Commits (≥ 50%) ou free-form, com prefixos. |
 
-**Artefatos:** `DARE/PROJECT-DNA.md` (esqueleto para o `/dare-dna` virar regras acionáveis) e `DARE/dna-facts.json` (os fatos crus — consumido depois por `dare patterns`).
+**Artefatos:** `DARE/PROJECT-DNA.md` (esqueleto para o `/dare-dna` virar regras acionáveis) e `DARE/dna-facts.json` (os fatos crus — consumido depois por `dare patterns`). Com `--ast`, inclui bloco `extraction` (modo híbrido, langs AST, fallback).
 
 ---
 
@@ -153,6 +155,7 @@ Minera idiomas que se repetem no código por **frequência/co-ocorrência** (det
 ```bash
 dare patterns            # PATTERNS.md + patterns-facts.json
 dare patterns --check    # só os padrões detectados; não escreve
+dare patterns --ast      # híbrido tree-sitter + regex (superset, opt-in)
 dare patterns --modules auth,users
 dare patterns --inject   # confirma PATTERNS.md como base de steering
 ```
@@ -161,12 +164,13 @@ dare patterns --inject   # confirma PATTERNS.md como base de steering
 |---|---|---|---|
 | `-d, --dir <path>` | string | cwd | Diretório alvo (validado contra escape de path). |
 | `--check` | boolean | `false` | Só mostra os padrões detectados; não escreve artefatos. |
+| `--ast` | boolean | `false` | Ativa pattern mining **tree-sitter (WASM)** e faz merge superset com regex. Grava bloco `extraction` em `patterns-facts.json`. |
 | `--modules <list>` | string (csv) | — | Limita a módulos específicos. |
 | `--inject` | boolean | `false` | Registra `PATTERNS.md` como base de steering (idempotente, preserva o steering do usuário). |
 
 **Tipos de padrão** (`PatternKind`): `naming-idiom` (sufixos `.service.ts`/`.controller.ts`/`.repository.ts`), `inferred-layer` (arquivos co-ocorrendo sob um segmento), `structural-idiom` (barrel `index.ts` de re-export), `call-idiom` (controllers referenciando `*Service`; validação `z.`/`schema.parse`), `implicit-decision` (ORM/HTTP dominante). Cada padrão guarda frequência, cobertura, módulos e evidência (`arquivo:linha`).
 
-**Artefatos:** `DARE/PATTERNS.md` + `DARE/patterns-facts.json`. Em *best-effort* os padrões também são ingeridos no GraphRAG (ausência do grafo não falha o comando).
+**Artefatos:** `DARE/PATTERNS.md` + `DARE/patterns-facts.json`. Com `--ast`, inclui bloco `extraction`. Em *best-effort* os padrões também são ingeridos no GraphRAG (ausência do grafo não falha o comando).
 
 ---
 

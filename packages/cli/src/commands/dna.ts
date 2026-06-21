@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs-extra';
 import path from 'path';
-import { detectDna, type DnaFacts } from '../utils/dna-detector.js';
+import { detectDna, detectDnaDetailed, type DnaFacts } from '../utils/dna-detector.js';
 import { renderDnaSkeleton } from '../utils/dna-facts.js';
 import { ensureDareSkills } from '../utils/project-generator.js';
 import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
@@ -13,6 +13,7 @@ import { maybeRunAiEnrichment } from '../ai/pipeline.js';
 interface DnaOptions extends AiCommandOptions {
   dir?: string;
   check?: boolean;
+  ast?: boolean;
 }
 
 export const dnaCommand = new Command('dna')
@@ -20,7 +21,8 @@ export const dnaCommand = new Command('dna')
     'Extract a legacy codebase\'s conventions into DARE/PROJECT-DNA.md (brownfield house-style ruleset)',
   )
   .option('-d, --dir <path>', 'Target directory (default: current directory)')
-  .option('--check', 'Only show detected conventions without writing artifacts');
+  .option('--check', 'Only show detected conventions without writing artifacts')
+  .option('--ast', 'Use tree-sitter AST for convention extraction');
 
 addAiOptions(dnaCommand);
 
@@ -35,10 +37,20 @@ dnaCommand.action(async (opts: DnaOptions) => {
 
     const spinner = ora('Extracting conventions...').start();
     const generatedAt = new Date().toISOString();
-    const facts = await detectDna(targetDir, generatedAt);
+    const detailed = await detectDnaDetailed(targetDir, generatedAt, opts.ast ? { ast: true } : undefined);
+    const facts = detailed.facts;
     spinner.stop();
 
     console.log(formatDnaReport(facts));
+    if (detailed.extraction) {
+      const ex = detailed.extraction;
+      console.log(
+        chalk.gray(
+          `  AST: ${ex.astAvailable ? 'on' : 'off (regex fallback)'} — ` +
+            `${ex.astPatternCount} ast signals, ${ex.regexPatternCount} regex layers`,
+        ),
+      );
+    }
     console.log('');
 
     if (opts.check) {
@@ -50,7 +62,11 @@ dnaCommand.action(async (opts: DnaOptions) => {
     const writeSpinner = ora('Writing PROJECT-DNA.md...').start();
     try {
       await fs.ensureDir(dareDir);
-      await fs.writeJSON(path.join(dareDir, 'dna-facts.json'), facts, { spaces: 2 });
+      await fs.writeJSON(
+        path.join(dareDir, 'dna-facts.json'),
+        detailed.extraction ? { ...facts, extraction: detailed.extraction } : facts,
+        { spaces: 2 },
+      );
       await fs.writeFile(path.join(dareDir, 'PROJECT-DNA.md'), renderDnaSkeleton(facts));
       writeSpinner.succeed(chalk.green('PROJECT-DNA.md generated.'));
 

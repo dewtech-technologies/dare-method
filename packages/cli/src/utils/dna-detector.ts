@@ -18,6 +18,9 @@ import path from 'path';
 import { execSync } from 'node:child_process';
 import { isTestFile } from './static-analyzer.js';
 import { detectModules, type ModuleInfo } from './module-detector.js';
+import { extractDnaWithAst } from '../ast/conventions/dna-extract.js';
+import { mergeDnaFacts } from '../ast/conventions/merge-facts.js';
+import type { ConventionExtractionMeta } from '../ast/conventions/types.js';
 
 export interface ToolingConfig {
   name: string;
@@ -332,12 +335,18 @@ function detectCommits(root: string): DnaFacts['commits'] {
 // ── Orchestration ─────────────────────────────────────────────────────────────
 
 export interface DetectDnaOptions {
-  dir?: string;
+  readonly ast?: boolean;
+  readonly maxFileBytes?: number;
 }
 
-export async function detectDna(root: string, generatedAt: string): Promise<DnaFacts> {
+export interface DetectDnaResult {
+  readonly facts: DnaFacts;
+  readonly extraction?: ConventionExtractionMeta;
+}
+
+async function detectDnaRegex(root: string, generatedAt: string): Promise<DnaFacts> {
   // File inventory: prefer an existing reverse-facts.json, else run module detection.
-  const { files, source } = await loadFileInventory(root);
+  const { files, source } = await loadFileInventoryWithModules(root);
 
   // Manifests for lib/framework/test detection.
   const pkg = await readJsonSafe(path.join(root, 'package.json'));
@@ -368,18 +377,54 @@ export async function detectDna(root: string, generatedAt: string): Promise<DnaF
   };
 }
 
-async function loadFileInventory(
+export async function detectDnaDetailed(
   root: string,
-): Promise<{ files: string[]; source: DnaFacts['fileInventorySource'] }> {
+  generatedAt: string,
+  opts?: DetectDnaOptions,
+): Promise<DetectDnaResult> {
+  const regexFacts = await detectDnaRegex(root, generatedAt);
+  if (!opts?.ast) return { facts: regexFacts };
+
+  const { files, modules } = await loadFileInventoryWithModules(root);
+  const astResult = await extractDnaWithAst({
+    root,
+    files,
+    modules,
+    maxFileBytes: opts.maxFileBytes,
+  });
+
+  const merged = mergeDnaFacts(regexFacts, astResult.slice);
+  const extraction: ConventionExtractionMeta = {
+    mode: 'hybrid',
+    astEnabled: true,
+    astAvailable: astResult.astAvailable,
+    astPatternCount: astResult.slice.extraLayers.length + astResult.slice.diPatterns.length,
+    regexPatternCount: regexFacts.architecture.detectedLayers.length,
+  };
+
+  return { facts: merged, extraction };
+}
+
+export async function detectDna(root: string, generatedAt: string): Promise<DnaFacts> {
+  return (await detectDnaDetailed(root, generatedAt)).facts;
+}
+
+async function loadFileInventoryWithModules(
+  root: string,
+): Promise<{ files: string[]; modules: ModuleInfo[]; source: DnaFacts['fileInventorySource'] }> {
   const reverseFacts = path.join(root, 'DARE', 'REVERSE', 'reverse-facts.json');
   if (await fs.pathExists(reverseFacts)) {
     const facts = await readJsonSafe(reverseFacts);
     const modules = (facts?.modules ?? []) as ModuleInfo[];
     const files = modules.flatMap((m) => m.files ?? []);
-    if (files.length > 0) return { files, source: 'reverse-facts' };
+    if (files.length > 0) return { files, modules, source: 'reverse-facts' };
   }
   const graph = await detectModules(root);
-  return { files: graph.modules.flatMap((m) => m.files), source: 'module-detector' };
+  return {
+    files: graph.modules.flatMap((m) => m.files),
+    modules: graph.modules,
+    source: 'module-detector',
+  };
 }
 
 // ── Small IO helpers ────────────────────────────────────────────────────────

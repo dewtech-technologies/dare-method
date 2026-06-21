@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs-extra';
 import path from 'node:path';
-import { detectPatterns } from '../utils/pattern-detector.js';
+import { detectPatterns, detectPatternsDetailed } from '../utils/pattern-detector.js';
 import { renderPatternsSkeleton } from '../utils/pattern-facts.js';
 import type { DnaFacts } from '../utils/dna-detector.js';
 import {
@@ -26,6 +26,7 @@ interface PatternsOptions extends AiCommandOptions {
   check?: boolean;
   modules?: string;
   inject?: boolean;
+  ast?: boolean;
 }
 
 function resolveTargetDir(opts: PatternsOptions): string {
@@ -94,7 +95,8 @@ export const patternsCommand = new Command('patterns')
   .option('-d, --dir <path>', 'Target directory (default: current directory)')
   .option('--check', 'Only show detected patterns without writing artifacts')
   .option('--modules <list>', 'Limit to specific modules (comma-separated ids/names)')
-  .option('--inject', 'Confirm PATTERNS.md as steering base (idempotent, preserves user steering)');
+  .option('--inject', 'Confirm PATTERNS.md as steering base (idempotent, preserves user steering)')
+  .option('--ast', 'Use tree-sitter AST for pattern mining');
 
 addAiOptions(patternsCommand);
 
@@ -121,10 +123,23 @@ patternsCommand.action(async (opts: PatternsOptions) => {
       : null;
 
     const spinner = ora('Detecting patterns...').start();
-    const facts = await detectPatterns(targetDir, dna, { modulesOnly });
+    const detailed = await detectPatternsDetailed(targetDir, dna, {
+      modulesOnly,
+      ...(opts.ast ? { ast: true } : {}),
+    });
+    const facts = detailed.facts;
     spinner.stop();
 
     console.log(formatPatternsReport(facts));
+    if (detailed.extraction) {
+      const ex = detailed.extraction;
+      console.log(
+        chalk.gray(
+          `  AST: ${ex.astAvailable ? 'on' : 'off (regex fallback)'} — ` +
+            `${ex.astPatternCount} ast patterns, ${ex.regexPatternCount} regex patterns`,
+        ),
+      );
+    }
     console.log('');
 
     if (opts.check) {
@@ -136,7 +151,11 @@ patternsCommand.action(async (opts: PatternsOptions) => {
     const writeSpinner = ora('Writing PATTERNS.md...').start();
     try {
       await fs.ensureDir(dareDir);
-      await fs.writeJSON(path.join(dareDir, 'patterns-facts.json'), facts, { spaces: 2 });
+      await fs.writeJSON(
+        path.join(dareDir, 'patterns-facts.json'),
+        detailed.extraction ? { ...facts, extraction: detailed.extraction } : facts,
+        { spaces: 2 },
+      );
       await fs.writeFile(path.join(dareDir, 'PATTERNS.md'), renderPatternsSkeleton(facts));
       writeSpinner.succeed(chalk.green('PATTERNS.md generated.'));
 

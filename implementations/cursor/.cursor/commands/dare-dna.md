@@ -13,6 +13,7 @@ o "como esse codebase faz as coisas" que uma nova feature deve respeitar.
 ```
 
 > Pré-requisito: rodar `dare dna` antes (gera `DARE/PROJECT-DNA.md` e `DARE/dna-facts.json`).
+> Use `dare dna --ast` para extração híbrida tree-sitter + regex (opt-in, v3.15+).
 > Se não existirem, instrua o usuário a rodar `dare dna` primeiro.
 
 ## Quando usar
