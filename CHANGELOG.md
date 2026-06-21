@@ -9,6 +9,26 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.14.0] — 2026-06-21
+
+Release **Brownfield AST** — extração híbrida tree-sitter (WASM) opt-in em `dare reverse --deep`.
+
+### ✨ Adicionado — AST híbrido
+
+- **`dare reverse --deep --ast`** — merge superset AST ∪ regex; baseline v3.13 inalterado sem `--ast`.
+- **Camada `ast/`** — lazy loader WASM, `mergeDataModels`, queries P1 (TS/JS, Python, PHP) + P2 (Go, Ruby, Rust).
+- **`reverse-facts.json.extraction`** — metadata (`astEndpoints`, `regexEndpoints`, langs carregadas, fallback).
+- **`optionalDependencies`** — `web-tree-sitter@0.25.10`, `tree-sitter-wasms@0.1.13`; grammars copiadas para `dist/ast/grammars/` no build.
+
+### 🔧 Melhorado — Extração multi-linha
+
+- NestJS `@Controller` + `@Get()` em linhas separadas; Express/FastAPI/Laravel chains multi-linha; TypeORM `@Entity` com fields indentados.
+
+### ✅ Gates
+
+- **`brownfield-ast-regression.test.ts`** — trava regressão regex-only (F-06 Prisma/SQL intactos).
+- Fixtures F-01..F-05 verdes com `--ast`.
+
 ## [3.13.0] — 2026-06-21
 
 Release **CLI-only cleanup** — monorepo enxuto com um único pacote npm publicável.

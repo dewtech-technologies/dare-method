@@ -1,0 +1,126 @@
+title: "Brownfield AST — Development Tasks"
+version: "3.14.0"
+generated: "2026-06-21T00:00:00Z"
+
+# Feature: brownfield-ast
+# Branch:  feat/v3.14-brownfield-ast
+# Design:  DARE/DESIGN-Feature-brownfield-ast.md
+# Blueprint: DARE/BLUEPRINT-Feature-brownfield-ast.md
+#
+# Regra de ouro: regex baseline; --ast = superset mergeado; zero LLM no core. Bloco de IDs: 14xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+  codex:       { HIGH: gpt-5.5,           MED: gpt-5.5,          LOW: gpt-5.4-mini }
+
+tasks:
+  # ─── Fase 1: fundação AST (rank 0→1) ─────────────────────────────────────
+  - id: task-1401
+    title: "ast/types + loader + deps optional"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1401-ast-foundation.md
+    subtask_prompt: |
+      Criar packages/cli/src/ast/types.ts e loader.ts (BLUEPRINT §3.1–3.2). Adicionar web-tree-sitter
+      e grammars P1/P2 como optionalDependencies em packages/cli/package.json. Lazy init WASM;
+      falha => available:false sem throw. Script build copia grammars para dist/ast/grammars/.
+      Testes loader fallback. Gates: tsc; vitest run ast-loader. Leia: task-1401-ast-foundation.md.
+
+  - id: task-1402
+    title: "ast/merge.ts — dedupe superset"
+    depends_on: [task-1401]
+    complexity: MED
+    spec_file: EXECUTION/task-1402-ast-merge.md
+    subtask_prompt: |
+      Implementar ast/merge.ts: mergeDataModels, normalizeRoute (BLUEPRINT §3.4). Dedupe endpoints
+      (method+route), entities (name); ordenação estável. ast/__tests__/ast-merge.test.ts.
+      Gates: vitest run ast-merge. Leia: task-1402-ast-merge.md.
+
+  # ─── Fase 2: integração datamodel + CLI ─────────────────────────────────
+  - id: task-1403
+    title: "datamodel — pipeline híbrido AST+regex"
+    depends_on: [task-1402]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1403-datamodel-hybrid.md
+    subtask_prompt: |
+      Estender utils/datamodel.ts: ExtractDataModelOptions, extractDataModelDetailed (BLUEPRINT §3.6).
+      Pipeline: SQL/Prisma + regex sempre; se opts.ast => extractWithAst stub+merge. extractDataModel()
+      backward compat. datamodel.test.ts inalterado sem opts. Gates: vitest run datamodel. Leia: task-1403.
+
+  - id: task-1404
+    title: "reverse.ts — flag --ast + extraction facts"
+    depends_on: [task-1403]
+    complexity: MED
+    spec_file: EXECUTION/task-1404-reverse-ast-flag.md
+    subtask_prompt: |
+      Adicionar --ast em commands/reverse.ts; repassar opts para extractDataModelDetailed.
+      reverse-facts.json.extraction quando --ast. --check --ast imprime counts. Warn se --ast sem --deep.
+      Gates: vitest run reverse. Leia: task-1404-reverse-ast-flag.md.
+
+  # ─── Fase 3: linguagens P1 (rank paralelo) ───────────────────────────────
+  - id: task-1405
+    title: "ast/languages/typescript — queries P1"
+    depends_on: [task-1403]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1405-ast-typescript.md
+    subtask_prompt: |
+      ast/languages/typescript.ts + ast/index.ts extractWithAst wiring. Fixtures F-01 NestJS multi-linha,
+      F-02 Express multi-linha, F-05 TypeORM @Entity. ast/__tests__/ast-typescript.test.ts.
+      Gates: vitest run ast-typescript. Leia: task-1405-ast-typescript.md.
+
+  - id: task-1406
+    title: "ast/languages/python — queries P1"
+    depends_on: [task-1403]
+    complexity: MED
+    spec_file: EXECUTION/task-1406-ast-python.md
+    subtask_prompt: |
+      ast/languages/python.ts: FastAPI/Flask routes multi-linha, SQLAlchemy classes. Fixture F-03.
+      Integrar em extractWithAst. Gates: vitest run ast-python. Leia: task-1406-ast-python.md.
+
+  - id: task-1407
+    title: "ast/languages/php — queries P1"
+    depends_on: [task-1403]
+    complexity: MED
+    spec_file: EXECUTION/task-1407-ast-php.md
+    subtask_prompt: |
+      ast/languages/php.ts: Laravel Route chain, Slim $router->get, Eloquent extends Model. Fixture F-04.
+      Integrar em extractWithAst. Gates: vitest run ast-php. Leia: task-1407-ast-php.md.
+
+  # ─── Fase 4: linguagens P2 ───────────────────────────────────────────────
+  - id: task-1408
+    title: "ast/languages P2 — go, ruby, rust"
+    depends_on: [task-1405, task-1406, task-1407]
+    complexity: MED
+    spec_file: EXECUTION/task-1408-ast-p2-languages.md
+    subtask_prompt: |
+      ast/languages/go.ts, ruby.ts, rust.ts — best-effort Gin/Axum, Rails routes.rb, axum .route.
+      Fallback regex se query falhar. Testes smoke por linguagem. Gates: vitest run ast-go ast-ruby ast-rust.
+      Leia: task-1408-ast-p2-languages.md.
+
+  # ─── Fase N-1: regressão + release ───────────────────────────────────────
+  - id: task-1409
+    title: "brownfield-ast-regression + tarball gate"
+    depends_on: [task-1404, task-1408]
+    complexity: MED
+    spec_file: EXECUTION/task-1409-ast-regression.md
+    subtask_prompt: |
+      Criar brownfield-ast-regression.test.ts: default sem --ast = v3.13 behavior; F-06 Prisma/SQL
+      intactos; no-llm-in-core verde. npm pack --dry-run ≤ v3.13 +10%. Gates: vitest run
+      brownfield-ast-regression datamodel no-llm-in-core. Leia: task-1409-ast-regression.md.
+
+  - id: task-1410
+    title: "CHANGELOG + ROADMAP + bump v3.14.0"
+    depends_on: [task-1409]
+    complexity: MED
+    spec_file: EXECUTION/task-1410-release-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.14.0]: brownfield AST --ast flag. docs-site/brownfield.md (+ en/es). Skills dare-reverse
+      citam dare reverse --deep --ast. ROADMAP Shipped v3.14.0. Bump 3.14.0. Tag APÓS bump.
+      Gates: verify-docs-coverage; vitest run. Leia: task-1410-release-docs.md.

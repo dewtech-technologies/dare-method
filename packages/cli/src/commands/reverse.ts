@@ -20,7 +20,7 @@ import {
   renderPermissionsSkeleton,
   type ReverseFacts,
 } from '../utils/reverse-facts.js';
-import { extractDataModel, renderErd, renderApiSurface } from '../utils/datamodel.js';
+import { extractDataModel, extractDataModelDetailed, renderErd, renderApiSurface } from '../utils/datamodel.js';
 import {
   parseSpecConfidence,
   renderConfidenceReport,
@@ -39,6 +39,7 @@ interface ReverseOptions extends AiCommandOptions {
   excalidraw?: boolean; // commander sets this false for --no-excalidraw
   report?: boolean;
   deep?: boolean;
+  ast?: boolean;
 }
 
 export const reverseCommand = new Command('reverse')
@@ -50,7 +51,8 @@ export const reverseCommand = new Command('reverse')
   .option('--modules <list>', 'Limit to specific modules (comma-separated ids/names)')
   .option('--no-excalidraw', 'Skip generating the editable .excalidraw architecture canvas')
   .option('--report', 'Compute the confidence report + code-spec matrix from already-marked specs')
-  .option('--deep', 'Also extract ERD + API surface (deterministic) and scaffold domain-rules / state-machines / permissions / C4');
+  .option('--deep', 'Also extract ERD + API surface (deterministic) and scaffold domain-rules / state-machines / permissions / C4')
+  .option('--ast', 'Use tree-sitter AST extraction (requires --deep for full effect)');
 
 addAiOptions(reverseCommand);
 
@@ -93,10 +95,29 @@ reverseCommand.action(async (opts: ReverseOptions) => {
       return;
     }
 
+    if (opts.ast && !opts.deep) {
+      console.log(chalk.yellow('  --ast has no effect without --deep; ignoring.\n'));
+    }
+
+    const extractOpts = opts.ast && opts.deep ? { ast: true as const } : undefined;
+
     if (opts.check) {
       if (opts.deep) {
-        const dm = await extractDataModel(targetDir);
-        console.log(chalk.yellow(`Deep: ${dm.entities.length} entidade(s) e ${dm.endpoints.length} endpoint(s) detectados.\n`));
+        const detailed = await extractDataModelDetailed(targetDir, extractOpts);
+        const dm = detailed.model;
+        console.log(chalk.yellow(`Deep: ${dm.entities.length} entidade(s) e ${dm.endpoints.length} endpoint(s) detectados.`));
+        if (detailed.extraction) {
+          const ex = detailed.extraction;
+          console.log(
+            chalk.gray(
+              `  AST: ${ex.astAvailable ? 'on' : 'off (regex fallback)'} — ` +
+                `${ex.astEndpoints} ast endpoints, ${ex.regexEndpoints} regex endpoints; ` +
+                `${ex.astEntities} ast entities, ${ex.regexEntities} regex entities` +
+                (ex.astLanguages.length ? ` [${ex.astLanguages.join(', ')}]` : ''),
+            ),
+          );
+        }
+        console.log('');
       }
       console.log(chalk.cyan('--check: detection only, no files written.'));
       return;
@@ -115,7 +136,8 @@ reverseCommand.action(async (opts: ReverseOptions) => {
       // v3.2: deterministic API/entity extraction runs by default (was --deep
       // only) so IDEIA.md + module specs carry real collected data, not just
       // skeletons. The agent (/dare-reverse) enriches the semantic sections.
-      const model = await extractDataModel(targetDir);
+      const detailed = await extractDataModelDetailed(targetDir, extractOpts);
+      const model = detailed.model;
       writeSpinner.text = 'Writing IDEIA.md + module specs...';
 
       // Surface the counts in reverse-facts.json (no longer purely structural).
@@ -125,6 +147,7 @@ reverseCommand.action(async (opts: ReverseOptions) => {
           endpoints: model.endpoints.length,
           entities: model.entities.length,
         },
+        ...(detailed.extraction ? { extraction: detailed.extraction } : {}),
       };
       await fs.writeJSON(path.join(reverseDir, 'reverse-facts.json'), factsWithModel, { spaces: 2 });
       await fs.writeFile(

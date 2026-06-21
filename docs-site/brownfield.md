@@ -73,6 +73,8 @@ dare reverse --check               # só o mapa de módulos detectado, não escr
 dare reverse --modules auth,billing  # limita a módulos específicos
 dare reverse --no-excalidraw       # não gera o canvas editável
 dare reverse --deep                # + ERD + API surface + domain-rules/state-machines/permissions/C4
+dare reverse --deep --ast          # híbrido tree-sitter + regex (superset, opt-in)
+dare reverse --deep --check --ast  # preview contagens AST vs regex, sem escrever
 dare reverse --report              # calcula relatório de confiança a partir dos markers já marcados
 ```
 
@@ -84,13 +86,17 @@ dare reverse --report              # calcula relatório de confiança a partir d
 | `--no-excalidraw` | boolean | (gera) | Pula a geração do canvas `architecture.excalidraw`. |
 | `--report` | boolean | `false` | Computa o relatório de confiança + matriz código↔spec a partir de specs já marcadas. |
 | `--deep` | boolean | `false` | Extrai ERD + API surface (determinístico) e gera esqueletos de domain-rules / state-machines / permissions / C4. |
+| `--ast` | boolean | `false` | Ativa extração **tree-sitter (WASM)** e faz merge superset com regex/SQL/Prisma. Requer `--deep` para efeito completo; com `--check --ast` imprime resumo `extraction` sem escrever. |
+
+!!! tip "Regex é o baseline; AST é superset opt-in"
+    Sem `--ast`, o comportamento é idêntico ao v3.13 (regex/line-based). Com `--ast`, rotas e entidades ORM multi-linha ganham precisão estrutural; o resultado **unifica** AST ∪ regex — nunca substitui parsers SQL/Prisma maduros. Dependências WASM são `optionalDependencies`; se ausentes, cai para regex-only silenciosamente.
 
 ### Artefatos gerados
 
 | Artefato | Conteúdo |
 |---|---|
 | `DARE/IDEIA.md` | Índice Fase 0: propósito inferido (`<!-- AGENT -->`), stack detectada + evidências, **mapa de módulos** (tabela + Mermaid LR colorido por tamanho), seções de Modelo de Dados e Superfície de API com dados reais quando extraídos, gaps e próximos passos. |
-| `DARE/REVERSE/reverse-facts.json` | Fatos determinísticos: projeto, estratégia de fronteira, sumário (módulos/arquivos/LOC/testes), módulos com arquivos e `depends_on`, contagem de `api.endpoints`/`api.entities`. |
+| `DARE/REVERSE/reverse-facts.json` | Fatos determinísticos: projeto, estratégia de fronteira, sumário (módulos/arquivos/LOC/testes), módulos com arquivos e `depends_on`, contagem de `api.endpoints`/`api.entities`. Com `--deep --ast`, inclui bloco `extraction` (modo híbrido, langs AST, contagens ast vs regex). |
 | `DARE/REVERSE/module-NN-<id>.md` | Um spec por módulo: fatos 🟢 (caminho, tamanho, linguagens, dependências), responsabilidade, superfície pública (endpoints/entidades reais do módulo), fluxo (`sequenceDiagram`), acoplamento e lista de arquivos. |
 | `DARE/REVERSE/architecture.excalidraw` | Canvas editável do mapa de módulos (abra em excalidraw.com). Omitido com `--no-excalidraw`. |
 

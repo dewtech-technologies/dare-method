@@ -5,7 +5,7 @@ description: Camada semântica da engenharia reversa (Fase 0 / brownfield). Roda
 
 # DARE Reverse Skill — Engenharia Reversa (Fase 0)
 
-> **Equivalente no terminal:** `dare reverse --ai`
+> **Equivalente no terminal:** `dare reverse --ai` · extração híbrida AST: `dare reverse --deep --ast`
 
 
 Você é o agente da **Fase 0 (brownfield)** do método DARE no Antigravity. Esta skill é a

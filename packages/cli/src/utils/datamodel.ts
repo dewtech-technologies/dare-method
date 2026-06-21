@@ -15,6 +15,10 @@
 
 import fs from 'fs-extra';
 import path from 'path';
+import type { AstLanguageId, ExtractionMeta } from '../ast/types.js';
+import { extractWithAst, mergeDataModels } from '../ast/index.js';
+
+export type { AstLanguageId, ExtractionMeta };
 
 export interface EntityField {
   name: string;
@@ -38,6 +42,17 @@ export interface Endpoint {
 export interface DataModel {
   entities: Entity[];
   endpoints: Endpoint[];
+}
+
+export interface ExtractDataModelOptions {
+  readonly ast?: boolean;
+  readonly astLanguages?: ReadonlyArray<AstLanguageId>;
+  readonly maxFileBytes?: number;
+}
+
+export interface ExtractDataModelResult {
+  readonly model: DataModel;
+  readonly extraction?: ExtractionMeta;
 }
 
 const IGNORE_DIRS = new Set([
@@ -88,7 +103,7 @@ interface ScanFile {
   content: string;
 }
 
-async function collectFiles(root: string): Promise<ScanFile[]> {
+async function collectFiles(root: string, maxFileBytes?: number): Promise<ScanFile[]> {
   const out: ScanFile[] = [];
   async function recurse(dir: string): Promise<void> {
     let entries: fs.Dirent[];
@@ -103,6 +118,10 @@ async function collectFiles(root: string): Promise<ScanFile[]> {
         await recurse(path.join(dir, e.name));
       } else if (e.isFile() && SCAN_EXT.has(path.extname(e.name))) {
         const abs = path.join(dir, e.name);
+        if (maxFileBytes !== undefined) {
+          const stat = await fs.stat(abs).catch(() => null);
+          if (!stat || stat.size > maxFileBytes) continue;
+        }
         const content = await fs.readFile(abs, 'utf-8').catch(() => '');
         if (content) out.push({ rel: toPosix(path.relative(root, abs)), content });
       }
@@ -112,8 +131,8 @@ async function collectFiles(root: string): Promise<ScanFile[]> {
   return out;
 }
 
-export async function extractDataModel(root: string): Promise<DataModel> {
-  const files = await collectFiles(root);
+async function extractDataModelRegex(root: string, maxFileBytes?: number): Promise<DataModel> {
+  const files = await collectFiles(root, maxFileBytes);
   const entities: Entity[] = [];
   const endpoints: Endpoint[] = [];
 
@@ -145,6 +164,42 @@ export async function extractDataModel(root: string): Promise<DataModel> {
   }
 
   return { entities: dedupeEntities(entities), endpoints: dedupeEndpoints(endpoints) };
+}
+
+export async function extractDataModelDetailed(
+  root: string,
+  opts?: ExtractDataModelOptions,
+): Promise<ExtractDataModelResult> {
+  const regexModel = await extractDataModelRegex(root, opts?.maxFileBytes);
+
+  if (!opts?.ast) {
+    return { model: regexModel };
+  }
+
+  const astResult = await extractWithAst({
+    root,
+    languages: opts.astLanguages,
+    maxFileBytes: opts.maxFileBytes,
+  });
+
+  const merged = mergeDataModels(regexModel, astResult.model);
+  const extraction: ExtractionMeta = {
+    mode: 'hybrid',
+    astEnabled: true,
+    astLanguages: astResult.meta.astLanguages,
+    astAvailable: astResult.meta.astAvailable,
+    regexFallback: !astResult.meta.astAvailable,
+    astEndpoints: astResult.meta.astEndpoints,
+    regexEndpoints: regexModel.endpoints.length,
+    astEntities: astResult.meta.astEntities,
+    regexEntities: regexModel.entities.length,
+  };
+
+  return { model: merged, extraction };
+}
+
+export async function extractDataModel(root: string, opts?: ExtractDataModelOptions): Promise<DataModel> {
+  return (await extractDataModelDetailed(root, opts)).model;
 }
 
 // ── Parsers: entities ──────────────────────────────────────────────────────
