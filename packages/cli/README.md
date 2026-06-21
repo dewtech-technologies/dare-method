@@ -166,6 +166,8 @@ Pick **one** of the two paths per stack:
 
 > **v3.8.1–3.8.2 (manutenção):** `dare update` passa a entregar os skills/comandos/config das v3.4→v3.8 a projetos existentes (backfill do `UPDATE-MANIFEST`, 3.8.1). O CI ganha um **gate de cobertura de docs** + **redeploy automático da documentação** a cada release (3.8.2).
 
+> **v3.12.0:** **Terminal Agent Parity** — `dare <cmd> --ai` ≡ `/dare-<cmd>`; `--json` uniforme; drivers `cursor`/`antigravity` no `execute --agent`; `ai/resolve` + `ai/parity`; apply completo migrate/review; `dare ai doctor`.
+
 > **v3.11.0:** **Dynamic DAG** — `REPLAN` splice de sub-DAG em runtime (`refine --split` + `spliceSubDag`); `verification.loop.maxDepth` (default **2**, excedeu → `ESCALATE`); `dare refine --split --apply` (modo manual); `dare dag viz` agrupa sub-DAGs (`subgraph Sub-DAG: <pai>` em Mermaid/DOT/Excalidraw); estado persiste em `dare-dag.yaml` + `.dare/state.json`.
 
 > **v3.10.0:** **Drift Gate** — `dare graph drift` (exit **7** com `--strict`). **Local Semantic Search** — retrieval híbrido RRF, `graphrag.semantic` opt-in, `@huggingface/transformers` optionalDep lazy, `dare graph query --semantic`, indexação incremental por `contentHash`.

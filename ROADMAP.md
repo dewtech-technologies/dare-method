@@ -1,12 +1,23 @@
 # DARE Method — Roadmap
 
-> **Status atual:** v3.11.0
+> **Status atual:** v3.12.0
 > **Última atualização:** 2026-06
 > **Licença:** MIT (D-001 — MIT permanente)
 
 Este documento descreve o que está **shipped**, o que está **em desenvolvimento ativo** e o que está **planejado**. Tudo o que aparece aqui é executável — não inclui ideias vagas.
 
 ---
+
+## ✅ Shipped — v3.12.0
+
+**Terminal Agent Parity** — um comando, dois gatilhos (terminal ↔ chat).
+
+- ✅ **`dare <cmd> --ai`** em 8 comandos semânticos com **`--json`** (`EnrichmentResult`)
+- ✅ **Resolução única de provider** — `ai/resolve.ts` (`--provider` > config > default)
+- ✅ **Drivers `cursor` e `antigravity`** em `dare execute --agent`
+- ✅ **Apply completo** — `migrate --ai` e `review --ai` mesclam artefatos finais
+- ✅ **`dare ai doctor`** — capacidade enrichment/execução por provider
+- ✅ **Skills `/dare-*`** citam equivalente terminal nas 3 IDEs
 
 ## ✅ Shipped — v3.11.0
 

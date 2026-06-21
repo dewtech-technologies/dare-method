@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.11.0** — última feature: **Dynamic DAG** — `REPLAN` faz splice de sub-DAG em runtime (via `refine --split`); `verification.loop.maxDepth` (default 2); `dare refine --split --apply` (modo manual); `dare dag viz` agrupa sub-DAGs aninhados. Antes: Drift Gate + Local Semantic Search (v3.10.0 — `dare graph drift`, retrieval híbrido RRF), Secure Autonomous Executor + Agentic-chain Security Gate (v3.9.0 — `dare execute --agent`, `dare guard`), Formal Verification Gate (v3.8.0), Reliable Verification Core (v3.3), Security Hardening (v3.4), Dual Graph (v3.5), Agent Hooks + Steering (v3.6) e Brownfield Discovery (v3.7). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.12.0** — última feature: **Terminal Agent Parity** — `dare <cmd> --ai` ≡ `/dare-<cmd>` em 8 comandos semânticos; drivers `cursor`/`antigravity` no `execute --agent`; `dare ai doctor` com capacidades enrichment/execução. Antes: Dynamic DAG (v3.11.0 — `REPLAN` splice de sub-DAG), Drift Gate + Local Semantic Search (v3.10.0), Secure Autonomous Executor (v3.9.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
