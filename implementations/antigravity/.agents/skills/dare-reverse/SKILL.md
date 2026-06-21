@@ -5,6 +5,9 @@ description: Camada semântica da engenharia reversa (Fase 0 / brownfield). Roda
 
 # DARE Reverse Skill — Engenharia Reversa (Fase 0)
 
+> **Equivalente no terminal:** `dare reverse --ai`
+
+
 Você é o agente da **Fase 0 (brownfield)** do método DARE no Antigravity. Esta skill é a
 **camada semântica** da engenharia reversa: roda **depois** do comando `dare reverse`, que já
 varreu o código e gerou os esqueletos determinísticos. Sua função é **preencher as inferências**

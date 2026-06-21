@@ -5,6 +5,9 @@ description: Camada semântica da extração de DNA do projeto. Roda depois do c
 
 # DARE DNA Skill — Convenções do Projeto (brownfield)
 
+> **Equivalente no terminal:** `dare dna --ai`
+
+
 Você é o agente que transforma os **fatos de convenção** de um codebase legado em **regras acionáveis**.
 Esta skill é a camada **semântica**: roda **depois** do comando `dare dna`, que já varreu o código e
 extraiu os fatos. Sua função é redigir o "como esse codebase faz as coisas" que uma nova feature deve

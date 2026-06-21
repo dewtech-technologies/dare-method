@@ -10,6 +10,10 @@ import {
   resolveVerdictFromCounts,
   violationsToFindings,
 } from '../reporters/ci-gate.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
+import fs from 'fs-extra';
 
 /**
  * `dare review <task-id>` — runs the static analyzer (and optionally a
@@ -39,20 +43,23 @@ export const reviewCommand = new Command('review')
   )
   .option('--format <fmt>', 'Saída: human | json | github', 'human')
   .option('--comment', 'Post idempotent PR comment (requires GITHUB_TOKEN + PR context)', false)
-  .option('--fail-on <mode>', 'Exit policy: none | warn | error', 'none')
-  .action(
-    async (
-      taskId: string,
-      options: {
-        strict: boolean;
-        errorsOnly: boolean;
-        files?: string[];
-        fromAgent?: string;
-        format: string;
-        comment: boolean;
-        failOn: string;
-      },
-    ) => {
+  .option('--fail-on <mode>', 'Exit policy: none | warn | error', 'none');
+
+addAiOptions(reviewCommand);
+
+reviewCommand.action(
+  async (
+    taskId: string,
+    options: {
+      strict: boolean;
+      errorsOnly: boolean;
+      files?: string[];
+      fromAgent?: string;
+      format: string;
+      comment: boolean;
+      failOn: string;
+    } & AiCommandOptions,
+  ) => {
       const projectRoot = process.cwd();
       const format = parseCiFormat(options.format);
       if (!format) {
@@ -65,12 +72,30 @@ export const reviewCommand = new Command('review')
         process.exit(1);
       }
 
+      let fromAgent = options.fromAgent;
+      const aiOpts = aiOptionsFromFlags(options);
+      if (aiOpts.enabled && !fromAgent) {
+        const specPath = path.join(projectRoot, 'DARE', 'EXECUTION', `${taskId}.md`);
+        const spec = (await fs.pathExists(specPath))
+          ? await fs.readFile(specPath, 'utf-8')
+          : '';
+        const enrichment = await maybeRunAiEnrichment({
+          enabled: true,
+          provider: aiOpts.provider,
+          json: aiOpts.json,
+          command: 'review',
+          cwd: projectRoot,
+          facts: { taskId, spec },
+        });
+        if (enrichment?.artifactPath) fromAgent = enrichment.artifactPath;
+      }
+
       let report: ReviewReport;
       try {
         report = await runReview(taskId, {
           projectRoot,
           files: options.files,
-          fromAgent: options.fromAgent,
+          fromAgent,
           strict: options.strict,
           errorsOnly: options.errorsOnly,
           format: format === 'github' ? 'human' : format,

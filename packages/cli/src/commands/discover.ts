@@ -158,9 +158,10 @@ export const discoverCommand = new Command('discover')
         type: 'list',
         name: 'ide',
         message: 'Primary IDE / Agent:',
-        default: detected.hasClaudeCode ? 'claude-code' : 'cursor',
+        default: detected.hasCodex ? 'codex' : detected.hasClaudeCode ? 'claude-code' : 'cursor',
         choices: [
           { name: '🤖 Claude Code', value: 'claude-code' },
+          { name: '⌨️  Codex CLI', value: 'codex' },
           { name: '🖱️  Cursor', value: 'cursor' },
           { name: '🚀 Antigravity', value: 'antigravity' },
           { name: '🔀 Cursor + Antigravity (Hybrid)', value: 'hybrid' },
@@ -232,6 +233,9 @@ export const discoverCommand = new Command('discover')
       if (answers.ide === 'claude-code' || answers.ide === 'claude-hybrid') {
         console.log(chalk.gray(`  Claude Code: use /dare-design, /dare-blueprint, /dare-execute como slash commands\n`));
       }
+      if (answers.ide === 'codex') {
+        console.log(chalk.gray(`  Codex CLI: use dare execute --agent --driver codex para execucao terminal-first\n`));
+      }
     } catch (err) {
       installSpinner.fail(chalk.red('Failed to install DARE'));
       console.error(err);
@@ -253,6 +257,11 @@ function buildFileList(ans: Record<string, unknown>): string {
   if (ide === 'antigravity' || ide === 'hybrid') {
     files.push('    · .antigravityrules');
     files.push('    · .agents/skills/ + .agents/workflows/');
+  }
+
+  if (ide === 'codex') {
+    files.push('    Â· AGENTS.md');
+    files.push('    Â· .agents/skills/');
   }
 
   return files.join('\n');

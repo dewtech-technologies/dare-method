@@ -20,6 +20,7 @@ O arquivo na raiz do projeto reúne quatro grupos:
 3. **`hooks`** — automações determinísticas por evento (Zod `strict`).
 4. **`steering`** — não vive no JSON; é resolvido a partir de arquivos em disco
    (ver [Agentes › Steering files](agents.md#steering-files)).
+5. **`ai`** — providers de terminal para enrichment (`--ai`) e execução (`execute --agent`).
 
 ```json
 {
@@ -91,6 +92,17 @@ O arquivo na raiz do projeto reúne quatro grupos:
     "maxOrphanCode": 0,
     "failOnStale": false,
     "ignore": ["**/index.ts", "**/*.generated.*", "**/bin/**"]
+  },
+
+  // ── ai (terminal-first providers) ─────────────────────────────────────
+  "ai": {
+    "defaultProvider": "codex",
+    "providers": {
+      "codex": { "command": "codex", "model": "gpt-5.4" },
+      "claude-code": { "command": "claude", "timeoutSeconds": 1200 },
+      "cursor-cli": { "command": "cursor-agent" },
+      "antigravity-cli": { "command": "antigravity" }
+    }
   }
 }
 ```
@@ -132,6 +144,31 @@ calibrar quando uma task deve ser dividida via `dare refine`.
 | `thresholds.low` | `number` | `5` | Limite superior da faixa LOW. |
 | `thresholds.med` | `number` | `12` | Limite superior da faixa MED. |
 | `thresholds.high` | `number` | `20` | Limite superior da faixa HIGH; acima disso é CRITICAL. |
+
+### `ai`
+
+Providers **terminal-first** para enrichment (`dare <cmd> --ai`) e execução
+(`dare execute --agent`). Validado em `packages/cli/src/ai/config.ts`.
+
+**Precedência do provider:** flag `--provider` > `ai.defaultProvider` > `codex`.
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `defaultProvider` | `'codex' \| 'claude-code' \| 'cursor-cli' \| 'antigravity-cli'` | `'codex'` | Provider padrão quando `--provider` não é passado. |
+| `providers.<name>.command` | `string` | CLI do provider | Override do binário (`codex`, `cursor-agent`, `antigravity`, …). |
+| `providers.<name>.model` | `string` | — | Modelo opcional passado ao CLI. |
+| `providers.<name>.timeoutSeconds` | `number` | `1200` | Timeout de subprocess por provider. |
+
+Variáveis de ambiente por provider (alternativa ao JSON): `DARE_CODEX_COMMAND`,
+`DARE_CURSOR_COMMAND`, `DARE_ANTIGRAVITY_COMMAND` (e aliases `DARE_AI_*`).
+
+Legacy: `agent.provider` / `agent.driver` no config ainda mapeiam para
+`dare execute --agent` (`claude`, `codex`, `cursor`, `antigravity`, `mock`).
+
+```bash
+dare ai doctor              # probe de CLIs + capacidade enrichment/execução
+dare reverse --ai --json    # EnrichmentResult estruturado para CI
+```
 
 ### `verification`
 

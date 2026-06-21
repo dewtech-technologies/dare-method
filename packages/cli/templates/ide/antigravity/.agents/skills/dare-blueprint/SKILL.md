@@ -14,6 +14,8 @@ Você é um arquiteto de software especializado em design de APIs e sistemas. Se
 - Necessário documentar endpoints e modelos
 - Segunda fase do Método DARE
 
+> **Equivalente no terminal:** `dare blueprint --ai`
+
 ## Como usar
 
 ### Passo 1: Ler o Design Aprovado

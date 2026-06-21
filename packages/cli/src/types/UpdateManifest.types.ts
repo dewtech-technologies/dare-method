@@ -15,6 +15,7 @@ export type IdeTarget =
   | '*'
   | 'cursor'
   | 'claude-code'
+  | 'codex'
   | 'antigravity'
   | 'hybrid'
   | 'claude-hybrid';

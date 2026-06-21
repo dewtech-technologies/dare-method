@@ -5,6 +5,44 @@ projeto DARE de forma **determinística e auditável**: **hooks** (automações 
 evento), **steering files** (contexto/regras resolvidos por arquivo) e o
 **servidor MCP** (API local de leitura do projeto e do grafo).
 
+## Paridade terminal ↔ chat
+
+Cada comando semântico do DARE tem **dois gatilhos equivalentes**:
+
+| Caminho | Exemplo |
+|---|---|
+| **Terminal** | `dare reverse --ai` |
+| **Chat da IDE** | `/dare-reverse` |
+
+O contrato está codificado em `PARITY_CONTRACTS` (`packages/cli/src/ai/parity.ts`):
+mesmo schema JSON, mesmos artefatos mesclados, mesma validação Zod (RS-01).
+
+### Providers suportados (v3.12+)
+
+| Provider | Enrichment (`--ai`) | Execução (`execute --agent`) | CLI default |
+|---|---|---|---|
+| `codex` | ✓ | ✓ (`--driver codex`) | `codex` |
+| `claude-code` | ✓ | ✓ (`--driver claude`) | `claude` |
+| `cursor-cli` | ✓ | ✓ (`--driver cursor`) | `cursor-agent` |
+| `antigravity-cli` | ✓ | ✓ (`--driver antigravity`) | `antigravity` |
+| `mock` | ✓ (testes) | ✓ (`--dry-run`) | — |
+
+Resolução de provider: **`--provider` > `ai.defaultProvider` no config > `codex`**.
+
+```bash
+# Diagnóstico de CLIs instalados + capacidade enrichment/execução
+dare ai doctor
+dare ai doctor --json
+
+# Saída estruturada após heurística determinística
+dare reverse --ai --json
+dare review task-001 --ai --json
+```
+
+Skills `/dare-*` nas três IDEs incluem a linha **Equivalente no terminal** apontando
+para o comando `dare <cmd> --ai` correspondente — o chat continua caminho de primeira
+classe; o terminal ganha o mesmo poder.
+
 ## Hooks
 
 Automações disparadas por eventos do ciclo de desenvolvimento. São

@@ -26,6 +26,7 @@ import { guardCommand } from '../commands/guard.js';
 import { dashboardCommand } from '../commands/dashboard.js';
 import { skillCommand } from '../skills/index.js';
 import { welcomeCommand } from '../commands/welcome.js';
+import { aiCommand } from '../commands/ai.js';
 import { printBanner } from '../utils/banner.js';
 
 const require = createRequire(import.meta.url);
@@ -62,6 +63,7 @@ program.addCommand(patternsCommand);
 program.addCommand(guardCommand);
 program.addCommand(dashboardCommand);
 program.addCommand(skillCommand);
+program.addCommand(aiCommand);
 program.addCommand(welcomeCommand);
 
 // Show banner + help when invoked with no subcommand

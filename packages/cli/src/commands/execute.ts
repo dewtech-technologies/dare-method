@@ -41,6 +41,14 @@ import {
   AgentSdkMissingError,
   createClaudeDriver,
 } from '../agent/drivers/claude.js';
+import {
+  createCodexCliDriver,
+  type CodexApproval,
+  type CodexSandbox,
+} from '../agent/drivers/codex.js';
+import { createCursorCliDriver } from '../agent/drivers/cursor.js';
+import { createAntigravityCliDriver } from '../agent/drivers/antigravity.js';
+import { parseAiConfig, resolveProviderConfig } from '../ai/config.js';
 import { runIncrementalSemanticIndex } from '../graphrag/incremental-index.js';
 import {
   gateToAspect,
@@ -66,6 +74,12 @@ import type {
   VerificationResult,
 } from '../verification/types.js';
 import { runBestOfN } from '../verification/best-of-n/runner.js';
+import {
+  parseAgentDriverOverride,
+  resolveAgentDriverId,
+  formatKnownDrivers,
+  type AgentDriverId,
+} from '../ai/resolve.js';
 import {
   NoViableCandidateError,
   selectByPareto,
@@ -130,6 +144,7 @@ interface ExecuteOptions {
   budgetTokens?: string;
   requireApproval?: string;
   onFail?: string;
+  driver?: string;
   dryRun?: boolean;
 }
 
@@ -160,6 +175,7 @@ export const executeCommand = new Command('execute')
   .option('--no-formal', 'Skip formal verification even when enabled in config', false)
   .option('--formal-backend <backend>', 'Formal backend override (dafny|verus|lean)')
   .option('--budget-tokens <n>', 'Token budget cap for --agent mode')
+  .option('--driver <name>', 'Agent driver for --agent (claude|codex|mock)')
   .option(
     '--require-approval <mode>',
     'Approval mode for --agent (rank|none)',
@@ -170,7 +186,7 @@ export const executeCommand = new Command('execute')
     'Action when a failed attempt does not resolve (replan|escalate|stop)',
     'escalate',
   )
-  .option('--dry-run', 'Use mock driver instead of Claude SDK driver', false)
+  .option('--dry-run', 'Use mock driver instead of the configured agent driver', false)
   .action(async (options: ExecuteOptions) => {
     const cwd = process.cwd();
     const dagPath = path.resolve(cwd, options.dag);
@@ -221,9 +237,16 @@ type AgentExecutionAction =
   | 'STOP';
 
 interface AgentRuntimeConfig {
+  readonly provider: AgentProviderName;
   readonly model: string;
   readonly apiKeyEnv?: string;
   readonly maxTokens?: number;
+  readonly codexCommand?: string;
+  readonly codexSandbox?: CodexSandbox;
+  readonly codexApproval?: CodexApproval;
+  readonly timeoutSeconds?: number;
+  readonly cursorCommand?: string;
+  readonly antigravityCommand?: string;
   readonly guard: GuardConfig;
 }
 
@@ -260,6 +283,7 @@ interface RefineSplitResult {
 }
 
 const GUARD_FAIL_EXIT_CODE = 6;
+type AgentProviderName = AgentDriverId;
 const DEFAULT_AGENT_MODEL = 'claude-sonnet-4-5';
 
 const ZERO_USAGE: TokenUsage = {
@@ -416,11 +440,44 @@ export async function resolveDriver(
     return resolveDriverOverride(args, config);
   }
   if (args.dryRun) return mockDriver;
+  const provider = parseAgentProvider(args.driver) ?? config.provider;
+  if (provider === 'mock') return mockDriver;
+  if (provider === 'codex') {
+    const model =
+      config.provider !== 'codex' && config.model === DEFAULT_AGENT_MODEL
+        ? undefined
+        : config.model || undefined;
+    return createCodexCliDriver({
+      command: config.codexCommand,
+      model,
+      sandbox: config.codexSandbox,
+      approval: config.codexApproval,
+      timeoutSeconds: config.timeoutSeconds,
+    });
+  }
+  if (provider === 'cursor') {
+    return createCursorCliDriver({
+      command: config.cursorCommand,
+      model: config.model || undefined,
+      timeoutSeconds: config.timeoutSeconds,
+    });
+  }
+  if (provider === 'antigravity') {
+    return createAntigravityCliDriver({
+      command: config.antigravityCommand,
+      model: config.model || undefined,
+      timeoutSeconds: config.timeoutSeconds,
+    });
+  }
   return createClaudeDriver({
-    model: config.model,
+    model: config.model || DEFAULT_AGENT_MODEL,
     apiKeyEnv: config.apiKeyEnv,
     maxTokens: config.maxTokens,
   });
+}
+
+function parseAgentProvider(raw: string | undefined): AgentProviderName | null {
+  return parseAgentDriverOverride(raw);
 }
 
 function parseRequireApprovalMode(raw: string | undefined): RequireApprovalMode | null {
@@ -599,10 +656,20 @@ async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> 
     typeof rawConfig.agent === 'object' && rawConfig.agent !== null
       ? (rawConfig.agent as Record<string, unknown>)
       : {};
+  const provider = resolveAgentDriverId(
+    rawConfig,
+    typeof agent.provider === 'string'
+      ? agent.provider
+      : typeof agent.driver === 'string'
+        ? agent.driver
+        : undefined,
+  );
   const model =
     typeof agent.model === 'string' && agent.model.trim().length > 0
       ? agent.model
-      : DEFAULT_AGENT_MODEL;
+      : provider === 'claude'
+        ? DEFAULT_AGENT_MODEL
+        : '';
   const apiKeyEnv =
     typeof agent.apiKeyEnv === 'string' && agent.apiKeyEnv.trim().length > 0
       ? agent.apiKeyEnv
@@ -613,8 +680,81 @@ async function loadAgentRuntimeConfig(cwd: string): Promise<AgentRuntimeConfig> 
     agent.maxTokens > 0
       ? agent.maxTokens
       : undefined;
+  const codex =
+    typeof agent.codex === 'object' && agent.codex !== null
+      ? (agent.codex as Record<string, unknown>)
+      : {};
+  const codexCommand =
+    typeof agent.command === 'string' && agent.command.trim().length > 0
+      ? agent.command
+      : typeof codex.command === 'string' && codex.command.trim().length > 0
+        ? codex.command
+        : undefined;
+  const codexSandbox = parseCodexSandbox(
+    typeof agent.sandbox === 'string'
+      ? agent.sandbox
+      : typeof codex.sandbox === 'string'
+        ? codex.sandbox
+        : undefined,
+  );
+  const codexApproval = parseCodexApproval(
+    typeof agent.approval === 'string'
+      ? agent.approval
+      : typeof codex.approval === 'string'
+        ? codex.approval
+        : undefined,
+  );
+  const timeoutSeconds =
+    typeof agent.timeoutSeconds === 'number' &&
+    Number.isInteger(agent.timeoutSeconds) &&
+    agent.timeoutSeconds > 0
+      ? agent.timeoutSeconds
+      : typeof codex.timeoutSeconds === 'number' &&
+          Number.isInteger(codex.timeoutSeconds) &&
+          codex.timeoutSeconds > 0
+        ? codex.timeoutSeconds
+        : undefined;
 
-  return { model, apiKeyEnv, maxTokens, guard };
+  const aiConfig = parseAiConfig(rawConfig);
+  const cursorSettings = resolveProviderConfig<{ command?: string; timeoutSeconds?: number }>(
+    aiConfig,
+    'cursor-cli',
+  );
+  const antigravitySettings = resolveProviderConfig<{ command?: string; timeoutSeconds?: number }>(
+    aiConfig,
+    'antigravity-cli',
+  );
+  const cursorCommand = cursorSettings.command?.trim() || undefined;
+  const antigravityCommand = antigravitySettings.command?.trim() || undefined;
+
+  return {
+    provider,
+    model,
+    apiKeyEnv,
+    maxTokens,
+    codexCommand,
+    codexSandbox,
+    codexApproval,
+    timeoutSeconds:
+      timeoutSeconds ??
+      cursorSettings.timeoutSeconds ??
+      antigravitySettings.timeoutSeconds,
+    cursorCommand,
+    antigravityCommand,
+    guard,
+  };
+}
+
+function parseCodexSandbox(raw: string | undefined): CodexSandbox | undefined {
+  if (raw === 'read-only' || raw === 'workspace-write' || raw === 'danger-full-access') {
+    return raw;
+  }
+  return undefined;
+}
+
+function parseCodexApproval(raw: string | undefined): CodexApproval | undefined {
+  if (raw === 'untrusted' || raw === 'on-request' || raw === 'never') return raw;
+  return undefined;
 }
 
 async function loadVerificationConfigForAgent(
@@ -747,6 +887,16 @@ async function handleAgent(
     console.error(
       chalk.red(
         `Error: --on-fail must be 'replan', 'escalate' or 'stop' (got '${options.onFail}')`,
+      ),
+    );
+    process.exit(1);
+    return;
+  }
+
+  if (options.driver && !parseAgentProvider(options.driver)) {
+    console.error(
+      chalk.red(
+        `Error: --driver must be one of: ${formatKnownDrivers()} (got '${options.driver}')`,
       ),
     );
     process.exit(1);

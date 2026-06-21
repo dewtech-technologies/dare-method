@@ -14,6 +14,8 @@ export default defineConfig({
       '**/dist/**',
       'templates/**',
       'fixtures/**',
+      // Bundled skill packages ship with their own tsconfig/deps; not CLI runtime.
+      'skills/**',
     ],
     coverage: {
       provider: 'v8',

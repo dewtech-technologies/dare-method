@@ -12,9 +12,7 @@
  *   2. Verify skill exists in registry.
  *   3. Check if already installed (skip or update).
  *   4. Resolve transitive dependencies.
- *   5. Simulate install: update `.dare/skills.yml`.
- *      (Real file extraction from packages/skills/ will happen when Agent 1
- *       delivers the skill packages; the manifest is the source of truth.)
+ *   5. Install bundled/local skill files when available and update `.dare/skills.yml`.
  *
  * @module skills/commands/add
  */
@@ -25,6 +23,7 @@ import ora from 'ora';
 import { registry, type RegistrySkill } from '../registry.js';
 import { LocalRegistry } from '../registry-local.js';
 import { ManifestReader, ManifestWriter, type SkillEntry } from '../manifest.js';
+import { installBundledSkill } from '../bundled.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -222,11 +221,27 @@ export const skillAddCommand = new Command('add')
       : ora(`Installing ${chalk.cyan(name)}@${effectiveVersion}...`).start();
 
     const writer = new ManifestWriter();
+    const localRegistry = new LocalRegistry();
 
     for (const item of plan) {
       if (item.alreadyInstalled) {
         result.skipped.push(`${item.skill.name}@${item.requestedVersion}`);
         continue;
+      }
+
+      const installedFromBundle = installBundledSkill(item.skill.name, cwd);
+      if (!installedFromBundle) {
+        try {
+          localRegistry.install(item.skill.name, item.requestedVersion, cwd);
+        } catch (err) {
+          if (item.skill.name === name && !registry.findByName(item.skill.name)) {
+            const msg = err instanceof Error ? err.message : String(err);
+            result.errors.push(msg);
+            if (spinner) spinner.fail(chalk.red(msg));
+            if (options.json) process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+            process.exit(1);
+          }
+        }
       }
 
       const entry: SkillEntry = {

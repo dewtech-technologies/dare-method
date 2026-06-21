@@ -15,6 +15,7 @@ const detected: DetectedProject = {
   backend: 'node-nestjs',
   hasDare: false,
   hasClaudeCode: false,
+  hasCodex: false,
   confidence: 'high',
   evidence: ['package.json found (name: demo)'],
 };

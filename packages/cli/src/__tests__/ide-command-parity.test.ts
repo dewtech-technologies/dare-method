@@ -42,6 +42,7 @@ const CLI_COMMANDS: Record<string, string> = {
   dashboard: 'dare-dashboard',
   patterns: 'dare-patterns',
   skill: 'dare-skill',
+  ai: 'dare-ai',
   welcome: 'dare-welcome',
 };
 

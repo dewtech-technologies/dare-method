@@ -9,6 +9,32 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.12.0] — 2026-06-20
+
+Release **Terminal Agent Parity** — um comando, dois gatilhos (`dare <cmd> --ai` ≡ `/dare-<cmd>`), quatro providers no terminal.
+
+### ✨ Adicionado — Paridade terminal ↔ chat
+
+- **`dare <cmd> --ai`** em todos os comandos semânticos (`reverse`, `dna`, `migrate`, `design`, `patterns`, `blueprint`, `review`, `refine`) com saída **`--json`** estruturada (`EnrichmentResult`).
+- **`ai/resolve.ts`** — resolução única de provider: `--provider` > `ai.defaultProvider` > default `codex`.
+- **`ai/parity.ts`** — contrato `PARITY_CONTRACTS` travando skill, terminal, artefatos e campos de schema.
+- **`dare ai doctor`** — reporta **capacidade** por provider (`enrichment` + `execution`), além de disponibilidade do CLI.
+
+### ✨ Adicionado — Execução multi-provider
+
+- **Drivers `cursor` e `antigravity`** em `dare execute --agent` (subprocess `cursor-agent` / `antigravity`, sem SDK no core).
+- **`--driver`** aceita `claude | codex | cursor | antigravity | mock` com mensagem clara para typos e CLIs ausentes.
+
+### 🔧 Melhorado — Apply de enrichments
+
+- **`migrate --ai`** mescla `strategySummary`, `riskAreas`, `parityNotes` e `blockingGaps` em `DARE/MIGRATION/MIGRATION.md`.
+- **`review --ai`** grava `review-semantic.json` e injeta o veredito sem exigir `--from-agent`.
+
+### 📚 Documentação e skills
+
+- Skills `/dare-*` nas 3 IDEs citam o equivalente terminal (`dare <cmd> --ai`).
+- `docs-site/configuration.md` e `docs-site/agents.md` documentam o bloco `ai` e o contrato de paridade.
+
 ## [3.11.0] — 2026-06-11
 
 Release **Dynamic DAG** — replan estrutural com sub-DAGs aninhados em runtime (compõe o release 3.11.0 junto de dashboard + ci-pr).

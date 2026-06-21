@@ -1,5 +1,8 @@
 # Comando: /dare-patterns
 
+> **Equivalente no terminal:** `dare patterns --ai`
+
+
 Descobre padrões recorrentes no codebase (`dare patterns`) — determinístico, sem LLM.
 
 ```bash

@@ -1,5 +1,8 @@
 # Comando: /dare-review
 
+> **Equivalente no terminal:** `dare review <task-id> --ai`
+
+
 ## Descrição
 
 Audita uma task **implementada** cruzando a spec (`DARE/EXECUTION/<id>.md`) com os arquivos reais que ela tocou. Detecta stubs, mocks fora de testes, funções vazias, TODOs, retorno-fantasma — **e** valida critério-a-critério se a implementação satisfaz o que a spec prometeu.

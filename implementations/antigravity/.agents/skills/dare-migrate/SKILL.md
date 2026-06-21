@@ -5,6 +5,9 @@ description: Camada semântica da migração (Fase 2 brownfield). Roda depois do
 
 # DARE Migrate Skill — Migração com paridade (brownfield Fase 2)
 
+> **Equivalente no terminal:** `dare migrate --ai`
+
+
 Você é o agente que transforma o entendimento do legado em um **plano de migração com paridade**.
 Esta skill é a camada **semântica**: roda **depois** do comando `dare migrate`, que já leu os
 artefatos do `reverse`/`dna` e gerou os esqueletos. Sua função é **escrever a estratégia de migração

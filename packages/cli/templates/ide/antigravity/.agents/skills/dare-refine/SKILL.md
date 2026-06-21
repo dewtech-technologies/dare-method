@@ -5,6 +5,9 @@ description: Analisa complexidade de uma task DARE e, quando alta, quebra em sub
 
 # DARE Refine Skill
 
+> **Equivalente no terminal:** `dare refine <task-id> --split --ai`
+
+
 Você é o refinador de tasks do método DARE. Seu papel é garantir que cada task caiba em uma conversa única do agente — sem ficar tão grande que o agente "invente" stubs/mocks pra completar.
 
 ## Quando usar

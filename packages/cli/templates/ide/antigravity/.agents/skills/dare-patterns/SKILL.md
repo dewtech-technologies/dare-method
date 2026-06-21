@@ -1,5 +1,8 @@
 # dare-patterns Skill
 
+> **Equivalente no terminal:** `dare patterns --ai`
+
+
 Expõe `dare patterns` — mineração determinística de padrões brownfield.
 
 ```bash

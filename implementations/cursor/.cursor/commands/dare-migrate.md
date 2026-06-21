@@ -5,6 +5,8 @@ artefatos do `reverse`/`dna` e gerou os esqueletos. Sua função é **escrever a
 e os cenários Gherkin de paridade reais** — o contrato comportamental que garante uma reimplementação
 fiel ao legado.
 
+> **Equivalente no terminal:** `dare migrate --ai`
+
 ## Como usar
 
 ```

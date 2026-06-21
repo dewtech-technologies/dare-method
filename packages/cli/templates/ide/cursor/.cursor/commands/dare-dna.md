@@ -4,6 +4,8 @@ Camada semântica da extração de DNA do projeto. Roda **depois** do comando `d
 o código e extraiu os fatos de convenção. Sua função é **transformar fatos em regras acionáveis** —
 o "como esse codebase faz as coisas" que uma nova feature deve respeitar.
 
+> **Equivalente no terminal:** `dare dna --ai`
+
 ## Como usar
 
 ```

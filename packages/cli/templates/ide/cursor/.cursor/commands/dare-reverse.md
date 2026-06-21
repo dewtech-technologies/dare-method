@@ -5,6 +5,8 @@ Camada semântica da engenharia reversa (Fase 0 / brownfield). Roda **depois** d
 inferências** que o CLI determinístico não faz: propósito, domínio, responsabilidades e os
 **diagramas de fluxo** ("como a coisa funciona").
 
+> **Equivalente no terminal:** `dare reverse --ai`
+
 ## Como usar
 
 ```

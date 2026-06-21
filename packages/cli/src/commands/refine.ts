@@ -26,6 +26,11 @@ import type {
   RefineVerdict,
   SplitProposal,
 } from '../types/Refine.types.js';
+import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import type { AiCommandOptions } from '../ai/types.js';
+import { maybeRunAiEnrichment } from '../ai/pipeline.js';
+import { splitProposalFromRefineSemantic } from '../ai/refine-bridge.js';
+import { RefineSemanticSchema } from '../ai/schemas.js';
 
 /**
  * `dare refine <task-id>` — measures complexity of a task and (optionally)
@@ -51,18 +56,21 @@ export const refineCommand = new Command('refine')
     false,
   )
   .option('--format <fmt>', 'Saída: human | json', 'human')
-  .option('--from-agent <path>', 'JSON com RefineVerdict produzido pelo agente IDE')
-  .action(
-    async (
-      taskId: string,
-      options: {
-        split: boolean;
-        apply: boolean;
-        strict: boolean;
-        format: 'human' | 'json';
-        fromAgent?: string;
-      },
-    ) => {
+  .option('--from-agent <path>', 'JSON com RefineVerdict produzido pelo agente IDE');
+
+addAiOptions(refineCommand);
+
+refineCommand.action(
+  async (
+    taskId: string,
+    options: {
+      split: boolean;
+      apply: boolean;
+      strict: boolean;
+      format: 'human' | 'json';
+      fromAgent?: string;
+    } & AiCommandOptions,
+  ) => {
       const projectRoot = process.cwd();
       if (options.apply && !options.split) {
         console.error(chalk.red('❌ --apply exige --split.'));
@@ -89,6 +97,26 @@ export const refineCommand = new Command('refine')
       let proposal: SplitProposal | undefined;
       if (options.split) {
         proposal = await buildSplitProposal(taskId, projectRoot);
+      }
+
+      const aiOpts = aiOptionsFromFlags(options);
+      if (options.split && aiOpts.enabled) {
+        const specPath = await findSpecFile(projectRoot, taskId);
+        const spec = specPath ? await fs.readFile(specPath, 'utf-8') : '';
+        const enrichment = await maybeRunAiEnrichment({
+          enabled: true,
+          provider: aiOpts.provider,
+          json: aiOpts.json,
+          command: 'refine',
+          cwd: projectRoot,
+          facts: { taskId, report, proposal, spec },
+        });
+        if (enrichment?.data) {
+          proposal = splitProposalFromRefineSemantic(
+            taskId,
+            RefineSemanticSchema.parse(enrichment.data),
+          );
+        }
       }
 
       let agentVerdict: RefineVerdict | undefined;

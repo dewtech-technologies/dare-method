@@ -54,4 +54,17 @@ describe('safeSpawn', () => {
     expect(env.HOME).toBe('/home/user');
     expect(env.MY_SECRET).toBeUndefined();
   });
+
+  it('preserves_git_config_triplets', () => {
+    const env = sanitizeEnv({
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'user.email',
+      GIT_CONFIG_VALUE_0: 'ci@example.test',
+      API_KEY: 'secret',
+    });
+    expect(env.GIT_CONFIG_COUNT).toBe('1');
+    expect(env.GIT_CONFIG_KEY_0).toBe('user.email');
+    expect(env.GIT_CONFIG_VALUE_0).toBe('ci@example.test');
+    expect(env.API_KEY).toBeUndefined();
+  });
 });

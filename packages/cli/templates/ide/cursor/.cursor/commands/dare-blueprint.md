@@ -1,5 +1,8 @@
 # Comando: /dare-blueprint
 
+> **Equivalente no terminal:** `dare blueprint --ai`
+
+
 ## Descrição
 Avança o DARE para a fase Architect: lê `DARE/DESIGN.md` aprovado e gera **somente** `DARE/BLUEPRINT.md`.
 

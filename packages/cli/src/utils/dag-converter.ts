@@ -10,7 +10,7 @@ import type {
 } from '../dag-runner/run_dag.js';
 import { DEFAULT_DAG_LIMITS } from '../dag-runner/run_dag.js';
 
-const KNOWN_RUNNERS: RunnerName[] = ['cursor', 'claude', 'antigravity'];
+const KNOWN_RUNNERS: RunnerName[] = ['cursor', 'claude', 'antigravity', 'codex'];
 
 /**
  * Parse `dare-dag.yaml` content into a Dag object.
