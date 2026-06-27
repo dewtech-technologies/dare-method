@@ -2,7 +2,7 @@
 
 # DARE v3.0 — LLM Output Validator
 # Validates LLM responses against JSON Schema definitions
-# Schemas live in app/llm/validators/*.json
+# Schemas live in lib/llm/validators/*.json
 #
 # Usage:
 #   LLM::Validators::Validator.validate!("summarize_output", response_hash)
@@ -10,7 +10,7 @@
 module LLM
   module Validators
     class Validator
-      SCHEMAS_DIR = Rails.root.join("app", "llm", "validators")
+      SCHEMAS_DIR = Rails.root.join("lib", "llm", "validators")
 
       class ValidationError < StandardError
         attr_reader :errors

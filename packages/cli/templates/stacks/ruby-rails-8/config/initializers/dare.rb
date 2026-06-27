@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "ostruct" # Ruby 3.4+ no longer autoloads OpenStruct.
+
 # DARE v3.0 — Central configuration initializer
 # All DARE runtime settings are loaded from config/dare.yml
 # Access via: Rails.configuration.dare
@@ -7,7 +9,8 @@
 dare_config_path = Rails.root.join("config", "dare.yml")
 
 if dare_config_path.exist?
-  raw = YAML.safe_load_file(dare_config_path, symbolize_names: false)
+  # aliases: true — dare.yml uses YAML anchors/aliases (disabled by default on Psych 4 / Ruby 3).
+  raw = YAML.safe_load_file(dare_config_path, symbolize_names: false, aliases: true)
   env_config = raw.dig(Rails.env) || raw["default"] || {}
 
   Rails.configuration.dare = OpenStruct.new(

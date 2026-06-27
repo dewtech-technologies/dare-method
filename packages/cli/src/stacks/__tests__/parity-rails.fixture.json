@@ -2,12 +2,12 @@
   "capturedAt": "2026-06-27",
   "source": "ruby_rails_8.generate (v3.17 — runtime skeleton, API-only path)",
   "scaffolder": "packages/cli/src/stacks/ruby-rails-8",
-  "fileCount": 69,
+  "fileCount": 70,
   "files": [
     {
       "path": ".dare/skills.yml",
-      "hash": "11ede8ee947a3447cf17452b92de30e5339e225d0a1e897e5845cebe062b59e4",
-      "bytes": 1078
+      "hash": "579f3ba99b15d8e043484c21f0a19d651adf05d0b3626f792e0dca6c497bb348",
+      "bytes": 1028
     },
     {
       "path": ".env.example",
@@ -22,7 +22,7 @@
     {
       "path": ".ruby-version",
       "hash": "5eee6c0c5c6901f5e523f0a434bca4106e1ff7136deb451f982b0bb1a7b13716",
-      "bytes": 6
+      "bytes": 7
     },
     {
       "path": "app/channels/application_cable/channel.rb",
@@ -56,73 +56,28 @@
     },
     {
       "path": "app/handlers/summarize_handler.rb",
-      "hash": "7e2aee544ef38dcc2e102fdee4fb2dd5235788c008bedfa377accea4b7c3712e",
-      "bytes": 1251
+      "hash": "4eba44328d553f34735cc607ccfc1a8e0555a09c7b93b53efd4706ab0bf65ab7",
+      "bytes": 1174
     },
     {
       "path": "app/handlers/users_handler.rb",
-      "hash": "15ec5fe3d8fc9bc2d863753b3e14bf3ec5b9e4a71338cbe22cf74f711db384bb",
-      "bytes": 1815
+      "hash": "3dd085ec9db24dcb2078d1f8f9fe0767032f34af1358fbeba747d2b0458c9d77",
+      "bytes": 1657
     },
     {
       "path": "app/jobs/application_job.rb",
       "hash": "245b68d9c8351d4e14580a164820ae459e222d423af8748cb2456414bdd4ece1",
-      "bytes": 302
-    },
-    {
-      "path": "app/llm/cache/llm_cache.rb",
-      "hash": "7a0dd1b960cda4c4e403972acbdceab9692590bc78b03d8f8656fa7a01cab201",
-      "bytes": 1154
-    },
-    {
-      "path": "app/llm/prompts/prompt_loader.rb",
-      "hash": "ad362a4cf1a0c923b62450a10d9ee2c4e05572b3bc4f0a3e5a3bf94ae132e59b",
-      "bytes": 2050
-    },
-    {
-      "path": "app/llm/prompts/summarize_v1.jinja2",
-      "hash": "6b7e9491cfed0516e3ca5d1e24b15c7d51aafa63599518ed47a3002f557a5d50",
-      "bytes": 268
-    },
-    {
-      "path": "app/llm/providers/dummy_provider.rb",
-      "hash": "142aeda419eba711b2009a794c7f5d9dd271d1e70eb1f10a03e7967f35405781",
-      "bytes": 1365
-    },
-    {
-      "path": "app/llm/providers/llm_provider.rb",
-      "hash": "a3a049ae828837840a37c257b74edab4ef8a3785f18e7d12f2a6787301cc167e",
-      "bytes": 2476
-    },
-    {
-      "path": "app/llm/providers/openai_provider.rb",
-      "hash": "2e7bc49d658a1476dafe19d30e9796857d414f310145cbb231ed71235eb6bf8e",
-      "bytes": 2147
-    },
-    {
-      "path": "app/llm/rate_limit/token_bucket.rb",
-      "hash": "611b001bcca3628280d1bb1a9ce3c68a59df03e63db689c940c63d1c0497980e",
-      "bytes": 2598
-    },
-    {
-      "path": "app/llm/validators/summarize_output_schema.json",
-      "hash": "73abafc633273fe70b08ecc85f060a890a937a9ca6c83c15d574a832f55375e7",
-      "bytes": 543
-    },
-    {
-      "path": "app/llm/validators/validator.rb",
-      "hash": "96c3bb1594796a350987f567cd862bb179295edc0d76e51b1ea4c89dfabe893b",
-      "bytes": 1528
+      "bytes": 311
     },
     {
       "path": "app/models/application_record.rb",
       "hash": "4f269f401f3a48c1c49a7afee84a2f8bf38db23fc634aca0c0734a23c7dab60c",
-      "bytes": 105
+      "bytes": 110
     },
     {
       "path": "app/models/user.rb",
-      "hash": "cb5c55b7f4fbe9f362d38701d26bd3f40f1ded0f46f371ece6c8da9b5467544c",
-      "bytes": 1705
+      "hash": "23d967ad7dc9336130269fef1da6ed17694ff1a9b46a356b5ff6602b52610fa2",
+      "bytes": 1659
     },
     {
       "path": "app/presenters/user_presenter.rb",
@@ -131,18 +86,18 @@
     },
     {
       "path": "app/repositories/document_repository.rb",
-      "hash": "51eb13256b1cacb65768f1204d69a0d8bfcb52c78ac44162e364881a7428cb28",
-      "bytes": 1770
+      "hash": "0b03a6b4c5650c8a44adfd119644d039e6017bb84c85f909c80beee7ca73188a",
+      "bytes": 1611
     },
     {
       "path": "app/repositories/user_repository.rb",
-      "hash": "9885ae814f29bf226b3c03c503d8c8863095eca56b3ff1abbe25569c22b052e4",
-      "bytes": 2179
+      "hash": "e6e3aaabf4387c2af63e6cdb9601511abbb2528c4798f7b76083d98d2443cbbe",
+      "bytes": 1980
     },
     {
       "path": "app/services/create_user_service.rb",
-      "hash": "77301151db514e7c6c8c37c6c6f4404721ebeaabeecdbb878141a24d68896526",
-      "bytes": 2354
+      "hash": "0844e02778fa1020aab84afa38e7064a672af3a53582520741d2fcda2ad6c4b8",
+      "bytes": 2149
     },
     {
       "path": "app/services/realtime_service.rb",
@@ -151,8 +106,8 @@
     },
     {
       "path": "app/services/summarize_document_service.rb",
-      "hash": "8f98c57369180b2854027afd0799952ad4d5226c2187b807e24962d93c834352",
-      "bytes": 2747
+      "hash": "413f9f614b521f4efc36429df2fa0a432dc7581ab6447e5cdcde6fc895ef86f4",
+      "bytes": 2564
     },
     {
       "path": "bin/bundle",
@@ -177,22 +132,22 @@
     {
       "path": "config.ru",
       "hash": "de2896d7b923a706efb1f5a159f15a6bded8b28d51580d21c0e9f21acb7e695e",
-      "bytes": 190
+      "bytes": 197
     },
     {
       "path": "config/application.rb",
-      "hash": "043cd65ce6322ea1ec69eaf6749ea58164996211279a221a6b6b248f09d14cda",
-      "bytes": 1179
+      "hash": "fd0aa72a26623959b3a7c6db71911f1fca7ff2069604beeb18d192e90494cd11",
+      "bytes": 1170
     },
     {
       "path": "config/boot.rb",
       "hash": "c5a85dc834a4914b9ef1665fb12c8c7a79444f6f54ec1d2e2882c9928fb44f89",
-      "bytes": 238
+      "bytes": 244
     },
     {
       "path": "config/cable.yml",
       "hash": "197319e7e32c0e3cc5f2b7de96744ea00eb99269be7273baccc84043c7cdf42e",
-      "bytes": 186
+      "bytes": 196
     },
     {
       "path": "config/dare.yml",
@@ -202,37 +157,37 @@
     {
       "path": "config/database.yml",
       "hash": "0cc6eea386dd54830894d8fd2792d228be7430298e85ccfed3c8499f9defa566",
-      "bytes": 763
+      "bytes": 786
     },
     {
       "path": "config/environment.rb",
       "hash": "f932fde7d8ac2cd8f88613c9febb6cdc7325090b84f89c5b39f1239f7535368e",
-      "bytes": 159
+      "bytes": 166
     },
     {
       "path": "config/environments/development.rb",
       "hash": "8259d8a5cd97b1a8ee340c8e558490e2cc1dcd5c0e2306cbcaeb65e15df15ebe",
-      "bytes": 893
+      "bytes": 920
     },
     {
       "path": "config/environments/production.rb",
       "hash": "28d0c0e3eb2b20ddc8f04cf84adfc2b9ac570f6dc92e1c836c978c4f0112871b",
-      "bytes": 1055
+      "bytes": 1084
     },
     {
       "path": "config/environments/test.rb",
       "hash": "fe59bd6aaea972749d8028e5f3ec38221c8fff0c27ad9936d146fc7d1fd00e82",
-      "bytes": 761
+      "bytes": 784
     },
     {
       "path": "config/initializers/dare.rb",
-      "hash": "4ec3d7267e50fddbe4d5625e9b5f9dd082c8a925c04bce0f8e40c712c6108205",
-      "bytes": 1268
+      "hash": "49a3bf876649dd61ca0045736a1cd8245ff18731e6583c9f9562cb7e75f25805",
+      "bytes": 1449
     },
     {
       "path": "config/initializers/filter_parameter_logging.rb",
       "hash": "53a4530912969b602e6ce5da6c1af9caa11ddbcc7117c4118a020da38f7bafb1",
-      "bytes": 440
+      "bytes": 449
     },
     {
       "path": "config/initializers/rack_attack.rb",
@@ -245,59 +200,109 @@
       "bytes": 412
     },
     {
+      "path": "config/initializers/zeitwerk.rb",
+      "hash": "c8aa87c663b722f103315b41de3cdfce97348a16a2f1daed259e3ae946a7aec6",
+      "bytes": 411
+    },
+    {
       "path": "config/puma.rb",
       "hash": "3466f5ef8724312499eeb05bee0d61190cae5ca5a3b46ed9f5ad73c572cdf50b",
-      "bytes": 512
+      "bytes": 530
     },
     {
       "path": "db/migrate/20260101000001_create_users.rb",
       "hash": "cf4a7eac44e07cc4903bbd7347eabc552dbea55faee23901691f38908228b0f0",
-      "bytes": 468
+      "bytes": 485
     },
     {
       "path": "db/seeds.rb",
       "hash": "283e8d61cc7af394d223796880cf220b2f475966699dcf9ea75514ff347c96e0",
-      "bytes": 373
+      "bytes": 385
     },
     {
       "path": "Gemfile",
-      "hash": "01356fdfd1547d2fa3e60ec33a08c6fa8973bdc6254d734dd8ed760dcb55877c",
-      "bytes": 1211
+      "hash": "8ff65f8f5922b8ad2ee5cef9180ae50d810b2d648d3412165dd3cfe00cb1bd74",
+      "bytes": 1170
+    },
+    {
+      "path": "lib/llm/cache/llm_cache.rb",
+      "hash": "7a0dd1b960cda4c4e403972acbdceab9692590bc78b03d8f8656fa7a01cab201",
+      "bytes": 1154
+    },
+    {
+      "path": "lib/llm/prompts/prompt_loader.rb",
+      "hash": "5472e19bcdf5bfecda463590542441e744020f44cd6850393c7d9b47b7e2f03b",
+      "bytes": 1996
+    },
+    {
+      "path": "lib/llm/prompts/summarize_v1.jinja2",
+      "hash": "6b7e9491cfed0516e3ca5d1e24b15c7d51aafa63599518ed47a3002f557a5d50",
+      "bytes": 268
+    },
+    {
+      "path": "lib/llm/providers/dummy_provider.rb",
+      "hash": "142aeda419eba711b2009a794c7f5d9dd271d1e70eb1f10a03e7967f35405781",
+      "bytes": 1365
+    },
+    {
+      "path": "lib/llm/providers/llm_provider.rb",
+      "hash": "a3a049ae828837840a37c257b74edab4ef8a3785f18e7d12f2a6787301cc167e",
+      "bytes": 2476
+    },
+    {
+      "path": "lib/llm/providers/openai_provider.rb",
+      "hash": "2e7bc49d658a1476dafe19d30e9796857d414f310145cbb231ed71235eb6bf8e",
+      "bytes": 2147
+    },
+    {
+      "path": "lib/llm/rate_limit/token_bucket.rb",
+      "hash": "611b001bcca3628280d1bb1a9ce3c68a59df03e63db689c940c63d1c0497980e",
+      "bytes": 2598
+    },
+    {
+      "path": "lib/llm/validators/summarize_output_schema.json",
+      "hash": "73abafc633273fe70b08ecc85f060a890a937a9ca6c83c15d574a832f55375e7",
+      "bytes": 543
+    },
+    {
+      "path": "lib/llm/validators/validator.rb",
+      "hash": "cfa581d574b0a8d2f14e44f07b35c3bcd0cd19f859689f10d367bdb028fc0cda",
+      "bytes": 1476
     },
     {
       "path": "lib/tasks/dare.rake",
-      "hash": "89e19ec487144cfa47f916719578398595870c58d6d00f0e4e3bf24d0c0ceefe",
-      "bytes": 6678
+      "hash": "c72041ccd3c1cc725f689fd9007a62913793fdc34dea3e8cec846dbf288fe9f7",
+      "bytes": 6519
     },
     {
       "path": "llms.txt",
-      "hash": "8b7dc261906ca41e0854031a72d5ec82e2ed480e73080df0d0dbee56dd219580",
-      "bytes": 2684
+      "hash": "678aebe47ce352e5a54744b07991aed0285d96944b660d04cc7baa919f978ef9",
+      "bytes": 2615
     },
     {
       "path": "public/404.html",
       "hash": "c20040a6f6a3b3922ce977dacbb39e5fe3fef09bd9cfe7d8c486acbe6c62bb59",
-      "bytes": 478
+      "bytes": 491
     },
     {
       "path": "public/422.html",
       "hash": "f0a007bf6539725406a60c656c2ca263747c6ad77b472d056fd67a01ce59a47e",
-      "bytes": 461
+      "bytes": 474
     },
     {
       "path": "public/500.html",
       "hash": "ec66f7e86eaaf7f4679741d9d8d406ef02eec7fe0f45d4c954fde70dbffc74ed",
-      "bytes": 395
+      "bytes": 407
     },
     {
       "path": "public/robots.txt",
       "hash": "74dd94e071b4cf5867d381082b62746cbde67bc2f129699e546ce60f8dd73cf8",
-      "bytes": 123
+      "bytes": 126
     },
     {
       "path": "Rakefile",
       "hash": "f974223fc9e387c82a4bd3e53cb979f16d4a720da5862e3fe1e6f8d834b92b34",
-      "bytes": 259
+      "bytes": 267
     },
     {
       "path": "spec/api/summarize_spec.rb",
@@ -336,13 +341,13 @@
     },
     {
       "path": "spec/services/create_user_service_spec.rb",
-      "hash": "209f50cac8dbdf8f8e26668f236f8216f2c4e11868f913e779ad2db5921cabbc",
-      "bytes": 3361
+      "hash": "511d00eda59b646bd5553bd14e929093553cf9c06653833521e81633e9dc30a1",
+      "bytes": 3239
     },
     {
       "path": "spec/services/summarize_document_service_spec.rb",
-      "hash": "07f8eb02cedb487133220a79e226576ed0bffb415a1fd598956dcbaf75224264",
-      "bytes": 4894
+      "hash": "f5103bbef66718bc33c83e9714b3be9119db9dfb66fbd64527bdc79da07328bf",
+      "bytes": 4688
     },
     {
       "path": "spec/swagger_helper.rb",

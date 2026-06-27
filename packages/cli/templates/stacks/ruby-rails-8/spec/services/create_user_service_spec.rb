@@ -4,7 +4,7 @@
 # Convention (ADR-06): unit tests with injected doubles — no database, no network
 require "rails_helper"
 
-RSpec.describe Services::CreateUserService do
+RSpec.describe CreateUserService do
   subject(:service) do
     described_class.new(
       user_repository: user_repository,
@@ -12,7 +12,7 @@ RSpec.describe Services::CreateUserService do
     )
   end
 
-  let(:user_repository) { instance_double(Repositories::UserRepository) }
+  let(:user_repository) { instance_double(UserRepository) }
   let(:event_publisher) { instance_double(RealtimeService) }
   let(:created_user)    { instance_double(User, id: 1, email: "alice@example.com", name: "Alice") }
 
@@ -61,7 +61,7 @@ RSpec.describe Services::CreateUserService do
       it "raises EmailTakenError" do
         expect {
           service.execute(email: "alice@example.com", name: "Alice")
-        }.to raise_error(Services::CreateUserService::EmailTakenError, /already registered/)
+        }.to raise_error(CreateUserService::EmailTakenError, /already registered/)
       end
 
       it "does not publish any event" do

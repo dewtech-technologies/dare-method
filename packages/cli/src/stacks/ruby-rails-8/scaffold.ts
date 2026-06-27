@@ -4,7 +4,7 @@
  * Creates a new Rails 8 project with full DARE integration:
  * - Layered Design (handlers, services, repositories, models, presenters)
  * - OpenAPI via rswag (auto-generated from specs)
- * - LLM integration (app/llm/)
+ * - LLM integration (lib/llm/)
  * - Action Cable with authorized subscriptions
  * - RFC 7807 Problem Details errors (D-006)
  * - rake dare:metrics (M-01 to M-04)
@@ -30,7 +30,7 @@ export interface RailsScaffoldOptions {
   railsVersion?: string;
   /** Skip example User resource (handlers/services/etc.) */
   skipExamples?: boolean;
-  /** Skip LLM integration layer (app/llm/) */
+  /** Skip LLM integration layer (lib/llm/) */
   skipLlm?: boolean;
   /** Skip Action Cable channels */
   skipChannels?: boolean;
@@ -192,12 +192,13 @@ export class RailsScaffold {
       'app/controllers/concerns',
       // Config
       'config/initializers',
-      // LLM
-      'app/llm/providers',
-      'app/llm/prompts',
-      'app/llm/validators',
-      'app/llm/cache',
-      'app/llm/rate_limit',
+      // LLM — lives under lib/ so Zeitwerk autoloads it under the `LLM`
+      // namespace (app/* subdirs are roots and would strip the namespace).
+      'lib/llm/providers',
+      'lib/llm/prompts',
+      'lib/llm/validators',
+      'lib/llm/cache',
+      'lib/llm/rate_limit',
       // Channels
       'app/channels/application_cable',
       // Tasks
@@ -280,6 +281,7 @@ export class RailsScaffold {
       'dare.rb',
       'rack_attack.rb',
       'rswag_api.rb',
+      'zeitwerk.rb',
     ];
 
     for (const filename of initializerFiles) {
@@ -386,15 +388,15 @@ export class RailsScaffold {
 
   private async generateLlmLayer(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
     const llmFiles: Array<[string, string]> = [
-      ['app/llm/providers/llm_provider.rb',              'app/llm/providers/llm_provider.rb'],
-      ['app/llm/providers/openai_provider.rb',           'app/llm/providers/openai_provider.rb'],
-      ['app/llm/providers/dummy_provider.rb',            'app/llm/providers/dummy_provider.rb'],
-      ['app/llm/prompts/prompt_loader.rb',               'app/llm/prompts/prompt_loader.rb'],
-      ['app/llm/prompts/summarize_v1.jinja2',            'app/llm/prompts/summarize_v1.jinja2'],
-      ['app/llm/validators/validator.rb',                'app/llm/validators/validator.rb'],
-      ['app/llm/validators/summarize_output_schema.json','app/llm/validators/summarize_output_schema.json'],
-      ['app/llm/cache/llm_cache.rb',                     'app/llm/cache/llm_cache.rb'],
-      ['app/llm/rate_limit/token_bucket.rb',             'app/llm/rate_limit/token_bucket.rb'],
+      ['lib/llm/providers/llm_provider.rb',              'lib/llm/providers/llm_provider.rb'],
+      ['lib/llm/providers/openai_provider.rb',           'lib/llm/providers/openai_provider.rb'],
+      ['lib/llm/providers/dummy_provider.rb',            'lib/llm/providers/dummy_provider.rb'],
+      ['lib/llm/prompts/prompt_loader.rb',               'lib/llm/prompts/prompt_loader.rb'],
+      ['lib/llm/prompts/summarize_v1.jinja2',            'lib/llm/prompts/summarize_v1.jinja2'],
+      ['lib/llm/validators/validator.rb',                'lib/llm/validators/validator.rb'],
+      ['lib/llm/validators/summarize_output_schema.json','lib/llm/validators/summarize_output_schema.json'],
+      ['lib/llm/cache/llm_cache.rb',                     'lib/llm/cache/llm_cache.rb'],
+      ['lib/llm/rate_limit/token_bucket.rb',             'lib/llm/rate_limit/token_bucket.rb'],
     ];
 
     for (const [templateRel, destRel] of llmFiles) {

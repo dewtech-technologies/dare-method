@@ -21,7 +21,7 @@ Stack: ruby-rails-8 | Layered Design | OpenAPI | LLM integration | Action Cable
 - app/repositories/ — Data access (interface + ActiveRecord implementation)
 - app/models/      — Domain objects (no callbacks, no fat model)
 - app/presenters/  — Serializers (Model → JSON, RFC 7807 errors)
-- app/llm/         — LLM patterns (providers, prompts, validators, cache)
+- lib/llm/         — LLM patterns (providers, prompts, validators, cache)
 - app/channels/    — Real-time (Action Cable, authorized subscriptions)
 - app/jobs/        — Background jobs (Solid Queue)
 
@@ -60,7 +60,7 @@ kamal setup && kamal deploy
 
 ## Directory Guide
 - New feature? Add: handler → service → repository → model → presenter → spec
-- New LLM feature? Add provider/prompt/validator in app/llm/
+- New LLM feature? Add provider/prompt/validator in lib/llm/
 - New real-time event? Add channel in app/channels/ + realtime_service.rb broadcast
 - New background job? Add in app/jobs/ using Solid Queue
 

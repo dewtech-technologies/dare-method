@@ -23,7 +23,7 @@ class User < ApplicationRecord
   #   after_save    :publish_event
   #
   # RIGHT (service):
-  #   Services::CreateUserService.new(...).execute(params)
+  #   CreateUserService.new(...).execute(params)
 
   # ── Simple domain helpers (pure data concerns only) ──────────────────────
   def display_name

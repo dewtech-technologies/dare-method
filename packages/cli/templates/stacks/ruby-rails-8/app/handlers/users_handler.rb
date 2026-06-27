@@ -9,7 +9,7 @@ class UsersHandler < ApplicationController
 
   # GET /api/users
   def index
-    repo  = Repositories::UserRepository.new
+    repo  = UserRepository.new
     users = repo.all_active
 
     render json: UserPresenter.collection(users), status: :ok
@@ -17,7 +17,7 @@ class UsersHandler < ApplicationController
 
   # GET /api/users/:id
   def show
-    repo = Repositories::UserRepository.new
+    repo = UserRepository.new
     user = repo.find!(params[:id])
 
     render json: UserPresenter.new(user).as_json, status: :ok
@@ -27,8 +27,8 @@ class UsersHandler < ApplicationController
   def create
     input = params.require(:user).permit(:email, :name, :password)
 
-    user = Services::CreateUserService.new(
-      user_repository: Repositories::UserRepository.new,
+    user = CreateUserService.new(
+      user_repository: UserRepository.new,
       event_publisher: RealtimeService.instance
     ).execute(
       email:    input[:email],
@@ -38,7 +38,7 @@ class UsersHandler < ApplicationController
 
     render json: UserPresenter.new(user).as_json, status: :created
 
-  rescue Services::CreateUserService::EmailTakenError => e
+  rescue CreateUserService::EmailTakenError => e
     render_problem(
       status: :conflict,
       title:  "Email Already Taken",
@@ -48,7 +48,7 @@ class UsersHandler < ApplicationController
 
   # PATCH /api/users/:id
   def update
-    repo  = Repositories::UserRepository.new
+    repo  = UserRepository.new
     user  = repo.find!(params[:id])
     input = params.require(:user).permit(:name)
 
@@ -59,7 +59,7 @@ class UsersHandler < ApplicationController
 
   # DELETE /api/users/:id
   def destroy
-    repo = Repositories::UserRepository.new
+    repo = UserRepository.new
     user = repo.find!(params[:id])
     repo.destroy!(user)
 

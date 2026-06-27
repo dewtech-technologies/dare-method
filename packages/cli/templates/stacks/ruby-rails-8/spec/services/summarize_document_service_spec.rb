@@ -4,7 +4,7 @@
 # Convention (ADR-06): unit tests with injected doubles — no database, no network
 require "rails_helper"
 
-RSpec.describe Services::SummarizeDocumentService do
+RSpec.describe SummarizeDocumentService do
   subject(:service) do
     described_class.new(
       document_repository: document_repository,
@@ -13,7 +13,7 @@ RSpec.describe Services::SummarizeDocumentService do
     )
   end
 
-  let(:document_repository) { instance_double(Repositories::DocumentRepository) }
+  let(:document_repository) { instance_double(DocumentRepository) }
   let(:llm_provider)        { instance_double(LLM::Providers::LLMProvider) }
   let(:event_publisher)     { instance_double(RealtimeService) }
 
@@ -42,7 +42,7 @@ RSpec.describe Services::SummarizeDocumentService do
       it "returns a Result with summary and document_id" do
         result = service.execute(document_id: "doc-123", user_id: 42)
 
-        expect(result).to be_a(Services::SummarizeDocumentService::Result)
+        expect(result).to be_a(SummarizeDocumentService::Result)
         expect(result.summary).to eq(summary_text)
         expect(result.document_id).to eq("doc-123")
       end
@@ -85,7 +85,7 @@ RSpec.describe Services::SummarizeDocumentService do
       it "raises DocumentNotFoundError" do
         expect {
           service.execute(document_id: "missing-id", user_id: 42)
-        }.to raise_error(Services::SummarizeDocumentService::DocumentNotFoundError, /missing-id/)
+        }.to raise_error(SummarizeDocumentService::DocumentNotFoundError, /missing-id/)
       end
 
       it "does not call the LLM provider" do
@@ -110,7 +110,7 @@ RSpec.describe Services::SummarizeDocumentService do
       it "raises SummarizationError" do
         expect {
           service.execute(document_id: "doc-123", user_id: 42)
-        }.to raise_error(Services::SummarizeDocumentService::SummarizationError, /empty summary/)
+        }.to raise_error(SummarizeDocumentService::SummarizationError, /empty summary/)
       end
 
       it "does not persist any summary" do
@@ -135,7 +135,7 @@ RSpec.describe Services::SummarizeDocumentService do
       it "raises SummarizationError" do
         expect {
           service.execute(document_id: "doc-123", user_id: 42)
-        }.to raise_error(Services::SummarizeDocumentService::SummarizationError)
+        }.to raise_error(SummarizeDocumentService::SummarizationError)
       end
     end
   end

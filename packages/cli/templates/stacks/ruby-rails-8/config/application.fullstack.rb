@@ -21,6 +21,6 @@ module <%= app_module %>
     config.autoload_paths << root.join("app/services")
     config.autoload_paths << root.join("app/repositories")
     config.autoload_paths << root.join("app/presenters")
-    config.eager_load_paths << root.join("app/llm")
+    config.autoload_lib(ignore: %w[tasks])
   end
 end
