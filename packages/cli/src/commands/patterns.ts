@@ -1,25 +1,14 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import ora from 'ora';
-import fs from 'fs-extra';
 import path from 'node:path';
-import { detectPatterns, detectPatternsDetailed } from '../utils/pattern-detector.js';
-import { renderPatternsSkeleton } from '../utils/pattern-facts.js';
-import type { DnaFacts } from '../utils/dna-detector.js';
 import {
   assertRelativeSafe,
   resolveSafePath,
   PathEscapeError,
 } from '../utils/path-safety.js';
-import { ensureDareSkills } from '../utils/project-generator.js';
-import { createGraph, loadGraphConfig } from '../graphrag/index.js';
-import { ingestPatterns } from '../graphrag/pattern-ingest.js';
 import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
 import type { AiCommandOptions } from '../ai/types.js';
-import { maybeRunAiEnrichment } from '../ai/pipeline.js';
-
-const DIR_ESCAPE_MSG =
-  "Error: --dir must stay within the project (no '..' or absolute escape)";
+import { runPatterns, DIR_ESCAPE_MSG } from '../core/commands/patterns.js';
 
 interface PatternsOptions extends AiCommandOptions {
   dir?: string;
@@ -40,54 +29,6 @@ function resolveTargetDir(opts: PatternsOptions): string {
   }
 }
 
-function parseModulesList(raw?: string): string[] | undefined {
-  if (!raw) return undefined;
-  const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
-  for (const part of parts) {
-    if (part.includes('..') || path.isAbsolute(part)) {
-      throw new PathEscapeError(DIR_ESCAPE_MSG);
-    }
-  }
-  return parts;
-}
-
-function formatPatternsReport(
-  facts: Awaited<ReturnType<typeof detectPatterns>>,
-): string {
-  const byKind = new Map<string, number>();
-  for (const p of facts.patterns) {
-    byKind.set(p.kind, (byKind.get(p.kind) ?? 0) + p.frequency);
-  }
-  const lines: string[] = [chalk.yellow('Patterns detected:\n')];
-  if (byKind.size === 0) {
-    lines.push('  (none above frequency threshold)');
-  } else {
-    for (const [kind, freq] of [...byKind.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-      lines.push(`  ${chalk.bold(kind)}: ${freq} occurrence(s)`);
-    }
-  }
-  lines.push(`  ${chalk.gray(`inventory: ${facts.fileInventorySource}`)}`);
-  return lines.join('\n');
-}
-
-async function ingestPatternsBestEffort(
-  targetDir: string,
-  facts: Awaited<ReturnType<typeof detectPatterns>>,
-): Promise<void> {
-  try {
-    const config = await loadGraphConfig({ cwd: targetDir });
-    const graph = await createGraph(config, { cwd: targetDir });
-    try {
-      const { nodes, edges } = ingestPatterns(graph, facts, targetDir);
-      console.log(chalk.dim(`  graph: +${nodes} pattern node(s), +${edges} edge(s)`));
-    } finally {
-      await Promise.resolve(graph.close());
-    }
-  } catch {
-    // best-effort: grafo ausente/erro não falha dare patterns
-  }
-}
-
 export const patternsCommand = new Command('patterns')
   .description(
     'Discover recurring codebase patterns into DARE/PATTERNS.md (deterministic, no LLM)',
@@ -101,90 +42,41 @@ export const patternsCommand = new Command('patterns')
 addAiOptions(patternsCommand);
 
 patternsCommand.action(async (opts: PatternsOptions) => {
-    let targetDir: string;
-    try {
-      targetDir = resolveTargetDir(opts);
-      parseModulesList(opts.modules);
-    } catch {
-      console.error(DIR_ESCAPE_MSG);
-      process.exit(1);
-    }
+  let targetDir: string;
+  try {
+    targetDir = resolveTargetDir(opts);
+  } catch {
+    console.error(DIR_ESCAPE_MSG);
+    process.exit(1);
+  }
 
-    const modulesOnly = parseModulesList(opts.modules);
+  console.log(chalk.blue.bold('\n🔍 DARE Framework - Pattern Discovery\n'));
+  console.log(chalk.gray(`  Scanning: ${targetDir}\n`));
 
-    console.log(chalk.blue.bold('\n🔍 DARE Framework - Pattern Discovery\n'));
-    console.log(chalk.gray(`  Scanning: ${targetDir}\n`));
-
-    if (!opts.check) await ensureDareSkills(targetDir);
-
-    const dnaPath = path.join(targetDir, 'DARE', 'dna-facts.json');
-    const dna: DnaFacts | null = (await fs.pathExists(dnaPath))
-      ? ((await fs.readJson(dnaPath)) as DnaFacts)
-      : null;
-
-    const spinner = ora('Detecting patterns...').start();
-    const detailed = await detectPatternsDetailed(targetDir, dna, {
-      modulesOnly,
-      ...(opts.ast ? { ast: true } : {}),
-    });
-    const facts = detailed.facts;
-    spinner.stop();
-
-    console.log(formatPatternsReport(facts));
-    if (detailed.extraction) {
-      const ex = detailed.extraction;
-      console.log(
-        chalk.gray(
-          `  AST: ${ex.astAvailable ? 'on' : 'off (regex fallback)'} — ` +
-            `${ex.astPatternCount} ast patterns, ${ex.regexPatternCount} regex patterns`,
-        ),
-      );
-    }
-    console.log('');
-
-    if (opts.check) {
-      console.log(chalk.cyan('--check: detection only, no files written.'));
-      return;
-    }
-
-    const dareDir = path.join(targetDir, 'DARE');
-    const writeSpinner = ora('Writing PATTERNS.md...').start();
-    try {
-      await fs.ensureDir(dareDir);
-      await fs.writeJSON(
-        path.join(dareDir, 'patterns-facts.json'),
-        detailed.extraction ? { ...facts, extraction: detailed.extraction } : facts,
-        { spaces: 2 },
-      );
-      await fs.writeFile(path.join(dareDir, 'PATTERNS.md'), renderPatternsSkeleton(facts));
-      writeSpinner.succeed(chalk.green('PATTERNS.md generated.'));
-
-      const aiOpts = aiOptionsFromFlags(opts);
-      await maybeRunAiEnrichment({
-        enabled: aiOpts.enabled,
-        provider: aiOpts.provider,
-        json: aiOpts.json,
-        command: 'patterns',
-        cwd: targetDir,
-        facts,
-      });
-    } catch (err) {
-      writeSpinner.fail(chalk.red('Failed to write pattern artifacts'));
-      console.error(err);
-      process.exit(1);
-    }
-
-    await ingestPatternsBestEffort(targetDir, facts);
-
-    if (opts.inject) {
-      console.log(
-        chalk.cyan(
-          '  --inject: DARE/PATTERNS.md registered as steering base (loader picks it up; user .dare/steering untouched).',
-        ),
-      );
-    }
-
-    console.log(chalk.cyan('\n📋 Generated:\n'));
-    console.log(`  ${chalk.gray('·')} DARE/PATTERNS.md`);
-    console.log(`  ${chalk.gray('·')} DARE/patterns-facts.json\n`);
+  const aiOpts = aiOptionsFromFlags(opts);
+  const result = await runPatterns({
+    cwd: targetDir,
+    ai: aiOpts.enabled,
+    provider: aiOpts.provider,
+    input: {
+      check: Boolean(opts.check),
+      modules: opts.modules,
+      inject: Boolean(opts.inject),
+      ast: Boolean(opts.ast),
+    },
   });
+
+  if (result.summary && result.summary.length > 0) {
+    console.log(result.summary.join('\n'));
+    console.log('');
+  }
+
+  if (aiOpts.enabled && aiOpts.json && result.enrichment) {
+    console.log(JSON.stringify(result.enrichment, null, 2));
+  }
+
+  if (!result.ok) {
+    console.error(result.error ?? 'Failed to run patterns command');
+    process.exit(1);
+  }
+});

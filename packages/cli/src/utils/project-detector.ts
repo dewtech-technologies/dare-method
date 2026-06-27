@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 
 export interface DetectedProject {
-  structure: 'monorepo' | 'backend' | 'frontend' | 'mcp-server' | 'unknown';
+  structure: 'monorepo' | 'backend' | 'frontend' | 'mcp-server' | 'mvc' | 'unknown';
   backend?: string;
   frontend?: string;
   mcpLanguage?: 'node-ts' | 'python';
@@ -192,7 +192,29 @@ export async function detectProject(dir: string): Promise<DetectedProject> {
     const composer = await fs.readJSON(composerPath).catch(() => ({}));
     const require = composer.require ?? {};
     if (require['laravel/framework']) {
-      evidence.push('laravel/framework found in composer.json');
+      // Laravel is a full MVC framework — controllers + Blade views + Eloquent
+      // models — so it spans backend and frontend. Classify as 'mvc', not 'backend'.
+      structure = 'mvc';
+      evidence.push('laravel/framework found in composer.json → MVC project');
+    }
+  }
+
+  // ── Check Ruby / Rails ────────────────────────────────────────────────────
+  const gemfilePath = path.join(dir, 'Gemfile');
+  if (await fs.pathExists(gemfilePath)) {
+    const gemfile = await fs.readFile(gemfilePath, 'utf-8').catch(() => '');
+    evidence.push('Gemfile found');
+    if (/gem\s+['"]rails['"]/.test(gemfile)) {
+      // Rails is a full MVC framework — controllers, ERB/Hotwire views, models —
+      // covering backend and frontend in one stack. Classify as 'mvc'.
+      structure = 'mvc';
+      backend = 'ruby-rails-8';
+      confidence = 'high';
+      evidence.push("gem 'rails' found in Gemfile → Rails MVC project");
+    } else if (structure === 'unknown') {
+      structure = 'backend';
+      backend = 'ruby-rails-8';
+      confidence = 'medium';
     }
   }
 

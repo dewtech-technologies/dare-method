@@ -43,7 +43,7 @@ import { assertWithinCwd } from '../commands/init-validation.js';
 
 export interface ProjectConfig {
   name: string;
-  structure: 'monorepo' | 'backend' | 'frontend' | 'mcp-server';
+  structure: 'monorepo' | 'backend' | 'frontend' | 'mcp-server' | 'mvc';
   backend?: string;
   frontend?: string;
   mcpTransport?: 'stdio' | 'sse' | 'http-stream';
@@ -1004,7 +1004,7 @@ async function assertOutputDirIsEmpty(config: ProjectConfig): Promise<void> {
 
   if (config.structure === 'mcp-server' || config.structure === 'frontend') {
     dirsToCheck.push(config.outputDir);
-  } else if (config.structure === 'backend') {
+  } else if (config.structure === 'backend' || config.structure === 'mvc') {
     dirsToCheck.push(config.outputDir);
   } else if (config.structure === 'monorepo') {
     if (config.backend) dirsToCheck.push(path.join(config.outputDir, 'backend'));
@@ -1066,8 +1066,8 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
     return layout === 'single' ? type : `${prefix}-${type}`;
   };
 
-  // Backend / monorepo backend
-  if ((structure === 'backend' || structure === 'monorepo') && backend) {
+  // Backend / monorepo backend / MVC (Rails, Laravel — single-dir scaffold)
+  if ((structure === 'backend' || structure === 'monorepo' || structure === 'mvc') && backend) {
     if (!BACKEND_STACKS.has(backend as BackendStack)) {
       throw new Error(`Unsupported backend stack: ${backend}`);
     }
@@ -1083,6 +1083,9 @@ async function runStackBootstrap(config: ProjectConfig): Promise<void> {
       projectName: rustCrateName('server'),
       toolchain,
       isMonorepo: structure === 'monorepo',
+      // MVC structure → full server-rendered app (Rails views). Honored by
+      // stacks that support both shapes; ignored by the rest.
+      fullstack: structure === 'mvc',
     });
   }
 

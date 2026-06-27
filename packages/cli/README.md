@@ -166,6 +166,8 @@ Pick **one** of the two paths per stack:
 
 > **v3.8.1–3.8.2 (manutenção):** `dare update` passa a entregar os skills/comandos/config das v3.4→v3.8 a projetos existentes (backfill do `UPDATE-MANIFEST`, 3.8.1). O CI ganha um **gate de cobertura de docs** + **redeploy automático da documentação** a cada release (3.8.2).
 
+> **v3.16.0:** **Estrutura MVC (Rails full-stack)** — nova estrutura de projeto **`mvc`** no `dare init`/`discover` (escolhe Rails 8 ou Laravel). MVC + Rails gera um **full application** (views + Propshaft + Hotwire, `ActionController::Base`); `ruby-rails-8` em "Backend only" segue **API-only** (`ActionController::API`). `dare discover` detecta Rails via `Gemfile` e classifica Rails/Laravel como `mvc`.
+
 > **v3.14.0:** **Brownfield AST** — `dare reverse --deep --ast` (tree-sitter WASM opt-in + merge superset com regex); `reverse-facts.json.extraction` metadata.
 
 > **v3.13.0:** **CLI-only cleanup** — legado MkDocs/landing removido; monorepo enxuto; doc canônica em `docs-site/`; testes `cli-only-invariants`.
@@ -247,9 +249,10 @@ dare init my-project
 ```
 
 Prompts:
-- **Structure:** Monorepo · Backend only · Frontend only · **MCP Server** ← new
+- **Structure:** Monorepo · Backend only · Frontend only · **MVC (Laravel/Rails)** ← new · MCP Server
+- **MVC framework** *(Structure = MVC)*: Ruby/Rails 8 (full application) · PHP/Laravel — full-stack server-rendered MVC
 - **MCP Server:** language (TypeScript / Python), transport (stdio / SSE / HTTP Stream), capabilities (Tools / Resources / Prompts)
-- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
+- **Backend stack:** Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib *(`ruby-rails-8` aqui = API-only)*
 - **Frontend stack:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR-only (Rust WASM)
 - **Cargo workspace layout** *(Monorepo + Rust/Axum + Leptos only)*: Single-crate (`crates/server` + `crates/web`) · Multi-crate (`{prefix}-core` + `{prefix}-server` + `{prefix}-web` + `{prefix}-cli`) — prefix suggested from project initials (e.g. `ai-runtime-securyti-rasp` → `arsr`)
 - **IDE / Agent:** Claude Code · Cursor · Antigravity · Hybrid
@@ -284,9 +287,9 @@ dare discover --check
 dare discover --dir ./path/to/project
 ```
 
-Auto-detects from: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `composer.json`.
+Auto-detects from: `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, `composer.json`, `Gemfile`.
 
-Recognizes: NestJS · React · Vue · Nuxt · Rust/Axum · FastAPI · Laravel · **MCP Server** (`@modelcontextprotocol/sdk`, `FastMCP`).
+Recognizes: NestJS · React · Vue · Nuxt · Rust/Axum · FastAPI · **Rails** (`Gemfile`) · Laravel · **MCP Server** (`@modelcontextprotocol/sdk`, `FastMCP`). Rails e Laravel são classificados como estrutura **`mvc`**.
 
 ---
 
@@ -747,7 +750,8 @@ npm run inspect
 
 | Type | Options |
 |------|---------|
-| **Backend** | Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib |
+| **Backend (API-only)** | Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib |
+| **MVC (full-stack)** | Ruby on Rails 8 (full application) · PHP/Laravel |
 | **Frontend** | React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM) |
 | **MCP Server** | TypeScript/Node.js · Python — stdio / SSE / HTTP Stream |
 | **IDE / Agent** | Claude Code · Cursor · Antigravity · Hybrid |

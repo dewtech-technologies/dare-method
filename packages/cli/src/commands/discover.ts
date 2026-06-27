@@ -64,6 +64,7 @@ export const discoverCommand = new Command('discover')
       { name: '🏗️  Monorepo (backend + frontend)', value: 'monorepo' },
       { name: '⚙️  Backend only', value: 'backend' },
       { name: '🎨 Frontend only', value: 'frontend' },
+      { name: '🏛️  MVC (Laravel ou Rails — full-stack)', value: 'mvc' },
       { name: '🔌 MCP Server', value: 'mcp-server' },
       { name: '❓ Unknown / Other', value: 'unknown' },
     ];
@@ -122,6 +123,19 @@ export const discoverCommand = new Command('discover')
           { name: '💬 Prompts   (prompt templates)', value: 'prompts', checked: false },
         ],
         validate: (selected: string[]) => selected.length > 0 || 'Select at least one capability',
+      },
+
+      // ── MVC framework (full-stack: model + view + controller) ───────────
+      {
+        type: 'list',
+        name: 'backend',
+        message: 'MVC framework:',
+        when: (ans) => ans.structure === 'mvc',
+        default: detected.backend ?? 'ruby-rails-8',
+        choices: [
+          { name: '💎 Ruby / Rails 8', value: 'ruby-rails-8' },
+          { name: '🐘 PHP / Laravel', value: 'php-laravel' },
+        ],
       },
 
       // ── Backend stack ───────────────────────────────────────────────────

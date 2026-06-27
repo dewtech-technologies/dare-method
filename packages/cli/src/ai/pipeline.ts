@@ -46,6 +46,8 @@ export async function runCommandEnrichment(args: {
   provider?: string;
   deep?: boolean;
   extra?: string;
+  timeoutSeconds?: number;
+  signal?: AbortSignal;
 }): Promise<EnrichmentResult> {
   const config = await loadAiConfig(args.cwd);
   const { name, provider } = resolveProvider(config, args.provider);
@@ -59,6 +61,8 @@ export async function runCommandEnrichment(args: {
     prompt,
     cwd: args.cwd,
     schema,
+    timeoutSeconds: args.timeoutSeconds,
+    signal: args.signal,
   });
 
   if (!result.ok || result.data === undefined) {

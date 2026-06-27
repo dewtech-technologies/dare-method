@@ -93,6 +93,13 @@ export interface ScaffoldOpts {
   readonly mcp?: { transport: McpTransport };
   /** True when init detected a pre-existing monorepo (Cargo workspace etc.). */
   readonly isMonorepo: boolean;
+  /**
+   * True when the project structure is 'mvc' — the stack should scaffold a
+   * full server-rendered MVC app (views + asset pipeline) instead of API-only.
+   * Honored by stacks that support both shapes (e.g. ruby-rails-8). Stacks that
+   * are inherently full-stack (php-laravel) or API-only ignore it. Default false.
+   */
+  readonly fullstack?: boolean;
 }
 
 export interface ScaffoldResult {

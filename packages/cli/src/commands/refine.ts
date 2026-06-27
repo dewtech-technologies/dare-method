@@ -1,36 +1,16 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import fs from 'fs-extra';
-import path from 'path';
-import {
-  analyzeTaskComplexity,
-  proposeSplit,
-  type ComplexityThresholds,
-} from '../utils/complexity-analyzer.js';
-import { parseFilesFromSpec, findSpecFile } from '../utils/ReviewRunner.js';
-import { readProjectConfig } from '../utils/UpdateDetector.js';
-import { convertDagToYaml, convertYamlToDag } from '../utils/dag-converter.js';
-import {
-  DEFAULT_STATE_PATH,
-  loadAndApplyState,
-  saveState,
-} from '../dag-runner/state-store.js';
-import {
-  CycleError,
-  MaxDepthError,
-  spliceSubDag,
-  type SubTask,
-} from '../dag-runner/sub-dag.js';
+import type { RefineRunFacts } from '../core/commands/refine.js';
+import { runRefine as runRefineCore } from '../core/commands/refine.js';
 import type {
   ComplexityReport,
   RefineVerdict,
   SplitProposal,
 } from '../types/Refine.types.js';
-import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import { addAiOptions } from '../ai/command-options.js';
 import type { AiCommandOptions } from '../ai/types.js';
-import { maybeRunAiEnrichment } from '../ai/pipeline.js';
-import { splitProposalFromRefineSemantic } from '../ai/refine-bridge.js';
-import { RefineSemanticSchema } from '../ai/schemas.js';
+
+export { buildSplitProposal } from '../core/commands/refine.js';
 
 /**
  * `dare refine <task-id>` — measures complexity of a task and (optionally)
@@ -72,187 +52,59 @@ refineCommand.action(
     } & AiCommandOptions,
   ) => {
       const projectRoot = process.cwd();
-      if (options.apply && !options.split) {
-        console.error(chalk.red('❌ --apply exige --split.'));
-        process.exit(1);
-      }
+      const result = await runRefineCore({
+        cwd: projectRoot,
+        ai: options.ai,
+        provider: options.provider,
+        input: {
+          taskId,
+          split: options.split,
+          apply: options.apply,
+          strict: options.strict,
+          format: options.format,
+          fromAgent: options.fromAgent,
+        },
+      });
 
-      // Read optional thresholds from dare.config.json (#refine.thresholds).
-      const thresholds = await readThresholds(projectRoot);
-
-      let report: ComplexityReport | null = null;
-      try {
-        report = await analyzeTaskComplexity(taskId, projectRoot, { thresholds });
-      } catch (err) {
-        console.error(
-          chalk.red(`❌ ${err instanceof Error ? err.message : String(err)}`),
-        );
-        process.exit(1);
-      }
-      if (!report) {
-        console.error(chalk.red(`❌ Não foi possível analisar a task ${taskId}.`));
-        process.exit(1);
-      }
-
-      let proposal: SplitProposal | undefined;
-      if (options.split) {
-        proposal = await buildSplitProposal(taskId, projectRoot);
-      }
-
-      const aiOpts = aiOptionsFromFlags(options);
-      if (options.split && aiOpts.enabled) {
-        const specPath = await findSpecFile(projectRoot, taskId);
-        const spec = specPath ? await fs.readFile(specPath, 'utf-8') : '';
-        const enrichment = await maybeRunAiEnrichment({
-          enabled: true,
-          provider: aiOpts.provider,
-          json: aiOpts.json,
-          command: 'refine',
-          cwd: projectRoot,
-          facts: { taskId, report, proposal, spec },
-        });
-        if (enrichment?.data) {
-          proposal = splitProposalFromRefineSemantic(
-            taskId,
-            RefineSemanticSchema.parse(enrichment.data),
+      const facts = asRefineRunFacts(result.facts);
+      if (facts) {
+        if (options.format === 'json') {
+          process.stdout.write(
+            JSON.stringify(
+              {
+                report: facts.report,
+                proposal: facts.proposal,
+                agentVerdict: facts.agentVerdict,
+              },
+              null,
+              2,
+            ) + '\n',
           );
+        } else {
+          printHuman(facts.report, facts.proposal, facts.agentVerdict);
         }
       }
 
-      let agentVerdict: RefineVerdict | undefined;
-      if (options.fromAgent) {
-        agentVerdict = await loadAgentVerdict(options.fromAgent);
+      if (result.error) {
+        console.error(chalk.red(`❌ ${result.error}`));
+        process.exit(1);
       }
 
-      if (options.format === 'json') {
-        process.stdout.write(
-          JSON.stringify({ report, proposal, agentVerdict }, null, 2) + '\n',
-        );
-      } else {
-        printHuman(report, proposal, agentVerdict);
+      if (!facts) {
+        console.error(chalk.red('❌ Refine core returned invalid facts.'));
+        process.exit(1);
       }
 
-      if (options.apply && proposal) {
-        try {
-          await applySplitToDag(projectRoot, taskId, proposal);
-        } catch (err) {
-          if (err instanceof MaxDepthError || err instanceof CycleError) {
-            console.error(chalk.red(`❌ ${err.message}`));
-          } else {
-            console.error(chalk.red(`❌ ${err instanceof Error ? err.message : String(err)}`));
-          }
-          process.exit(1);
-        }
-      }
-
-      const isHigh = report.level === 'HIGH' || report.level === 'CRITICAL';
-      if (options.strict && isHigh) process.exit(2);
+      if (facts.strictFailure) process.exit(2);
       process.exit(0);
     },
   );
 
-async function readThresholds(
-  projectRoot: string,
-): Promise<ComplexityThresholds | undefined> {
-  try {
-    const cfg = (await readProjectConfig(projectRoot)) as Record<string, unknown>;
-    const refine = cfg.refine as { thresholds?: ComplexityThresholds } | undefined;
-    return refine?.thresholds;
-  } catch {
-    return undefined;
-  }
-}
-
-export async function buildSplitProposal(
-  taskId: string,
-  projectRoot: string,
-): Promise<SplitProposal> {
-  const specPath = await findSpecFile(projectRoot, taskId);
-  if (!specPath) {
-    return { originalTaskId: taskId, subtasks: [], notes: 'Spec não encontrada.' };
-  }
-  const md = await fs.readFile(specPath, 'utf-8');
-  const files = parseFilesFromSpec(md);
-  return proposeSplit(taskId, files);
-}
-
-async function loadAgentVerdict(filePath: string): Promise<RefineVerdict> {
-  if (!(await fs.pathExists(filePath))) {
-    throw new Error(`--from-agent file not found: ${filePath}`);
-  }
-  const data = await fs.readJSON(filePath);
-  if (typeof data?.manageable !== 'boolean' || !Array.isArray(data?.reasons)) {
-    throw new Error(
-      `Invalid refine verdict in ${filePath}: needs { manageable: boolean, reasons: string[] }.`,
-    );
-  }
-  return data as RefineVerdict;
-}
-
-async function applySplitToDag(
-  projectRoot: string,
-  taskId: string,
-  proposal: SplitProposal,
-): Promise<void> {
-  const dagPath = path.join(projectRoot, 'DARE', 'dare-dag.yaml');
-  if (!(await fs.pathExists(dagPath))) {
-    throw new Error(`DAG não encontrado em ${dagPath}.`);
-  }
-
-  const dag = convertYamlToDag(await fs.readFile(dagPath, 'utf-8'));
-  const statePath = path.join(projectRoot, DEFAULT_STATE_PATH);
-  await loadAndApplyState(dag, statePath);
-
-  const subTasks = proposalToSubTasks(dag, taskId, proposal);
-  const maxDepth = await readLoopMaxDepth(projectRoot);
-  const result = spliceSubDag(dag, taskId, subTasks, maxDepth);
-  if (result.inserted.length === 0) {
-    console.log(chalk.gray(`  ↺ Split já aplicado para ${taskId}; sem mudanças.`));
-    return;
-  }
-
-  await fs.writeFile(dagPath, convertDagToYaml(result.dag));
-  await saveState(result.dag, statePath);
-  console.log(chalk.green(`  ✅ Sub-DAG aplicado em ${taskId} (${result.inserted.length} sub-task(s)).`));
-}
-
-function proposalToSubTasks(
-  dag: { tasks: Array<{ id: string; depends_on: string[]; spec_file?: string }> },
-  parentId: string,
-  proposal: SplitProposal,
-): ReadonlyArray<SubTask> {
-  const parent = dag.tasks.find((task) => task.id === parentId);
-  if (!parent) throw new Error(`Task "${parentId}" não encontrada no DAG.`);
-  const baseSpecDir = resolveSpecDir(parent.spec_file);
-
-  return proposal.subtasks.map((subtask, idx) => ({
-    id: subtask.id,
-    parentId,
-    dependsOn: idx === 0 ? [...parent.depends_on] : [proposal.subtasks[idx - 1].id],
-    specPath: path.posix.join(baseSpecDir, `${subtask.id}.md`),
-  }));
-}
-
-function resolveSpecDir(parentSpecFile: string | undefined): string {
-  if (!parentSpecFile) return 'DARE/EXECUTION';
-  const normalized = parentSpecFile.replace(/\\/g, '/');
-  const dir = path.posix.dirname(normalized);
-  return dir === '.' ? 'DARE/EXECUTION' : dir;
-}
-
-async function readLoopMaxDepth(projectRoot: string): Promise<number> {
-  let rawConfig: unknown = {};
-  try {
-    rawConfig = await readProjectConfig(projectRoot);
-  } catch {
-    rawConfig = {};
-  }
-  const value = (rawConfig as { verification?: { loop?: { maxDepth?: unknown } } })
-    .verification?.loop?.maxDepth;
-  if (typeof value === 'number' && Number.isInteger(value)) {
-    return value;
-  }
-  return 2;
+function asRefineRunFacts(value: unknown): RefineRunFacts | null {
+  if (!value || typeof value !== 'object') return null;
+  const report = (value as { report?: unknown }).report;
+  if (!report || typeof report !== 'object') return null;
+  return value as RefineRunFacts;
 }
 
 function printHuman(

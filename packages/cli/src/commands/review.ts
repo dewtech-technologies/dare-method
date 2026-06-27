@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import path from 'path';
-import { runReview } from '../utils/ReviewRunner.js';
+import { runReview as runReviewCore } from '../core/commands/review.js';
 import type { ReviewReport, Violation } from '../types/Review.types.js';
 import {
   applyCiGateOutput,
@@ -10,10 +10,8 @@ import {
   resolveVerdictFromCounts,
   violationsToFindings,
 } from '../reporters/ci-gate.js';
-import { addAiOptions, aiOptionsFromFlags } from '../ai/command-options.js';
+import { addAiOptions } from '../ai/command-options.js';
 import type { AiCommandOptions } from '../ai/types.js';
-import { maybeRunAiEnrichment } from '../ai/pipeline.js';
-import fs from 'fs-extra';
 
 /**
  * `dare review <task-id>` — runs the static analyzer (and optionally a
@@ -72,40 +70,28 @@ reviewCommand.action(
         process.exit(1);
       }
 
-      let fromAgent = options.fromAgent;
-      const aiOpts = aiOptionsFromFlags(options);
-      if (aiOpts.enabled && !fromAgent) {
-        const specPath = path.join(projectRoot, 'DARE', 'EXECUTION', `${taskId}.md`);
-        const spec = (await fs.pathExists(specPath))
-          ? await fs.readFile(specPath, 'utf-8')
-          : '';
-        const enrichment = await maybeRunAiEnrichment({
-          enabled: true,
-          provider: aiOpts.provider,
-          json: aiOpts.json,
-          command: 'review',
-          cwd: projectRoot,
-          facts: { taskId, spec },
-        });
-        if (enrichment?.artifactPath) fromAgent = enrichment.artifactPath;
-      }
-
-      let report: ReviewReport;
-      try {
-        report = await runReview(taskId, {
-          projectRoot,
-          files: options.files,
-          fromAgent,
+      const result = await runReviewCore({
+        cwd: projectRoot,
+        ai: options.ai,
+        provider: options.provider,
+        input: {
+          taskId,
           strict: options.strict,
           errorsOnly: options.errorsOnly,
-          format: format === 'github' ? 'human' : format,
-        });
-      } catch (err) {
+          files: options.files,
+          fromAgent: options.fromAgent,
+          format,
+          failOn,
+          comment: options.comment,
+        },
+      });
+      if (result.error) {
         console.error(
-          chalk.red(`❌ ${err instanceof Error ? err.message : String(err)}`),
+          chalk.red(`❌ ${result.error}`),
         );
         process.exit(1);
       }
+      const report = result.facts as ReviewReport;
 
       const allViolations = report.reports.flatMap((r) => r.violations);
       const findings = violationsToFindings(allViolations, projectRoot);
