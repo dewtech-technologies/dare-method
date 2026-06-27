@@ -26,7 +26,7 @@ Stack: ruby-rails-8 | Full-stack MVC | Layered Design | Hotwire | LLM integratio
 - app/repositories/ — Data access (interface + ActiveRecord implementation)
 - app/models/      — Domain objects (no callbacks, no fat model)
 - app/presenters/  — Serializers (Model → JSON for API responses)
-- app/llm/         — LLM patterns (providers, prompts, validators, cache)
+- lib/llm/         — LLM patterns (providers, prompts, validators, cache)
 - app/channels/    — Real-time (Action Cable, authorized subscriptions)
 - app/jobs/        — Background jobs (Solid Queue)
 
@@ -64,7 +64,7 @@ kamal setup && kamal deploy
 ## Directory Guide
 - New page? Add: route → controller#action → view (+ service/repository for logic)
 - New JSON endpoint? Add: handler → service → repository → presenter → spec
-- New LLM feature? Add provider/prompt/validator in app/llm/
+- New LLM feature? Add provider/prompt/validator in lib/llm/
 - New real-time event? Add channel in app/channels/ + realtime_service.rb broadcast
 - New background job? Add in app/jobs/ using Solid Queue
 

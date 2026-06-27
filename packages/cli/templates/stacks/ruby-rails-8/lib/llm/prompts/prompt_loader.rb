@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # DARE v3.0 — PromptLoader
-# Loads .txt or .jinja2 prompt templates from app/llm/prompts/
+# Loads .txt or .jinja2 prompt templates from lib/llm/prompts/
 # Performs simple variable interpolation
 #
 # Usage:
@@ -11,7 +11,7 @@
 module LLM
   module Prompts
     class PromptLoader
-      PROMPTS_DIR = Rails.root.join("app", "llm", "prompts")
+      PROMPTS_DIR = Rails.root.join("lib", "llm", "prompts")
 
       # Load a prompt template and interpolate variables.
       #

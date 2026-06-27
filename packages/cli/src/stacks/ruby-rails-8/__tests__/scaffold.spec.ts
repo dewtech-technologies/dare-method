@@ -73,9 +73,9 @@ describe('RailsScaffold — default generation', () => {
     'app/repositories',
     'app/models',
     'app/presenters',
-    'app/llm/providers',
-    'app/llm/prompts',
-    'app/llm/validators',
+    'lib/llm/providers',
+    'lib/llm/prompts',
+    'lib/llm/validators',
     'app/channels/application_cable',
     'lib/tasks',
     'spec/services',
@@ -148,8 +148,8 @@ describe('RailsScaffold — default generation', () => {
 
   // ── LLM layer ─────────────────────────────────────────────────────────────────
   it('generates LLM provider interface', async () => {
-    expect(await fileExists(outputDir, 'app/llm/providers/llm_provider.rb')).toBe(true);
-    const c = await readFile(outputDir, 'app/llm/providers/llm_provider.rb');
+    expect(await fileExists(outputDir, 'lib/llm/providers/llm_provider.rb')).toBe(true);
+    const c = await readFile(outputDir, 'lib/llm/providers/llm_provider.rb');
     expect(c).toContain('LLMProvider');
     expect(c).toContain('complete');
     expect(c).toContain('DummyProvider');
@@ -191,21 +191,21 @@ describe('RailsScaffold — LLM templates content', () => {
   });
 
   it('llm_cache.rb exists and contains TTL', async () => {
-    expect(await fileExists(outputDir, 'app/llm/cache/llm_cache.rb')).toBe(true);
-    const c = await readFile(outputDir, 'app/llm/cache/llm_cache.rb');
+    expect(await fileExists(outputDir, 'lib/llm/cache/llm_cache.rb')).toBe(true);
+    const c = await readFile(outputDir, 'lib/llm/cache/llm_cache.rb');
     expect(c).toContain('TTL');
     expect(c).toContain('LlmCache');
   });
 
   it('llm_cache.rb has hit_rate / fetch / invalidate methods', async () => {
-    const c = await readFile(outputDir, 'app/llm/cache/llm_cache.rb');
+    const c = await readFile(outputDir, 'lib/llm/cache/llm_cache.rb');
     expect(c).toContain('fetch');
     expect(c).toContain('invalidate');
   });
 
   it('token_bucket.rb exists and contains acquire / try_acquire semantics', async () => {
-    expect(await fileExists(outputDir, 'app/llm/rate_limit/token_bucket.rb')).toBe(true);
-    const c = await readFile(outputDir, 'app/llm/rate_limit/token_bucket.rb');
+    expect(await fileExists(outputDir, 'lib/llm/rate_limit/token_bucket.rb')).toBe(true);
+    const c = await readFile(outputDir, 'lib/llm/rate_limit/token_bucket.rb');
     // The template uses consume! which is the acquire pattern
     expect(c).toContain('consume!');
     expect(c).toContain('TokenBucket');
@@ -213,26 +213,26 @@ describe('RailsScaffold — LLM templates content', () => {
   });
 
   it('validator.rb exists and contains validate_schema', async () => {
-    expect(await fileExists(outputDir, 'app/llm/validators/validator.rb')).toBe(true);
-    const c = await readFile(outputDir, 'app/llm/validators/validator.rb');
+    expect(await fileExists(outputDir, 'lib/llm/validators/validator.rb')).toBe(true);
+    const c = await readFile(outputDir, 'lib/llm/validators/validator.rb');
     expect(c).toContain('validate!');
     expect(c).toContain('Validator');
     expect(c).toContain('ValidationError');
   });
 
   it('prompt_loader.rb exists and contains PromptLoader.load', async () => {
-    expect(await fileExists(outputDir, 'app/llm/prompts/prompt_loader.rb')).toBe(true);
-    const c = await readFile(outputDir, 'app/llm/prompts/prompt_loader.rb');
+    expect(await fileExists(outputDir, 'lib/llm/prompts/prompt_loader.rb')).toBe(true);
+    const c = await readFile(outputDir, 'lib/llm/prompts/prompt_loader.rb');
     expect(c).toContain('PromptLoader');
     expect(c).toContain('def self.load');
   });
 
   it('summarize_v1.jinja2 prompt template exists', async () => {
-    expect(await fileExists(outputDir, 'app/llm/prompts/summarize_v1.jinja2')).toBe(true);
+    expect(await fileExists(outputDir, 'lib/llm/prompts/summarize_v1.jinja2')).toBe(true);
   });
 
   it('summarize_output_schema.json exists', async () => {
-    expect(await fileExists(outputDir, 'app/llm/validators/summarize_output_schema.json')).toBe(true);
+    expect(await fileExists(outputDir, 'lib/llm/validators/summarize_output_schema.json')).toBe(true);
   });
 });
 
@@ -572,10 +572,10 @@ describe('RailsScaffold — --skip-llm option', () => {
     await fs.remove(tmpDir);
   });
 
-  it('does NOT generate app/llm/ files when skipLlm is true', async () => {
-    expect(await fileExists(outputDir, 'app/llm/providers/llm_provider.rb')).toBe(false);
-    expect(await fileExists(outputDir, 'app/llm/cache/llm_cache.rb')).toBe(false);
-    expect(await fileExists(outputDir, 'app/llm/rate_limit/token_bucket.rb')).toBe(false);
+  it('does NOT generate lib/llm/ files when skipLlm is true', async () => {
+    expect(await fileExists(outputDir, 'lib/llm/providers/llm_provider.rb')).toBe(false);
+    expect(await fileExists(outputDir, 'lib/llm/cache/llm_cache.rb')).toBe(false);
+    expect(await fileExists(outputDir, 'lib/llm/rate_limit/token_bucket.rb')).toBe(false);
   });
 
   it('still generates Gemfile when skipLlm is true', async () => {
@@ -629,7 +629,7 @@ describe('RailsScaffold — --skip-channels option', () => {
   });
 
   it('still generates LLM layer when skipChannels is true', async () => {
-    expect(await fileExists(outputDir, 'app/llm/providers/llm_provider.rb')).toBe(true);
+    expect(await fileExists(outputDir, 'lib/llm/providers/llm_provider.rb')).toBe(true);
   });
 
   it('still generates SummarizeDocument when skipChannels is true', async () => {
@@ -672,7 +672,7 @@ describe('RailsScaffold — --skip-examples option', () => {
   });
 
   it('still generates LLM layer when skipExamples is true', async () => {
-    expect(await fileExists(outputDir, 'app/llm/providers/llm_provider.rb')).toBe(true);
+    expect(await fileExists(outputDir, 'lib/llm/providers/llm_provider.rb')).toBe(true);
   });
 
   it('still generates SummarizeDocument when skipExamples is true', async () => {

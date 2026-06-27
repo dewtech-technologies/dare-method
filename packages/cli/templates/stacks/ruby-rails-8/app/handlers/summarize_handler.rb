@@ -14,8 +14,8 @@ class SummarizeHandler < ApplicationController
 
   # POST /api/v1/documents/:id/summarize
   def create
-    result = Services::SummarizeDocumentService.new(
-      document_repository: Repositories::DocumentRepository.new,
+    result = SummarizeDocumentService.new(
+      document_repository: DocumentRepository.new,
       llm_provider:        LLM::Providers::LLMProvider.instance,
       event_publisher:     RealtimeService.instance
     ).execute(
@@ -25,9 +25,9 @@ class SummarizeHandler < ApplicationController
 
     render json: { summary: result.summary, document_id: result.document_id }, status: :ok
 
-  rescue Services::SummarizeDocumentService::DocumentNotFoundError => e
+  rescue SummarizeDocumentService::DocumentNotFoundError => e
     render_problem(status: 404, title: "Not Found", detail: e.message)
-  rescue Services::SummarizeDocumentService::SummarizationError => e
+  rescue SummarizeDocumentService::SummarizationError => e
     render_problem(status: 422, title: "Summarization Failed", detail: e.message)
   end
 end

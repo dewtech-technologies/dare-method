@@ -11,6 +11,18 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [3.18.1] — 2026-06-27
 
+Fix **caminho Docker do Rails** + política `auto` + **o app Rails gerado finalmente BOOTA** — corrige a v3.18.0 e múltiplos bugs pré-existentes nos templates Rails (invisíveis porque o app nunca tinha sido executado). Validado com `bin/rails zeitwerk:check` ("All is good!") num app gerado via `rails new` real.
+
+### 🐛 Corrigido — boot real do app (pré-existentes, agora travados por CI)
+
+- **Camada LLM Zeitwerk** — movida de `app/llm/` para **`lib/llm/`** (onde o namespace `LLM::` é idiomático sob o root `lib`) + initializer `config/initializers/zeitwerk.rb` com inflections (`llm`→`LLM`, `llm_provider`→`LLMProvider`). Antes: `LLM::Providers::*` sob `app/llm` (root) quebrava o eager-load.
+- **Wrappers `module Services`/`module Repositories`** removidos de `create_user_service`, `summarize_document_service`, `document_repository`, `user_repository` — em `app/*` (roots Zeitwerk) as classes são top-level; referências (handlers, specs) atualizadas.
+- **Gemfile** — `gem "debug", platforms: %i[mri windows linux]` → `%i[mri windows]` (`linux` não é plataforma Bundler válida; `bundle install` falhava).
+- **`config/initializers/dare.rb`** — `YAML.safe_load_file(..., aliases: true)` (o `dare.yml` usa aliases, bloqueados no Psych 4) + `require "ostruct"` (Ruby 3.4+).
+- **CI `rails-full-boot`** agora é **gate bloqueante** (era informativo) — gera o app via `rails new` real + overlay e exige boot + `zeitwerk:check` verde.
+
+### 🐛 Corrigido — toolchain
+
 Fix **caminho Docker do Rails** + política `auto` — corrige a v3.18.0 para de fato entregar o app completo quando não há Ruby nativo.
 
 ### 🐛 Corrigido

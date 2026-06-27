@@ -132,9 +132,9 @@ namespace :dare do
       app/repositories
       app/models
       app/presenters
-      app/llm/providers
-      app/llm/prompts
-      app/llm/validators
+      lib/llm/providers
+      lib/llm/prompts
+      lib/llm/validators
       app/channels
     ]
 

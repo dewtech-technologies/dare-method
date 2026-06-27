@@ -74,7 +74,7 @@ describe('RailsScaffold — full-stack MVC (fullstack: true)', () => {
 
   it('still emits the DARE layered/LLM/channel layers', async () => {
     expect(await fileExists(outputDir, 'app/handlers/users_handler.rb')).toBe(true);
-    expect(await fileExists(outputDir, 'app/llm/providers/llm_provider.rb')).toBe(true);
+    expect(await fileExists(outputDir, 'lib/llm/providers/llm_provider.rb')).toBe(true);
     expect(await fileExists(outputDir, 'app/channels/dare_updates_channel.rb')).toBe(true);
   });
 });

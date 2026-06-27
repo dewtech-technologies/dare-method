@@ -115,13 +115,11 @@ jobs:
 
   rails-full-boot:
     name: Rails full app boots (rails new + overlay)
-    # Informational for now: surfaces real boot status of the generated
-    # full-stack Rails app. continue-on-error until the pre-existing LLM-layer
-    # Zeitwerk namespacing (LLM::Providers::* under app/llm) is fixed; flip to a
-    # hard gate once `zeitwerk:check` is green.
+    # Hard gate: generates a full-stack Rails app via the real `rails new`
+    # (Docker) + DARE overlay, then asserts it boots and eager-loads cleanly
+    # (`zeitwerk:check`). Guarantees the generated app actually runs.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -154,8 +152,8 @@ jobs:
             bundle install --quiet
             echo "== boot =="
             bin/rails runner "puts %(BOOT OK: Rails #{Rails.version})"
-            echo "== zeitwerk:check (informational) =="
-            bin/rails zeitwerk:check || echo "::warning::zeitwerk:check failed — known LLM-layer namespacing issue"
+            echo "== zeitwerk:check =="
+            bin/rails zeitwerk:check
           '
 
   dare-pr-dogfood:

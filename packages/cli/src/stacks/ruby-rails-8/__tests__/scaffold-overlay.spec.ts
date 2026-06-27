@@ -47,7 +47,7 @@ const DARE_VALUE_ADD = [
   'app/repositories/user_repository.rb',
   'app/models/user.rb',
   'db/migrate/20260101000001_create_users.rb', // backs the User model
-  'app/llm/providers/llm_provider.rb',
+  'lib/llm/providers/llm_provider.rb',
   'lib/tasks/dare.rake',
   'llms.txt',
   'config/dare.yml',
