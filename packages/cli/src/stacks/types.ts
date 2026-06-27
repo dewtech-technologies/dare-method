@@ -100,6 +100,15 @@ export interface ScaffoldOpts {
    * are inherently full-stack (php-laravel) or API-only ignore it. Default false.
    */
   readonly fullstack?: boolean;
+
+  /**
+   * True when the framework's own generator already produced the runtime
+   * skeleton (e.g. `rails new` ran before this overlay). The scaffolder must
+   * then emit ONLY its DARE value-add files and skip the hand-written runtime
+   * (boot files, bin stubs, database.yml, etc.) so it doesn't clobber the
+   * real, complete output. Default false → emit the offline template runtime.
+   */
+  readonly nativeRuntimeProvided?: boolean;
 }
 
 export interface ScaffoldResult {

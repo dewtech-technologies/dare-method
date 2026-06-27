@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.17.0** — última feature: **Rails runtime skeleton** — o scaffold `ruby-rails-8` agora emite os arquivos de boot do Rails (`config/application.rb`, `boot.rb`, `database.yml`, `bin/*`, migration, etc.), então o projeto **roda sem `rails new`** (`bundle install` → `bin/rails db:prepare` → `bin/dev`/`bin/rails server`). Antes: Estrutura MVC Rails full-stack (v3.16.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.18.0** — última feature: **Rails delegado ao `rails new`** — o scaffolder `ruby-rails-8` agora roda o **`rails new` de verdade** (native/Docker) e sobrepõe só o valor-add do DARE, então o runtime (locales, credentials, storage.yml, solid_* wired) é sempre completo e atual. Novo `dare init --fullstack` (não-interativo). Antes: Rails runtime skeleton à mão (v3.17.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·

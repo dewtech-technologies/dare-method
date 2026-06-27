@@ -88,8 +88,14 @@ export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<v
   // one through the internalized scaffolder. The old official-tool bootstrap
   // functions (bootstrapNodeNestjs/npx, bootstrapPhpLaravel/composer, …) are
   // retained only as historical reference and no longer reached from init.
+  // Rails is special: instead of hand-templating the framework runtime, run the
+  // real `rails new` (native or Docker) and overlay DARE's value-add on top.
+  // This keeps the app complete and current with every Rails release.
+  if (opts.stack === 'ruby-rails-8') {
+    return bootstrapRubyRails(opts.dir, opts.projectName, mode, opts.fullstack ?? false);
+  }
+
   const BACKEND_IDS = new Set([
-    'ruby-rails-8',
     'php-laravel',
     'node-nestjs',
     'python-fastapi',
@@ -1263,6 +1269,107 @@ async function bootstrapMcpPython(dir: string, mode: ToolchainMode): Promise<voi
 
   await python.runOther(venvPython, ['-m', 'pip', 'install', '--upgrade', 'pip']);
   await python.runOther(venvPython, ['-m', 'pip', 'install', 'mcp[cli]', 'pytest', 'ruff']);
+}
+
+/**
+ * Ruby on Rails — run the real `rails new`, then overlay DARE's value-add.
+ *
+ * Unlike the other stacks, the framework runtime (config/application.rb, bin/,
+ * boot.rb, database.yml, locales, credentials, …) lives INSIDE the app and is
+ * produced by `rails new`, not fetched by `bundle install`. So we generate it
+ * with the real generator (native `rails` or, as a fallback, the `ruby` Docker
+ * image) and then lay the DARE files on top. The scaffolder is told the runtime
+ * already exists (`nativeRuntimeProvided`) so it skips its offline template
+ * runtime and only writes DARE's controllers/services/specs/Gemfile/etc.
+ *
+ * If neither `rails` nor Docker is available, we degrade gracefully to the
+ * offline template runtime (the hand-written skeleton) with a warning instead
+ * of hard-failing — so `dare init` always produces something runnable-ish.
+ */
+async function bootstrapRubyRails(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+  fullstack: boolean,
+): Promise<void> {
+  banner(`Bootstrapping Rails 8 (${fullstack ? 'full-stack' : 'API-only'}) in ${dir}`);
+
+  // rails new flags — skip what DARE owns (tests→rspec, ci→dare-ci, git, bundle).
+  const flags = [
+    '--database=postgresql',
+    '--skip-bundle',
+    '--skip-git',
+    '--skip-test',
+    '--skip-ci',
+  ];
+  if (!fullstack) flags.push('--api');
+
+  // Toolchain policy (Rails-specific): native `rails` when present; Docker only
+  // when explicitly requested (a `rails new` via `gem install rails` in the ruby
+  // image is heavy — we never trigger it silently on `auto`). When neither path
+  // applies, degrade to DARE's offline template runtime instead of hard-failing.
+  const hasNativeRails = await hasCommand('rails');
+  const useNative = hasNativeRails && (mode === 'native' || mode === 'auto');
+
+  if (mode !== 'docker' && !useNative) {
+    const reason =
+      mode === 'native'
+        ? '--toolchain=native selected but `rails` is not on PATH'
+        : '`rails` not found on PATH';
+    console.log(
+      chalk.yellow(
+        `⚠  ${reason} — using DARE's offline Rails templates (less complete than \`rails new\`).\n` +
+          `   Install Ruby+Rails, or re-run with --toolchain docker, for a full app.`,
+      ),
+    );
+    await overlayRailsDare(dir, projectName, mode, fullstack, /* nativeRuntimeProvided */ false);
+    return;
+  }
+
+  const tool = await StackTool.resolve({
+    nativeCmd: 'rails',
+    nativeHint: 'Install Ruby 3.3+ and Rails 8: https://rubyonrails.org/ (gem install rails)',
+    // No official `rails` image — use the ruby image and install rails into it.
+    dockerImage: 'ruby:3.3-slim',
+    imageHasEntrypoint: false,
+    dir,
+    mode: useNative ? 'native' : 'docker',
+  });
+
+  if (tool.usingDocker) {
+    // ruby:3.3 image has gem but not rails — install it, then generate.
+    await tool.runOther('sh', [
+      '-c',
+      `gem install rails -v '~> 8.0' --no-document && rails new . ${flags.join(' ')}`,
+    ]);
+  } else {
+    await tool.run(['new', '.', ...flags]);
+  }
+
+  // Overlay DARE's value-add; the real runtime is already in place.
+  await overlayRailsDare(dir, projectName, mode, fullstack, /* nativeRuntimeProvided */ true);
+}
+
+/** Runs the ruby-rails-8 scaffolder as a DARE overlay (or offline fallback). */
+async function overlayRailsDare(
+  dir: string,
+  projectName: string,
+  mode: ToolchainMode,
+  fullstack: boolean,
+  nativeRuntimeProvided: boolean,
+): Promise<void> {
+  const { resolve } = await import('../stacks/registry.js');
+  const { DARE_DNA } = await import('../stacks/types.js');
+  const scaffold = await resolve('ruby-rails-8');
+  await scaffold.generate({
+    dir,
+    projectName,
+    toolchain: mode,
+    features: new Set(DARE_DNA),
+    isMonorepo: false,
+    fullstack,
+    nativeRuntimeProvided,
+  });
 }
 
 /**

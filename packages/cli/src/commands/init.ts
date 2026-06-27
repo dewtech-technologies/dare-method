@@ -13,12 +13,14 @@ export const initCommand = new Command('init')
   .description('Initialize a new DARE project with interactive setup')
   .argument('[project-name]', 'Project name')
   .option('--stack <id>', 'Backend stack id (skips the interactive prompt)')
+  .option('--fullstack', 'With --stack ruby-rails-8|php-laravel: full-stack MVC (structure=mvc) instead of API-only')
   .option('--mcp <language>', 'MCP server language: node-ts | python | rust | go')
   .option('--transport <mode>', 'MCP transport: stdio | sse | http', 'stdio')
   .option('--toolchain <mode>', 'native | docker | auto', 'auto')
   .option('--non-interactive', 'Fail instead of prompting; requires --stack or --mcp')
   .action(async (projectName: string | undefined, options: {
     stack?: string;
+    fullstack?: boolean;
     mcp?: string;
     transport?: string;
     toolchain?: string;
@@ -338,9 +340,11 @@ const BACKEND_STACK_IDS = new Set([
 ]);
 const MCP_LANGUAGES = new Set(['node-ts', 'python', 'rust', 'go']);
 
+const MVC_CAPABLE_STACKS = new Set(['ruby-rails-8', 'php-laravel']);
+
 async function runNonInteractive(
   projectName: string | undefined,
-  options: { stack?: string; mcp?: string; transport?: string; toolchain?: string; nonInteractive?: boolean },
+  options: { stack?: string; fullstack?: boolean; mcp?: string; transport?: string; toolchain?: string; nonInteractive?: boolean },
 ): Promise<void> {
   const rawName = projectName ?? 'my-dare-project';
   const validated = validateProjectName(rawName);
@@ -359,6 +363,14 @@ async function runNonInteractive(
     console.error(
       chalk.red(
         `Error: unknown stack '${options.stack}'. Valid: ${[...BACKEND_STACK_IDS].sort().join(', ')}`,
+      ),
+    );
+    process.exit(1);
+  }
+  if (options.fullstack && options.stack && !MVC_CAPABLE_STACKS.has(options.stack)) {
+    console.error(
+      chalk.red(
+        `Error: --fullstack only applies to MVC frameworks: ${[...MVC_CAPABLE_STACKS].sort().join(', ')}`,
       ),
     );
     process.exit(1);
@@ -392,9 +404,12 @@ async function runNonInteractive(
         outputDir,
       });
     } else {
+      // --fullstack on an MVC-capable stack → structure 'mvc' (runs `rails new`
+      // full-stack for Rails; full app for Laravel). Otherwise API-only backend.
+      const structure = options.fullstack ? 'mvc' : 'backend';
       await generateProjectStructure({
         name,
-        structure: 'backend',
+        structure,
         backend: options.stack,
         ide: 'cursor',
         graphrag: 'sqlite',
