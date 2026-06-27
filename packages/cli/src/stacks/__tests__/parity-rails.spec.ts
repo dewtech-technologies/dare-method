@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 //
-// Parity gate — internalized Rails 8 scaffolder (T-011) MUST produce a tree
-// byte-identical (modulo timestamps/UUIDs/secrets) to the v3.0.0 baseline.
+// Parity gate — the ruby-rails-8 scaffolder (API-only path) MUST produce a tree
+// byte-identical (modulo timestamps/UUIDs/secrets) to the captured baseline.
 //
-// Baseline fixture captured by `scripts/capture-rails-baseline.mjs` (T-010).
+// The baseline was re-captured in v3.17 when the runtime skeleton (boot files,
+// bin stubs, db, base classes) was added. Re-capture after any intentional
+// change to the scaffold with:  npx tsx scripts/capture-rails-baseline.ts
 //
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import path from 'node:path';
