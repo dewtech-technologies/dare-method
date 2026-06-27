@@ -13,8 +13,15 @@ import { generateProjectStructure } from '../../utils/project-generator.js';
 
 let tmpRoot: string;
 let appDir: string;
+let prevOffline: string | undefined;
 
 beforeAll(async () => {
+  // Force DARE's offline Rails templates so this test never shells out to a
+  // real `rails new` (native/Docker) — keeps it deterministic and fast on dev
+  // boxes and CI runners that have Docker installed.
+  prevOffline = process.env.DARE_RAILS_OFFLINE;
+  process.env.DARE_RAILS_OFFLINE = '1';
+
   tmpRoot = path.join(process.cwd(), `.init-rails-it-${Date.now()}`);
   await fs.ensureDir(tmpRoot);
   appDir = path.join(tmpRoot, 'my-rails-app');
@@ -33,6 +40,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (prevOffline === undefined) delete process.env.DARE_RAILS_OFFLINE;
+  else process.env.DARE_RAILS_OFFLINE = prevOffline;
   if (tmpRoot) await fs.remove(tmpRoot);
 });
 

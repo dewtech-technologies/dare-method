@@ -9,6 +9,20 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.18.1] — 2026-06-27
+
+Fix **caminho Docker do Rails** + política `auto` — corrige a v3.18.0 para de fato entregar o app completo quando não há Ruby nativo.
+
+### 🐛 Corrigido
+
+- **Imagem Docker `ruby:3.3-slim` → `ruby:3.3`** — a slim não tem toolchain de build (`make`/gcc), então `gem install rails` falhava ao compilar extensões nativas (websocket-driver). Com a imagem completa, `gem install rails` + `rails new` rodam. Validado end-to-end: app completo com `credentials.yml.enc`, `master.key`, `locales/en.yml`, `storage.yml`.
+- **`GEM_HOME` gravável** no container (`/tmp/.dare-gems`) — funciona mesmo com `--user uid:gid` (Linux/CI), onde `/usr/local/bundle` não é gravável.
+
+### 🔧 Mudado — política de toolchain do Rails
+
+- **`auto` agora usa Docker quando não há rails nativo** (antes caía direto nos templates offline). Ordem: native → Docker (se disponível) → offline. Assim o **default entrega o app completo** para quem tem Docker mas não tem Ruby. Offline só quando não há nem Ruby nem Docker.
+- **`DARE_RAILS_OFFLINE=1`** — seam para forçar templates offline (testes determinísticos; não puxa Docker em dev/CI).
+
 ## [3.18.0] — 2026-06-27
 
 Release **Rails delegado ao `rails new`** — o scaffolder `ruby-rails-8` passa a rodar o **`rails new` de verdade** (native ou Docker) e sobrepor só os arquivos de valor agregado do DARE. Resolve a incompletude crônica do runtime (locales, credentials, storage.yml, solid_* wired) — em vez de reimplementar o `rails new` à mão, delega a ele.
