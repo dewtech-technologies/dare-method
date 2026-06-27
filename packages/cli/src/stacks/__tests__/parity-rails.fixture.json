@@ -1,8 +1,8 @@
 {
-  "capturedAt": "2026-06-02",
-  "source": "ruby_rails_8.generate (v3.1 internalized, DNA-enriched)",
+  "capturedAt": "2026-06-27",
+  "source": "ruby_rails_8.generate (v3.17 — runtime skeleton, API-only path)",
   "scaffolder": "packages/cli/src/stacks/ruby-rails-8",
-  "fileCount": 44,
+  "fileCount": 69,
   "files": [
     {
       "path": ".dare/skills.yml",
@@ -12,7 +12,7 @@
     {
       "path": ".env.example",
       "hash": "301e5c6b7776349c9adbbfef41204e5a2a02f7c6e598fc9f8164c3d0437042f8",
-      "bytes": 455
+      "bytes": 475
     },
     {
       "path": ".github/workflows/dare-ci.yml",
@@ -20,9 +20,9 @@
       "bytes": 2848
     },
     {
-      "path": "Gemfile",
-      "hash": "01356fdfd1547d2fa3e60ec33a08c6fa8973bdc6254d734dd8ed760dcb55877c",
-      "bytes": 1211
+      "path": ".ruby-version",
+      "hash": "5eee6c0c5c6901f5e523f0a434bca4106e1ff7136deb451f982b0bb1a7b13716",
+      "bytes": 6
     },
     {
       "path": "app/channels/application_cable/channel.rb",
@@ -63,6 +63,11 @@
       "path": "app/handlers/users_handler.rb",
       "hash": "15ec5fe3d8fc9bc2d863753b3e14bf3ec5b9e4a71338cbe22cf74f711db384bb",
       "bytes": 1815
+    },
+    {
+      "path": "app/jobs/application_job.rb",
+      "hash": "245b68d9c8351d4e14580a164820ae459e222d423af8748cb2456414bdd4ece1",
+      "bytes": 302
     },
     {
       "path": "app/llm/cache/llm_cache.rb",
@@ -110,6 +115,11 @@
       "bytes": 1528
     },
     {
+      "path": "app/models/application_record.rb",
+      "hash": "4f269f401f3a48c1c49a7afee84a2f8bf38db23fc634aca0c0734a23c7dab60c",
+      "bytes": 105
+    },
+    {
       "path": "app/models/user.rb",
       "hash": "cb5c55b7f4fbe9f362d38701d26bd3f40f1ded0f46f371ece6c8da9b5467544c",
       "bytes": 1705
@@ -145,14 +155,84 @@
       "bytes": 2747
     },
     {
+      "path": "bin/bundle",
+      "hash": "ab753ed1845aaa265288cba03489a26df9fd38f3e169390818122f3c156ce859",
+      "bytes": 232
+    },
+    {
+      "path": "bin/rails",
+      "hash": "4a9d4ae4d7ac9c100989d6fe112744b21d1a5d480b8cd2b8f2022cbdaac8c616",
+      "bytes": 172
+    },
+    {
+      "path": "bin/rake",
+      "hash": "edffd41d1b21b68090d68fcab3bc3c537fcfac1df156dbf10aee23f2ad8e6d6e",
+      "bytes": 121
+    },
+    {
+      "path": "bin/setup",
+      "hash": "11f2672b19d0703a492ca3c4cb9872c9adb85f4ea8f8b399d6080fb8e835f7df",
+      "bytes": 652
+    },
+    {
+      "path": "config.ru",
+      "hash": "de2896d7b923a706efb1f5a159f15a6bded8b28d51580d21c0e9f21acb7e695e",
+      "bytes": 190
+    },
+    {
+      "path": "config/application.rb",
+      "hash": "043cd65ce6322ea1ec69eaf6749ea58164996211279a221a6b6b248f09d14cda",
+      "bytes": 1179
+    },
+    {
+      "path": "config/boot.rb",
+      "hash": "c5a85dc834a4914b9ef1665fb12c8c7a79444f6f54ec1d2e2882c9928fb44f89",
+      "bytes": 238
+    },
+    {
+      "path": "config/cable.yml",
+      "hash": "197319e7e32c0e3cc5f2b7de96744ea00eb99269be7273baccc84043c7cdf42e",
+      "bytes": 186
+    },
+    {
       "path": "config/dare.yml",
       "hash": "6071dd26b0bb3ac9838dd3eeabe25beeb6b555250f9ffd2a363366fea192d842",
       "bytes": 1197
     },
     {
+      "path": "config/database.yml",
+      "hash": "0cc6eea386dd54830894d8fd2792d228be7430298e85ccfed3c8499f9defa566",
+      "bytes": 763
+    },
+    {
+      "path": "config/environment.rb",
+      "hash": "f932fde7d8ac2cd8f88613c9febb6cdc7325090b84f89c5b39f1239f7535368e",
+      "bytes": 159
+    },
+    {
+      "path": "config/environments/development.rb",
+      "hash": "8259d8a5cd97b1a8ee340c8e558490e2cc1dcd5c0e2306cbcaeb65e15df15ebe",
+      "bytes": 893
+    },
+    {
+      "path": "config/environments/production.rb",
+      "hash": "28d0c0e3eb2b20ddc8f04cf84adfc2b9ac570f6dc92e1c836c978c4f0112871b",
+      "bytes": 1055
+    },
+    {
+      "path": "config/environments/test.rb",
+      "hash": "fe59bd6aaea972749d8028e5f3ec38221c8fff0c27ad9936d146fc7d1fd00e82",
+      "bytes": 761
+    },
+    {
       "path": "config/initializers/dare.rb",
       "hash": "4ec3d7267e50fddbe4d5625e9b5f9dd082c8a925c04bce0f8e40c712c6108205",
       "bytes": 1268
+    },
+    {
+      "path": "config/initializers/filter_parameter_logging.rb",
+      "hash": "53a4530912969b602e6ce5da6c1af9caa11ddbcc7117c4118a020da38f7bafb1",
+      "bytes": 440
     },
     {
       "path": "config/initializers/rack_attack.rb",
@@ -165,6 +245,26 @@
       "bytes": 412
     },
     {
+      "path": "config/puma.rb",
+      "hash": "3466f5ef8724312499eeb05bee0d61190cae5ca5a3b46ed9f5ad73c572cdf50b",
+      "bytes": 512
+    },
+    {
+      "path": "db/migrate/20260101000001_create_users.rb",
+      "hash": "cf4a7eac44e07cc4903bbd7347eabc552dbea55faee23901691f38908228b0f0",
+      "bytes": 468
+    },
+    {
+      "path": "db/seeds.rb",
+      "hash": "283e8d61cc7af394d223796880cf220b2f475966699dcf9ea75514ff347c96e0",
+      "bytes": 373
+    },
+    {
+      "path": "Gemfile",
+      "hash": "01356fdfd1547d2fa3e60ec33a08c6fa8973bdc6254d734dd8ed760dcb55877c",
+      "bytes": 1211
+    },
+    {
       "path": "lib/tasks/dare.rake",
       "hash": "89e19ec487144cfa47f916719578398595870c58d6d00f0e4e3bf24d0c0ceefe",
       "bytes": 6678
@@ -173,6 +273,31 @@
       "path": "llms.txt",
       "hash": "8b7dc261906ca41e0854031a72d5ec82e2ed480e73080df0d0dbee56dd219580",
       "bytes": 2684
+    },
+    {
+      "path": "public/404.html",
+      "hash": "c20040a6f6a3b3922ce977dacbb39e5fe3fef09bd9cfe7d8c486acbe6c62bb59",
+      "bytes": 478
+    },
+    {
+      "path": "public/422.html",
+      "hash": "f0a007bf6539725406a60c656c2ca263747c6ad77b472d056fd67a01ce59a47e",
+      "bytes": 461
+    },
+    {
+      "path": "public/500.html",
+      "hash": "ec66f7e86eaaf7f4679741d9d8d406ef02eec7fe0f45d4c954fde70dbffc74ed",
+      "bytes": 395
+    },
+    {
+      "path": "public/robots.txt",
+      "hash": "74dd94e071b4cf5867d381082b62746cbde67bc2f129699e546ce60f8dd73cf8",
+      "bytes": 123
+    },
+    {
+      "path": "Rakefile",
+      "hash": "f974223fc9e387c82a4bd3e53cb979f16d4a720da5862e3fe1e6f8d834b92b34",
+      "bytes": 259
     },
     {
       "path": "spec/api/summarize_spec.rb",

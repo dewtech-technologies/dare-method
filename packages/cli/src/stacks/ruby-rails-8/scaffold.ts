@@ -141,6 +141,13 @@ export class RailsScaffold {
       await this.generateViewLayer(opts, result);
     }
 
+    // 5c. Rails runtime skeleton — boot files, bin stubs, db, base classes.
+    //     Makes the scaffold a runnable Rails app (no manual `rails new`).
+    await this.generateRuntimeSkeleton(opts, result);
+    if (opts.fullstack) {
+      await this.generateAssetRuntime(opts, result);
+    }
+
     // 6. SummarizeDocument feature
     await this.generateSummarizeDocument(opts, result);
 
@@ -185,6 +192,10 @@ export class RailsScaffold {
       'app/channels/application_cable',
       // Tasks
       'lib/tasks',
+      // Rails runtime (boot skeleton — makes the app runnable without `rails new`)
+      'config/environments',
+      'bin',
+      'db/migrate',
       // Specs
       'spec/services',
       'spec/handlers',
@@ -461,6 +472,99 @@ export class RailsScaffold {
     }
   }
 
+  /**
+   * Rails runtime skeleton — the boot files `rails new` would normally generate,
+   * so the DARE scaffold is a runnable app on its own (no manual `rails new`).
+   * Emitted for BOTH api-only and full-stack; `config/application.rb` is the
+   * only variant-aware file (api railties vs `rails/all`).
+   */
+  private async generateRuntimeSkeleton(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
+    // Files with ERB-var substitution (<%= app_name %> / <%= app_module %>).
+    const applicationTemplate = opts.fullstack
+      ? 'config/application.fullstack.rb'
+      : 'config/application.rb';
+    const rendered: Array<[string, string]> = [
+      [applicationTemplate, 'config/application.rb'],
+      ['config/database.yml', 'config/database.yml'],
+      ['config/cable.yml',    'config/cable.yml'],
+      ['bin/setup',           'bin/setup'],
+    ];
+    for (const [templateRel, destRel] of rendered) {
+      const src = path.join(this.TEMPLATES_DIR, templateRel);
+      const dest = path.join(opts.outputDir, destRel);
+      if (await fs.pathExists(src)) {
+        await fs.writeFile(dest, await this.renderTemplate(src, opts));
+        result.filesCreated.push(destRel);
+      }
+    }
+
+    // Files copied verbatim.
+    const copied: string[] = [
+      'config/boot.rb',
+      'config/environment.rb',
+      'config/environments/development.rb',
+      'config/environments/test.rb',
+      'config/environments/production.rb',
+      'config/puma.rb',
+      'config/initializers/filter_parameter_logging.rb',
+      'config.ru',
+      'Rakefile',
+      '.ruby-version',
+      'app/models/application_record.rb',
+      'app/jobs/application_job.rb',
+      'bin/rails',
+      'bin/rake',
+      'bin/bundle',
+      'db/migrate/20260101000001_create_users.rb',
+      'db/seeds.rb',
+      'public/404.html',
+      'public/422.html',
+      'public/500.html',
+      'public/robots.txt',
+    ];
+    for (const rel of copied) {
+      const src = path.join(this.TEMPLATES_DIR, rel);
+      const dest = path.join(opts.outputDir, rel);
+      if (await fs.pathExists(src)) {
+        await fs.copy(src, dest);
+        result.filesCreated.push(rel);
+      }
+    }
+
+    // bin/* must be executable.
+    for (const stub of ['bin/rails', 'bin/rake', 'bin/bundle', 'bin/setup']) {
+      const p = path.join(opts.outputDir, stub);
+      if (await fs.pathExists(p)) await fs.chmod(p, 0o755);
+    }
+  }
+
+  /**
+   * Full-stack only — the asset/JS runtime that backs the view layer: importmap
+   * pins, Propshaft assets initializer, the stylesheet entry and the Stimulus/
+   * Turbo JavaScript wiring, plus `bin/dev`.
+   */
+  private async generateAssetRuntime(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
+    const copied: string[] = [
+      'config/importmap.rb',
+      'config/initializers/assets.rb',
+      'app/assets/stylesheets/application.css',
+      'app/javascript/application.js',
+      'app/javascript/controllers/application.js',
+      'app/javascript/controllers/index.js',
+      'bin/dev',
+    ];
+    for (const rel of copied) {
+      const src = path.join(this.TEMPLATES_DIR, rel);
+      const dest = path.join(opts.outputDir, rel);
+      if (await fs.pathExists(src)) {
+        await fs.copy(src, dest);
+        result.filesCreated.push(rel);
+      }
+    }
+    const dev = path.join(opts.outputDir, 'bin/dev');
+    if (await fs.pathExists(dev)) await fs.chmod(dev, 0o755);
+  }
+
   // ── Template rendering ─────────────────────────────────────────────────────
 
   /**
@@ -476,6 +580,9 @@ export class RailsScaffold {
 
     const vars: Record<string, string> = {
       app_name:      opts.appName,
+      app_module:    this.toModuleName(opts.appName),
+      // snake_case form for DB names / channel prefixes (Postgres-friendly).
+      app_database:  opts.appName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'app',
       ruby_version:  opts.rubyVersion ?? '>= 3.3.0',
       rails_version: opts.railsVersion ?? '~> 8.0',
       llm_provider:  opts.llmProvider ?? 'dummy',
@@ -506,6 +613,21 @@ export class RailsScaffold {
     };
   }
 
+  /**
+   * Ruby module name for `config/application.rb` — CamelCase from the app name.
+   * E.g. "dare-labs-plataform" → "DareLabsPlataform". Falls back to "App" when
+   * the name has no usable alphanumerics.
+   */
+  private toModuleName(appName: string): string {
+    const camel = appName
+      .split(/[^a-zA-Z0-9]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join('');
+    // A Ruby module/constant must start with an uppercase letter.
+    return /^[A-Z]/.test(camel) ? camel : `App${camel}`;
+  }
+
   private log(opts: RailsScaffoldOptions, message: string): void {
     if (opts.verbose) {
       console.log(`[dare rails-8] ${message}`);
@@ -515,19 +637,16 @@ export class RailsScaffold {
   private printNextSteps(opts: RailsScaffoldOptions): void {
     if (!opts.verbose) return;
 
-    // Full-stack → full Rails app (views). API-only → `rails new --api`.
-    const railsNew = opts.fullstack
-      ? 'rails new . --database=postgresql --skip-test'
-      : 'rails new . --api --database=postgresql --skip-test';
+    // The runtime skeleton makes this a runnable Rails app — no `rails new`.
+    const runStep = opts.fullstack ? 'bin/dev' : 'bin/rails server';
 
     console.log(`
 Next steps:
   1. cd ${opts.outputDir}
-  2. ${railsNew} (if integrating into existing dir)
-     OR run the full scaffold: dare new ${opts.appName} --stack rails
-  3. bundle install
-  4. bin/rails db:create db:migrate
-  5. bundle exec rspec
+  2. bundle install
+  3. bin/rails db:prepare        # create + migrate (+ seed on a fresh DB)
+  4. bundle exec rspec
+  5. ${runStep}
   6. bundle exec rake dare:metrics
 
 DARE docs:
@@ -583,19 +702,17 @@ export const ruby_rails_8: StackScaffold = {
       .map((p) => path.relative(opts.dir, p).replace(/\\/g, '/'))
       .sort();
 
-    // API-only scaffolds a `--api` app; full-stack scaffolds a full Rails app.
-    const railsNew = opts.fullstack
-      ? 'rails new . --database=postgresql'
-      : 'rails new . --api --database=postgresql';
+    // The runtime skeleton ships the Rails boot files, so the project runs
+    // without a manual `rails new`. Full-stack uses bin/dev; api uses server.
+    const runStep = opts.fullstack ? 'bin/dev' : 'bin/rails server';
 
     return {
       filesWritten,
       postInstallSteps: [
         `cd ${opts.projectName}`,
-        railsNew,
         'bundle install',
-        'bin/rails db:create db:migrate',
-        'bin/rails server',
+        'bin/rails db:prepare',
+        runStep,
       ],
       warnings: [],
       // RailsScaffold already emits every DNA artifact; v3.1 contract

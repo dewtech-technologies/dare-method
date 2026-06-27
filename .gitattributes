@@ -1,0 +1,3 @@
+# Rails scaffold runtime — shebang bin stubs MUST stay LF so they execute on
+# POSIX systems (a CRLF after `#!/usr/bin/env ruby` breaks the interpreter line).
+packages/cli/templates/stacks/ruby-rails-8/bin/* text eol=lf

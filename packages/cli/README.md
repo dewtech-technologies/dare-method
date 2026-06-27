@@ -166,6 +166,8 @@ Pick **one** of the two paths per stack:
 
 > **v3.8.1–3.8.2 (manutenção):** `dare update` passa a entregar os skills/comandos/config das v3.4→v3.8 a projetos existentes (backfill do `UPDATE-MANIFEST`, 3.8.1). O CI ganha um **gate de cobertura de docs** + **redeploy automático da documentação** a cada release (3.8.2).
 
+> **v3.17.0:** **Rails runtime skeleton** — o scaffold `ruby-rails-8` emite os arquivos de boot que o `rails new` geraria (`config/application.rb` variant-aware, `boot.rb`, `environment.rb`, `config/environments/*`, `database.yml`, `puma.rb`, `cable.yml`, `bin/{rails,rake,bundle,setup}`, migration `create_users`, `application_record.rb`, `public/*`), e no full-stack o runtime de asset/JS (`importmap.rb`, `app/javascript/*`, `bin/dev`). Resultado: o projeto roda **sem `rails new`** — `bundle install` → `bin/rails db:prepare` → `bin/dev`/`bin/rails server`. Parity re-baselineada via `scripts/capture-rails-baseline.ts`.
+
 > **v3.16.0:** **Estrutura MVC (Rails full-stack)** — nova estrutura de projeto **`mvc`** no `dare init`/`discover` (escolhe Rails 8 ou Laravel). MVC + Rails gera um **full application** (views + Propshaft + Hotwire, `ActionController::Base`); `ruby-rails-8` em "Backend only" segue **API-only** (`ActionController::API`). `dare discover` detecta Rails via `Gemfile` e classifica Rails/Laravel como `mvc`.
 
 > **v3.14.0:** **Brownfield AST** — `dare reverse --deep --ast` (tree-sitter WASM opt-in + merge superset com regex); `reverse-facts.json.extraction` metadata.

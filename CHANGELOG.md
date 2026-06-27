@@ -9,6 +9,26 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.17.0] — 2026-06-27
+
+Release **Rails runtime skeleton** — o scaffold `ruby-rails-8` passa a emitir os arquivos de boot que o `rails new` normalmente gera, então o projeto roda sem o passo manual `rails new`.
+
+### ✨ Adicionado — Runtime do Rails no scaffold
+
+- **Boot skeleton (api + full)** — `config/application.rb` (variant-aware), `boot.rb`, `environment.rb`, `config/environments/{development,test,production}.rb`, `database.yml` (env-driven, nomes snake_case), `puma.rb`, `cable.yml`, `config/initializers/filter_parameter_logging.rb`, `config.ru`, `Rakefile`, `.ruby-version`, `bin/{rails,rake,bundle,setup}` (executáveis), `app/models/application_record.rb`, `app/jobs/application_job.rb`, migration `create_users` (casa com o `User`), `db/seeds.rb` e páginas `public/{404,422,500}.html` + `robots.txt`.
+- **Runtime de asset/JS (só full-stack)** — `config/importmap.rb`, `config/initializers/assets.rb`, `app/assets/stylesheets/application.css`, `app/javascript/{application.js,controllers/*}` (Stimulus/Turbo) e `bin/dev`.
+- **`config/application.rb` variant-aware** — full = `require "rails/all"`; api = railties seletivas + `config.api_only = true`. Módulo Ruby em CamelCase derivado do nome do projeto.
+
+### 🔧 Melhorado
+
+- **`postInstallSteps` / next steps** — removido o `rails new .`; agora `bundle install` → `bin/rails db:prepare` → `bin/dev` (full) / `bin/rails server` (api).
+- **Solid Suite** — gems mantidas no Gemfile, mas runtime default single-database e in-process (cache/queue/cable) para garantir boot; install generators opcionais documentados.
+
+### ✅ Gates
+
+- **`scaffold-runtime.spec.ts`** — presença do runtime (api + full), `api_only` vs `rails/all`, migration ↔ model, bin executável (POSIX), asset runtime só no full.
+- **`parity-rails.fixture.json`** — re-baseline (44 → 69 arquivos) via `scripts/capture-rails-baseline.ts` recriado; gate de regressão do tree api-only mantido.
+
 ## [3.16.0] — 2026-06-27
 
 Release **Estrutura MVC (Rails full-stack)** — adiciona uma categoria de projeto para frameworks MVC full-stack (Laravel/Rails) e faz o `ruby-rails-8` gerar tanto API-only quanto full application conforme a estrutura escolhida.
