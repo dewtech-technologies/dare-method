@@ -34,6 +34,12 @@ export interface RailsScaffoldOptions {
   skipLlm?: boolean;
   /** Skip Action Cable channels */
   skipChannels?: boolean;
+  /**
+   * Generate a full-stack Rails 8 application (server-rendered MVC: views,
+   * asset pipeline, Hotwire, ActionController::Base) instead of the default
+   * API-only shape (ActionController::API, no views). Default: false (API-only).
+   */
+  fullstack?: boolean;
   /** LLM provider default (default: "dummy") */
   llmProvider?: 'openai' | 'dummy';
   /** Whether to include verbose console output */
@@ -130,6 +136,11 @@ export class RailsScaffold {
       await this.generateChannels(opts, result);
     }
 
+    // 5b. Full-stack view layer (server-rendered MVC) — only when fullstack
+    if (opts.fullstack) {
+      await this.generateViewLayer(opts, result);
+    }
+
     // 6. SummarizeDocument feature
     await this.generateSummarizeDocument(opts, result);
 
@@ -188,6 +199,17 @@ export class RailsScaffold {
       '.github/workflows',
     ];
 
+    // Full-stack MVC adds the view layer (server-rendered HTML).
+    if (opts.fullstack) {
+      dirs.push(
+        'app/views/layouts',
+        'app/views/home',
+        'app/helpers',
+        'app/assets/stylesheets',
+        'app/javascript/controllers',
+      );
+    }
+
     for (const dir of dirs) {
       const fullPath = path.join(opts.outputDir, dir);
       await fs.ensureDir(fullPath);
@@ -200,7 +222,8 @@ export class RailsScaffold {
   // ── Template generators ────────────────────────────────────────────────────
 
   private async generateGemfile(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
-    const src  = path.join(this.TEMPLATES_DIR, 'Gemfile.erb');
+    const template = opts.fullstack ? 'Gemfile.fullstack.erb' : 'Gemfile.erb';
+    const src  = path.join(this.TEMPLATES_DIR, template);
     const dest = path.join(opts.outputDir, 'Gemfile');
     const content = await this.renderTemplate(src, opts);
     await fs.writeFile(dest, content);
@@ -208,7 +231,8 @@ export class RailsScaffold {
   }
 
   private async generateLlmsTxt(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
-    const src  = path.join(this.TEMPLATES_DIR, 'llms.txt.erb');
+    const template = opts.fullstack ? 'llms.fullstack.txt.erb' : 'llms.txt.erb';
+    const src  = path.join(this.TEMPLATES_DIR, template);
     const dest = path.join(opts.outputDir, 'llms.txt');
     const content = await this.renderTemplate(src, opts);
     await fs.writeFile(dest, content);
@@ -248,12 +272,55 @@ export class RailsScaffold {
   }
 
   private async generateApplicationController(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
+    // Full-stack uses an ActionController::Base controller (views/CSRF/cookies);
+    // API-only uses the ActionController::API controller. The destination is the
+    // same file — only the source template differs.
+    const appControllerTemplate = opts.fullstack
+      ? 'app/controllers/application_controller.fullstack.rb'
+      : 'app/controllers/application_controller.rb';
+
     const files: Array<[string, string]> = [
       ['app/controllers/concerns/problem_details.rb', 'app/controllers/concerns/problem_details.rb'],
-      ['app/controllers/application_controller.rb',   'app/controllers/application_controller.rb'],
+      [appControllerTemplate,                          'app/controllers/application_controller.rb'],
     ];
 
     for (const [templateRel, destRel] of files) {
+      const src  = path.join(this.TEMPLATES_DIR, templateRel);
+      const dest = path.join(opts.outputDir, destRel);
+      if (await fs.pathExists(src)) {
+        await fs.copy(src, dest);
+        result.filesCreated.push(destRel);
+      }
+    }
+  }
+
+  /**
+   * Full-stack only — lays down the server-rendered view layer: application
+   * layout, an example HomeController + view, the application helper, and a
+   * routes.rb wiring the root page + Swagger UI. API-only never calls this.
+   */
+  private async generateViewLayer(opts: RailsScaffoldOptions, result: RailsScaffoldResult): Promise<void> {
+    // Templates rendered through ERB-var substitution (contain <%= app_name %>).
+    const rendered: Array<[string, string]> = [
+      ['app/views/layouts/application.html.erb', 'app/views/layouts/application.html.erb'],
+      ['app/views/home/index.html.erb',          'app/views/home/index.html.erb'],
+    ];
+    for (const [templateRel, destRel] of rendered) {
+      const src  = path.join(this.TEMPLATES_DIR, templateRel);
+      const dest = path.join(opts.outputDir, destRel);
+      if (await fs.pathExists(src)) {
+        await fs.writeFile(dest, await this.renderTemplate(src, opts));
+        result.filesCreated.push(destRel);
+      }
+    }
+
+    // Plain files copied verbatim (no ERB-var substitution).
+    const copied: Array<[string, string]> = [
+      ['app/controllers/home_controller.rb', 'app/controllers/home_controller.rb'],
+      ['app/helpers/application_helper.rb',  'app/helpers/application_helper.rb'],
+      ['config/routes.fullstack.rb',         'config/routes.rb'],
+    ];
+    for (const [templateRel, destRel] of copied) {
       const src  = path.join(this.TEMPLATES_DIR, templateRel);
       const dest = path.join(opts.outputDir, destRel);
       if (await fs.pathExists(src)) {
@@ -433,6 +500,7 @@ export class RailsScaffold {
       skipExamples:  options.skipExamples  ?? false,
       skipLlm:       options.skipLlm       ?? false,
       skipChannels:  options.skipChannels  ?? false,
+      fullstack:     options.fullstack     ?? false,
       llmProvider:   options.llmProvider   ?? 'dummy',
       verbose:       options.verbose       ?? true,
     };
@@ -447,10 +515,15 @@ export class RailsScaffold {
   private printNextSteps(opts: RailsScaffoldOptions): void {
     if (!opts.verbose) return;
 
+    // Full-stack → full Rails app (views). API-only → `rails new --api`.
+    const railsNew = opts.fullstack
+      ? 'rails new . --database=postgresql --skip-test'
+      : 'rails new . --api --database=postgresql --skip-test';
+
     console.log(`
 Next steps:
   1. cd ${opts.outputDir}
-  2. rails new . --database=postgresql --skip-test (if integrating into existing dir)
+  2. ${railsNew} (if integrating into existing dir)
      OR run the full scaffold: dare new ${opts.appName} --stack rails
   3. bundle install
   4. bin/rails db:create db:migrate
@@ -500,6 +573,9 @@ export const ruby_rails_8: StackScaffold = {
       skipExamples: false,
       skipLlm: false,
       skipChannels: false,
+      // Full-stack MVC (views + asset pipeline) is opt-in via the 'mvc' project
+      // structure. Default stays API-only so the 'backend' option is unchanged.
+      fullstack: opts.fullstack ?? false,
       verbose: false,
     });
 
@@ -507,11 +583,16 @@ export const ruby_rails_8: StackScaffold = {
       .map((p) => path.relative(opts.dir, p).replace(/\\/g, '/'))
       .sort();
 
+    // API-only scaffolds a `--api` app; full-stack scaffolds a full Rails app.
+    const railsNew = opts.fullstack
+      ? 'rails new . --database=postgresql'
+      : 'rails new . --api --database=postgresql';
+
     return {
       filesWritten,
       postInstallSteps: [
         `cd ${opts.projectName}`,
-        'rails new . --database=postgresql',
+        railsNew,
         'bundle install',
         'bin/rails db:create db:migrate',
         'bin/rails server',

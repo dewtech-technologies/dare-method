@@ -57,7 +57,20 @@ export const initCommand = new Command('init')
           { name: '🏗️  Monorepo (backend + frontend)', value: 'monorepo' },
           { name: '⚙️  Backend only', value: 'backend' },
           { name: '🎨 Frontend only', value: 'frontend' },
+          { name: '🏛️  MVC (Laravel ou Rails — full-stack)', value: 'mvc' },
           { name: '🔌 MCP Server', value: 'mcp-server' },
+        ],
+      },
+
+      // ── MVC framework (full-stack: model + view + controller) ─────────────
+      {
+        type: 'list',
+        name: 'backend',
+        message: 'MVC framework:',
+        when: (ans) => ans.structure === 'mvc',
+        choices: [
+          { name: '💎 Ruby / Rails 8', value: 'ruby-rails-8' },
+          { name: '🐘 PHP / Laravel', value: 'php-laravel' },
         ],
       },
 
@@ -103,7 +116,7 @@ export const initCommand = new Command('init')
         type: 'list',
         name: 'backend',
         message: 'Backend stack:',
-        when: (ans) => ans.structure !== 'frontend' && ans.structure !== 'mcp-server',
+        when: (ans) => ans.structure !== 'frontend' && ans.structure !== 'mcp-server' && ans.structure !== 'mvc',
         choices: [
           { name: '💎 Ruby / Rails 8', value: 'ruby-rails-8' },
           { name: '🦀 Rust / Axum', value: 'rust-axum' },
@@ -118,7 +131,7 @@ export const initCommand = new Command('init')
         type: 'list',
         name: 'frontend',
         message: 'Frontend stack:',
-        when: (ans) => ans.structure !== 'backend' && ans.structure !== 'mcp-server',
+        when: (ans) => ans.structure !== 'backend' && ans.structure !== 'mcp-server' && ans.structure !== 'mvc',
         choices: [
           { name: '⚛️  React 18+ (TypeScript)', value: 'react' },
           { name: '💚 Vue 3+ (Composition API)', value: 'vue' },

@@ -590,6 +590,9 @@ export function generateClaudeSettings(stack: { backend?: string; frontend?: str
   const isLeptosFullstack = stack.frontend === 'rust-leptos';
   const isLeptosCsr = stack.frontend === 'rust-leptos-csr';
 
+  const isRails = stack.backend === 'ruby-rails-8';
+  const isLaravel = stack.backend === 'php-laravel';
+
   const buildCmd = isLeptosFullstack
     ? 'cargo leptos build --release'
     : isLeptosCsr
@@ -598,6 +601,10 @@ export function generateClaudeSettings(stack: { backend?: string; frontend?: str
     ? 'cargo build'
     : stack.backend === 'python-fastapi' || stack.structure === 'mcp-server'
     ? 'python -m py_compile main.py'
+    : isRails
+    ? 'bin/rails zeitwerk:check'
+    : isLaravel
+    ? 'composer install --no-interaction'
     : 'npm run build';
 
   const testCmd = isLeptosFullstack || isLeptosCsr
@@ -606,6 +613,10 @@ export function generateClaudeSettings(stack: { backend?: string; frontend?: str
     ? 'cargo test'
     : stack.backend === 'python-fastapi' || stack.structure === 'mcp-server'
     ? 'pytest'
+    : isRails
+    ? 'bin/rails test'
+    : isLaravel
+    ? 'php artisan test'
     : 'npm test';
 
   const lintCmd = isLeptosFullstack || isLeptosCsr
@@ -614,6 +625,10 @@ export function generateClaudeSettings(stack: { backend?: string; frontend?: str
     ? 'cargo clippy'
     : stack.backend === 'python-fastapi' || stack.structure === 'mcp-server'
     ? 'ruff check .'
+    : isRails
+    ? 'bin/rubocop'
+    : isLaravel
+    ? 'vendor/bin/pint --test'
     : 'npx eslint src';
 
   return JSON.stringify({

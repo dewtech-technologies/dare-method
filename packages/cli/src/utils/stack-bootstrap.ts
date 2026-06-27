@@ -47,6 +47,12 @@ export interface BootstrapBackendOptions {
   toolchain?: ToolchainMode;
   /** When true the crate lives inside a Cargo workspace — use --vcs none on cargo init. */
   isMonorepo?: boolean;
+  /**
+   * When true, scaffold a full server-rendered MVC app (views + asset pipeline)
+   * instead of API-only. Set for the 'mvc' project structure. Honored by stacks
+   * that support both shapes (ruby-rails-8); ignored by the rest.
+   */
+  fullstack?: boolean;
 }
 
 export interface BootstrapFrontendOptions {
@@ -98,6 +104,8 @@ export async function bootstrapBackend(opts: BootstrapBackendOptions): Promise<v
       opts.projectName,
       opts.isMonorepo ?? false,
       mode,
+      undefined,
+      opts.fullstack ?? false,
     );
   }
   switch (opts.stack) {
@@ -1270,6 +1278,7 @@ async function bootstrapViaRegistry(
   isMonorepo: boolean,
   mode: ToolchainMode,
   mcpTransport?: 'stdio' | 'sse' | 'http',
+  fullstack: boolean = false,
 ): Promise<void> {
   banner(`Scaffolding ${stackId} (DARE-shaped) in ${dir}`);
   const { resolve } = await import('../stacks/registry.js');
@@ -1281,6 +1290,7 @@ async function bootstrapViaRegistry(
     toolchain: mode,
     features: new Set(DARE_DNA),
     isMonorepo,
+    fullstack,
     mcp: scaffold.category === 'mcp' ? { transport: mcpTransport ?? 'stdio' } : undefined,
   });
 }

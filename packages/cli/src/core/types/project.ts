@@ -1,5 +1,5 @@
-export type ProjectStructure = 'monorepo' | 'backend' | 'frontend';
-export type BackendStack = 'rust-axum' | 'node-nestjs' | 'python-fastapi' | 'php-laravel';
+export type ProjectStructure = 'monorepo' | 'backend' | 'frontend' | 'mvc';
+export type BackendStack = 'rust-axum' | 'node-nestjs' | 'python-fastapi' | 'php-laravel' | 'ruby-rails-8';
 export type FrontendStack = 'react' | 'vue' | 'rust-leptos' | 'rust-leptos-csr';
 export type IdeChoice = 'cursor' | 'antigravity' | 'hybrid' | 'claude-code' | 'claude-hybrid' | 'codex';
 export type GraphRagBackend = 'sqlite' | 'json' | 'neo4j';

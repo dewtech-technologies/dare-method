@@ -88,7 +88,7 @@ export const bootstrapCommand = new Command('bootstrap')
           projectName,
           toolchain,
         });
-      } else if ((cfg.structure === 'backend' || cfg.structure === 'monorepo') && cfg.backend) {
+      } else if ((cfg.structure === 'backend' || cfg.structure === 'monorepo' || cfg.structure === 'mvc') && cfg.backend) {
         const dir = cfg.structure === 'monorepo' ? path.join(cwd, 'backend') : cwd;
         await fs.ensureDir(dir);
         await bootstrapBackend({
@@ -96,6 +96,8 @@ export const bootstrapCommand = new Command('bootstrap')
           dir,
           projectName,
           toolchain,
+          // MVC → full server-rendered app (Rails views); ignored by other stacks.
+          fullstack: cfg.structure === 'mvc',
         });
         if (cfg.structure === 'monorepo' && cfg.frontend) {
           const fdir = path.join(cwd, 'frontend');

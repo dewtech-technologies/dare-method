@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.15.0** — última feature: **Brownfield AST em DNA + Patterns** — `dare dna --ast` e `dare patterns --ast` com extração híbrida tree-sitter (WASM) + regex; baseline v3.14 inalterado sem `--ast`. Antes: Brownfield AST em reverse (v3.14.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.16.0** — última feature: **Estrutura MVC (Rails full-stack)** — nova opção de projeto **MVC** no `dare init`/`discover` onde se escolhe **Laravel** ou **Rails 8**; o caminho MVC + Rails gera um **full application** (views + asset pipeline + Hotwire), enquanto o `ruby-rails-8` em "Backend only" segue **API-only**. `dare discover` agora detecta Rails (Gemfile) e classifica Rails/Laravel como `mvc`. Antes: Brownfield AST em DNA + Patterns (v3.15.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·
@@ -41,7 +41,8 @@ npm install -g @dewtech/dare-cli
 
 # 2. Inicialize seu projeto de forma interativa
 dare init meu-projeto
-# → Escolha: Estrutura (Monorepo / Backend / Frontend / MCP Server)
+# → Escolha: Estrutura (Monorepo / Backend / Frontend / MVC / MCP Server)
+# → [MVC] Escolha o framework full-stack: Rails 8 (full app) ou Laravel
 # → Escolha: IDE (Claude Code / Cursor / Antigravity / Hybrid)
 # → Escolha: Backend (Rust/Axum, Node/NestJS, Python/FastAPI, PHP/Laravel)
 # → Escolha: Frontend (React, Vue, Leptos fullstack, Leptos CSR)
@@ -398,7 +399,7 @@ cd meu-projeto-existente
 dare discover
 ```
 
-O CLI detecta automaticamente a stack (NestJS, FastAPI, Laravel, React, Vue, MCP Server…), confirma com você e instala apenas os arquivos DARE — sem tocar no código existente.
+O CLI detecta automaticamente a stack (NestJS, FastAPI, Rails, Laravel, React, Vue, MCP Server…), confirma com você e instala apenas os arquivos DARE — sem tocar no código existente. Projetos Rails (Gemfile) e Laravel são classificados como estrutura **MVC**.
 
 ```bash
 dare discover --check   # só mostra o que detectou, sem instalar
@@ -676,7 +677,9 @@ em todos os `dare bootstrap` futuros. Override pontual com
 
 ### Stacks suportados
 
-**Backend:** Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
+**Backend (API-only):** Ruby on Rails 8 · Rust/Axum · Node.js/NestJS · Python/FastAPI · PHP/Laravel · Go/Gin · Go/stdlib
+
+**MVC (full-stack):** Ruby on Rails 8 (full application — views + asset pipeline + Hotwire) · PHP/Laravel — escolhidos na estrutura **MVC**
 
 **Frontend:** React 18+ · Vue 3+ · Leptos fullstack (Rust SSR+WASM) · Leptos CSR (Rust WASM)
 

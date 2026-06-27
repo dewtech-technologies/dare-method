@@ -1,6 +1,6 @@
 {
   "name": "@dewtech/dare-cli",
-  "version": "3.15.0",
+  "version": "3.16.0",
   "description": "DARE Framework - CLI, GraphRAG engine, MCP server and shared types in a single package",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "sync": "tsx scripts/sync-implementations.ts",
-    "build": "tsx scripts/sync-implementations.ts && tsc && tsx scripts/copy-ast-grammars.ts && node -e \"require('fs-extra').copySync('src/skills/registry-mock.json','dist/skills/registry-mock.json')\"",
+    "build": "tsx scripts/sync-implementations.ts && tsc && tsx scripts/copy-ast-grammars.ts && tsx scripts/copy-guard-rules.ts && node -e \"require('fs-extra').copySync('src/skills/registry-mock.json','dist/skills/registry-mock.json')\"",
     "dev": "tsx watch src/bin/dare.ts",
     "test": "vitest run",
     "lint": "eslint src",

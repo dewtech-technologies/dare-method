@@ -1,0 +1,175 @@
+title: "dare serve protocol — Development Tasks"
+version: "3.16.0"
+generated: "2026-06-21T00:00:00Z"
+
+# Feature: dare-serve-protocol
+# Branch:  feat/v3.16-serve-protocol
+# Design:  DARE/DESIGN-Feature-dare-serve-protocol.md
+# Blueprint: DARE/BLUEPRINT-Feature-dare-serve-protocol.md
+#
+# Regra de ouro: ZERO comando duplicado. Extrair run<Cmd> dos 8 comandos para core/commands; as 3
+# portas (CLI, chat, serve) chamam a MESMA função. Heurística sempre roda; facts/cwd server-side.
+# maybeRunAiEnrichment aposentado. Bloco de IDs: 16xx.
+
+limits:
+  parent_context_chars: 2000
+  task_output_chars: 4000
+  timeout_seconds: 600
+
+models:
+  cursor:      { HIGH: gpt-5.3-codex,     MED: composer-2,       LOW: auto-low }
+  claude:      { HIGH: claude-sonnet-4-5, MED: claude-haiku-4,   LOW: claude-haiku-4 }
+  antigravity: { HIGH: gemini-2.5-pro,    MED: gemini-2.5-flash, LOW: gemini-2.5-flash }
+  codex:       { HIGH: gpt-5.5,           MED: gpt-5.5,          LOW: gpt-5.4-mini }
+
+tasks:
+  # ─── Fase 1: fundação (rank 0 — paralelo) ─────────────────────────────────
+  - id: task-1601
+    title: "serve/protocol.ts — PROTOCOL_VERSION + buildManifest()"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1601-protocol-manifest.md
+    subtask_prompt: |
+      Criar src/serve/protocol.ts: PROTOCOL_VERSION='1.0.0', OperationDescriptor (com
+      heuristicAlwaysRuns:true e requiresInput) e buildManifest() DERIVADO de SEMANTIC_COMMANDS +
+      parityFor + jsonSchemaForCommand + capabilitiesForProvider. PROIBIDO hardcodar comandos.
+      Sem console/process.exit. Gates: vitest run protocol; build.
+      Leia: DARE/EXECUTION/task-1601-protocol-manifest.md.
+
+  - id: task-1602
+    title: "extrair rotas de contexto p/ serve/routes/context.ts (MCP intacto)"
+    depends_on: []
+    complexity: HIGH
+    spec_file: EXECUTION/task-1602-extract-context-router.md
+    subtask_prompt: |
+      Mover handlers de contexto de mcp-server/server.ts (health, tools, context/query, blueprint,
+      dag, tasks GET/PUT, graph/*, project, steering, middleware projectPath deprecado) para
+      mountContextRoutes(router, projectRoot) em src/serve/routes/context.ts. createMcpServer monta
+      o router — MESMO comportamento. Gates: vitest run src/mcp-server/__tests__ (ZERO regressão).
+      Leia: DARE/EXECUTION/task-1602-extract-context-router.md.
+
+  - id: task-1603
+    title: "core/commands/types.ts — contrato CommandRun + COMMAND_RUNNERS"
+    depends_on: []
+    complexity: MED
+    spec_file: EXECUTION/task-1603-command-core-contract.md
+    subtask_prompt: |
+      Criar src/core/commands/types.ts: CommandRunOptions (cwd, ai?, provider?, deep?, input?, signal?,
+      timeoutSeconds?), CommandRunResult (command, ok, facts, artifacts, enrichment?, summary?, error?),
+      CommandRunner, e o registry COMMAND_RUNNERS (Record<AiCommandName, CommandRunner>) inicialmente
+      vazio/typed para ser preenchido pelas tasks de extração. Sem console/process.exit.
+      Leia: DARE/EXECUTION/task-1603-command-core-contract.md.
+
+  # ─── Fase 2: extração dos núcleos (rank 1 — paralelo, 2 comandos por task) ─
+  - id: task-1604
+    title: "extrair run<Cmd> de reverse + dna"
+    depends_on: [task-1603]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1604-extract-reverse-dna-cores.md
+    subtask_prompt: |
+      Criar core/commands/reverse.ts (runReverse) e dna.ts (runDna): mover a orquestração das actions
+      (heurística via utils + escrita de artifacts + enrich via runCommandEnrichment) para funções
+      puras. Registrar em COMMAND_RUNNERS. commands/reverse.ts e dna.ts viram cascas (chamam run<Cmd>,
+      imprimem, process.exit). Heurística sempre roda; ai opcional. SEM ora/chalk/process.exit no core.
+      Gates: suíte CLI verde; rg ora/chalk/process.exit em core → 0.
+      Leia: DARE/EXECUTION/task-1604-extract-reverse-dna-cores.md.
+
+  - id: task-1605
+    title: "extrair run<Cmd> de patterns + migrate"
+    depends_on: [task-1603]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1605-extract-patterns-migrate-cores.md
+    subtask_prompt: |
+      Criar core/commands/patterns.ts (runPatterns) e migrate.ts (runMigrate) seguindo o mesmo padrão
+      da 1604. Registrar em COMMAND_RUNNERS. Cascas em commands/patterns.ts e migrate.ts.
+      Gates: suíte CLI verde; núcleo puro. Leia: DARE/EXECUTION/task-1605-extract-patterns-migrate-cores.md.
+
+  - id: task-1606
+    title: "extrair run<Cmd> de design + blueprint"
+    depends_on: [task-1603]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1606-extract-design-blueprint-cores.md
+    subtask_prompt: |
+      Criar core/commands/design.ts (runDesign — input.description) e blueprint.ts (runBlueprint — lê
+      DESIGN.md). Mesmo padrão. Registrar em COMMAND_RUNNERS. Cascas nas actions.
+      Gates: suíte CLI verde; núcleo puro. Leia: DARE/EXECUTION/task-1606-extract-design-blueprint-cores.md.
+
+  - id: task-1607
+    title: "extrair run<Cmd> de review + refine"
+    depends_on: [task-1603]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1607-extract-review-refine-cores.md
+    subtask_prompt: |
+      Criar core/commands/review.ts (runReview — input.taskId, analisador estático + verdito) e
+      refine.ts (runRefine — input.taskId). Mesmo padrão. Registrar em COMMAND_RUNNERS. Cascas nas
+      actions (preservar exit codes do review). Gates: suíte CLI verde; núcleo puro.
+      Leia: DARE/EXECUTION/task-1607-extract-review-refine-cores.md.
+
+  # ─── Fase 3: rotas de comando ─────────────────────────────────────────────
+  - id: task-1608
+    title: "serve/routes/commands.ts — /protocol, /providers, POST /commands/:command (timeout→504)"
+    depends_on: [task-1601, task-1604, task-1605, task-1606, task-1607]
+    complexity: HIGH
+    spec_file: EXECUTION/task-1608-serve-command-routes.md
+    subtask_prompt: |
+      Criar src/serve/routes/commands.ts: GET /protocol (buildManifest); GET /providers (default só
+      capabilities, ?probe=true ⇒ probeAllProviders com cache TTL ~60s, sem spawn por default);
+      POST /commands/:command → valida command ∈ SEMANTIC_COMMANDS (400), provider obrigatório se
+      ai:true (400, RS-04), monta AbortController com teto (DARE_SERVE_RUN_TIMEOUT, default 180s),
+      chama COMMAND_RUNNERS[command]({ cwd: app.locals.projectRoot, ai, provider, deep, input, signal }),
+      responde CommandRunResult; abort ⇒ 504. cwd NUNCA do body. Sem ora/chalk/process.exit.
+      Gates: vitest run commands; build. Leia: DARE/EXECUTION/task-1608-serve-command-routes.md.
+
+  # ─── Fase 4: montagem + comando CLI ───────────────────────────────────────
+  - id: task-1609
+    title: "serve/index.ts + bin/serve.ts + comando dare serve"
+    depends_on: [task-1602, task-1608]
+    complexity: MED
+    spec_file: EXECUTION/task-1609-serve-app-and-command.md
+    subtask_prompt: |
+      createServeApp(projectRoot, opts) = createApp + mountContextRoutes + mountCommandRoutes +
+      ALL /execute ⇒ 405 + finalizeApp. bin/serve.ts (boot via boot-config + SIGTERM). commands/serve.ts
+      (Commander --port --host --token --project) registrado em bin/dare.ts. MCP bin permanece só
+      contexto. Gates: dare serve --help; subir e GET /health + /protocol; build.
+      Leia: DARE/EXECUTION/task-1609-serve-app-and-command.md.
+
+  # ─── Fase 5: testes ───────────────────────────────────────────────────────
+  - id: task-1610
+    title: "testes — anti-duplicação + heurística + manifest + timeout + providers + cwd"
+    depends_on: [task-1609]
+    complexity: MED
+    spec_file: EXECUTION/task-1610-tests.md
+    subtask_prompt: |
+      Criar src/serve/__tests__/ e src/core/commands/__tests__/: protocol-parity (manifest ===
+      SEMANTIC_COMMANDS); heuristic-always (run<Cmd> com ai:false retorna facts); commands (8 via mock
+      + 400s + provider obrigatório); serve-timeout (request longo ⇒ 504, signal aborta); providers
+      (GET default sem spawn; ?probe cacheado); security-cwd (escrita só no projectRoot). Invariantes
+      (teste/CI): rg "ora\(|chalk\.|process.exit" src/core/commands src/serve → 0; rg
+      "maybeRunAiEnrichment" src → 0; rg "runCommandEnrichment|detectModules|detectDnaDetailed|extractDataModel"
+      src/commands src/serve → 0. Gates: vitest run src/serve src/core/commands.
+      Leia: DARE/EXECUTION/task-1610-tests.md.
+
+  # ─── Fase N-1: auditoria + release ────────────────────────────────────────
+  - id: task-1611
+    title: "auditoria N-1 — regressão CLI + MCP + paridade de superfície"
+    depends_on: [task-1610]
+    complexity: MED
+    spec_file: EXECUTION/task-1611-audit-regression.md
+    subtask_prompt: |
+      Suíte completa: vitest run (CLI + MCP + serve + core verdes), build, lint. Confirmar: 8 run<Cmd>
+      registrados; CLI actions são cascas; MCP só contexto; dare serve superset; /execute ⇒ 405; sem
+      console/SDK no núcleo; heurística sempre roda. Criar serve-surface-regression.test.ts. Gates:
+      pnpm --filter @dewtech/dare-cli test; build; lint. Leia: DARE/EXECUTION/task-1611-audit-regression.md.
+
+  - id: task-1612
+    title: "CHANGELOG + ROADMAP + doc-site + bump v3.16.0"
+    depends_on: [task-1611]
+    complexity: MED
+    spec_file: EXECUTION/task-1612-release-docs.md
+    subtask_prompt: |
+      CHANGELOG [3.16.0]: núcleo unificado de comandos (core/commands, 3 portas, zero duplicação),
+      dare serve + protocolo (manifest, /commands, /providers, timeout→504); MCP vira preset de
+      contexto; maybeRunAiEnrichment aposentado. ROADMAP Shipped v3.16.0 + "execução de agente/job
+      assíncrono = v3.17". docs-site/protocol.md (gate coverage) no nav. Bump root + cli 3.16.0; bump
+      ANTES da tag v3.16.0. Gates: verify-docs-coverage; mkdocs build --strict; vitest run.
+      Leia: DARE/EXECUTION/task-1612-release-docs.md.

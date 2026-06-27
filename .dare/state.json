@@ -1,84 +1,82 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-21T05:07:20.658Z",
+  "updatedAt": "2026-06-21T14:57:14.055Z",
   "tasks": {
-    "task-1501": {
+    "task-1601": {
       "status": "DONE",
-      "output": "ast/conventions/ foundation: types.ts, merge-facts.ts, scan.ts, parse-file.ts (walkScannedFile), merge-facts.test.ts",
-      "duration": 80730,
+      "output": "serve/protocol.ts + protocol.test.ts — buildManifest from SEMANTIC_COMMANDS",
+      "duration": 78875,
       "dependsOn": []
     },
-    "task-1502": {
+    "task-1602": {
       "status": "DONE",
-      "output": "dna-extract.ts hybrid AST slice + mergeDnaFacts in dna-detector detectDnaDetailed",
-      "duration": 80972,
+      "output": "serve/routes/context.ts — mountContextRoutes extracted; mcp-server tests green",
+      "duration": 74672,
+      "dependsOn": []
+    },
+    "task-1603": {
+      "status": "DONE",
+      "output": "core/commands/types.ts + registerRunner/getRunner + types.test.ts",
+      "duration": 75798,
+      "dependsOn": []
+    },
+    "task-1604": {
+      "status": "PENDING",
       "dependsOn": [
-        "task-1501"
+        "task-1603"
       ]
     },
-    "task-1503": {
-      "status": "DONE",
-      "output": "commands/dna.ts --ast flag, extraction metadata in dna-facts.json",
-      "duration": 78806,
+    "task-1605": {
+      "status": "PENDING",
       "dependsOn": [
-        "task-1502"
+        "task-1603"
       ]
     },
-    "task-1504": {
-      "status": "DONE",
-      "output": "patterns-extract.ts AST pattern mining + scan integration",
-      "duration": 75743,
+    "task-1606": {
+      "status": "PENDING",
       "dependsOn": [
-        "task-1501"
+        "task-1603"
       ]
     },
-    "task-1505": {
-      "status": "DONE",
-      "output": "mergePatternsFacts hybrid merge in pattern-detector detectPatternsDetailed",
-      "duration": 76586,
+    "task-1607": {
+      "status": "PENDING",
       "dependsOn": [
-        "task-1504"
+        "task-1603"
       ]
     },
-    "task-1506": {
-      "status": "DONE",
-      "output": "commands/patterns.ts --ast flag, extraction metadata in patterns-facts.json",
-      "duration": 76648,
+    "task-1608": {
+      "status": "SKIPPED",
       "dependsOn": [
-        "task-1505"
+        "task-1601",
+        "task-1604",
+        "task-1605",
+        "task-1606",
+        "task-1607"
       ]
     },
-    "task-1507": {
-      "status": "DONE",
-      "output": "dna-ast.test.ts + fixtures F-D01..F-D03 green",
-      "duration": 80051,
+    "task-1609": {
+      "status": "SKIPPED",
       "dependsOn": [
-        "task-1503"
+        "task-1602",
+        "task-1608"
       ]
     },
-    "task-1508": {
-      "status": "DONE",
-      "output": "patterns-ast.test.ts + fixtures F-P01..F-P03 green",
-      "duration": 78663,
+    "task-1610": {
+      "status": "SKIPPED",
       "dependsOn": [
-        "task-1506"
+        "task-1609"
       ]
     },
-    "task-1509": {
-      "status": "DONE",
-      "output": "brownfield-ast-dna-patterns-regression.test.ts — baseline regex-only locked",
-      "duration": 76866,
+    "task-1611": {
+      "status": "SKIPPED",
       "dependsOn": [
-        "task-1503",
-        "task-1506"
+        "task-1610"
       ]
     },
-    "task-1510": {
-      "status": "DONE",
-      "output": "CHANGELOG [3.15.0], ROADMAP, README, docs-site/brownfield.md, skills 3 IDEs, bump 3.15.0",
-      "duration": 75594,
+    "task-1612": {
+      "status": "SKIPPED",
       "dependsOn": [
-        "task-1509"
+        "task-1611"
       ]
     }
   }

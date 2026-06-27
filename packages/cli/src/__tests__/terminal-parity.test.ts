@@ -37,6 +37,17 @@ function skillPaths(slug: string): string[] {
   ];
 }
 
+const CORE_RUNNER_BY_FILE: Record<(typeof SEMANTIC_COMMAND_FILES)[number], string> = {
+  'reverse.ts': 'runReverse',
+  'dna.ts': 'runDna',
+  'migrate.ts': 'runMigrate',
+  'design.ts': 'runDesign',
+  'patterns.ts': 'runPatterns',
+  'blueprint.ts': 'runBlueprint',
+  'review.ts': 'runReview',
+  'refine.ts': 'runRefine',
+};
+
 describe('terminal parity contract', () => {
   it('each_contract_has_skill_in_three_ides', () => {
     for (const contract of PARITY_CONTRACTS) {
@@ -59,8 +70,13 @@ describe('terminal parity contract', () => {
     for (const file of SEMANTIC_COMMAND_FILES) {
       const source = readFileSync(path.join(COMMANDS_DIR, file), 'utf8');
       expect(source, file).toContain('addAiOptions');
-      expect(source, file).toContain('maybeRunAiEnrichment');
-      expect(source, file).toContain('json: aiOpts.json');
+      expect(source, file).toContain('../core/commands/');
+      expect(source, file).toContain(CORE_RUNNER_BY_FILE[file]);
+      if (file === 'review.ts' || file === 'refine.ts') {
+        expect(source, file).toMatch(/format === 'json'|--format.*json/);
+      } else {
+        expect(source, file).toMatch(/aiOpts\.json|options\.json|\-\-json/);
+      }
     }
   });
 

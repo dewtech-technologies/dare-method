@@ -9,6 +9,28 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.16.0] — 2026-06-27
+
+Release **Estrutura MVC (Rails full-stack)** — adiciona uma categoria de projeto para frameworks MVC full-stack (Laravel/Rails) e faz o `ruby-rails-8` gerar tanto API-only quanto full application conforme a estrutura escolhida.
+
+### ✨ Adicionado — Estrutura de projeto `mvc`
+
+- **`dare init` → estrutura MVC** — nova opção "🏛️ MVC (Laravel ou Rails — full-stack)" onde se escolhe o framework full-stack (Rails 8 ou Laravel), mantendo as opções existentes (Monorepo / Backend / Frontend / MCP Server).
+- **Rails 8 full application** — o caminho MVC + Rails gera um app completo: `ApplicationController < ActionController::Base`, camada de views (layout + `HomeController` + view), `app/helpers`, asset pipeline (Propshaft) + Hotwire (Turbo/Stimulus) via `importmap`, `config/routes.rb` com `root` + Swagger UI, e `llms.txt` descrevendo MVC server-rendered.
+- **Detecção de Rails no `dare discover`** — detecta `gem 'rails'` no `Gemfile` (antes não detectava Rails) e classifica Rails e Laravel como estrutura `mvc`.
+
+### 🔧 Melhorado
+
+- **`dare discover`** — prompt de framework MVC com default vindo da detecção; `Gemfile` adicionado às fontes de auto-detecção.
+- **`generateClaudeSettings`** — comandos Ralph Loop corretos para Rails (`bin/rails test`, `bin/rubocop`) e Laravel (`php artisan test`, `pint`) — antes ambos caíam no default `npm`.
+- **`dare bootstrap`** — re-scaffolda projetos `mvc` (Rails full-app / Laravel) corretamente.
+
+### ✅ Gates
+
+- **`project-detector-mvc.test.ts`** — Rails (`Gemfile`)→`mvc`, Laravel→`mvc`, Gemfile-sem-rails→`backend`.
+- **`scaffold-fullstack.spec.ts`** — full app (views, `ActionController::Base`, Gemfile front-end, routes) vs API-only default inalterado.
+- **`parity-rails.spec.ts`** — baseline API-only continua byte-idêntico (flag `fullstack` default `false`).
+
 ## [3.15.0] — 2026-06-21
 
 Release **Brownfield AST em DNA + Patterns** — estende a extração híbrida tree-sitter (WASM) de v3.14 para `dare dna` e `dare patterns`.
