@@ -113,6 +113,51 @@ jobs:
             detect --source /repo/packages/cli/templates/stacks \
             --config /repo/.gitleaks.toml --no-git --redact --exit-code 1 --verbose
 
+  rails-full-boot:
+    name: Rails full app boots (rails new + overlay)
+    # Informational for now: surfaces real boot status of the generated
+    # full-stack Rails app. continue-on-error until the pre-existing LLM-layer
+    # Zeitwerk namespacing (LLM::Providers::* under app/llm) is fixed; flip to a
+    # hard gate once `zeitwerk:check` is green.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: pnpm --filter @dewtech/dare-cli build
+
+      - name: Generate full-stack Rails app (real `rails new` via Docker)
+        run: |
+          node packages/cli/dist/bin/dare.js init rails-smoke \
+            --stack ruby-rails-8 --fullstack --non-interactive --toolchain docker
+
+      - name: Boot check (bundle install + boot + zeitwerk:check)
+        run: |
+          docker run --rm -v "$PWD/rails-smoke:/app" -w /app ruby:3.3 sh -lc '
+            set -e
+            apt-get update -qq && apt-get install -y -qq libpq-dev >/dev/null
+            bundle install --quiet
+            echo "== boot =="
+            bin/rails runner "puts %(BOOT OK: Rails #{Rails.version})"
+            echo "== zeitwerk:check (informational) =="
+            bin/rails zeitwerk:check || echo "::warning::zeitwerk:check failed — known LLM-layer namespacing issue"
+          '
+
   dare-pr-dogfood:
     name: DARE Gate (dogfood)
     if: github.event_name == 'pull_request'

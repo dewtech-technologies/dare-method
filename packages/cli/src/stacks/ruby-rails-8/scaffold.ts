@@ -40,6 +40,13 @@ export interface RailsScaffoldOptions {
    * API-only shape (ActionController::API, no views). Default: false (API-only).
    */
   fullstack?: boolean;
+  /**
+   * True when `rails new` already produced the framework runtime. The overlay
+   * then writes ONLY DARE's value-add and skips the hand-written runtime
+   * skeleton (boot files, bin stubs, database.yml, asset/JS wiring) so it
+   * doesn't clobber the real, complete output. Default false (offline runtime).
+   */
+  nativeRuntimeProvided?: boolean;
   /** LLM provider default (default: "dummy") */
   llmProvider?: 'openai' | 'dummy';
   /** Whether to include verbose console output */
@@ -142,10 +149,13 @@ export class RailsScaffold {
     }
 
     // 5c. Rails runtime skeleton — boot files, bin stubs, db, base classes.
-    //     Makes the scaffold a runnable Rails app (no manual `rails new`).
-    await this.generateRuntimeSkeleton(opts, result);
-    if (opts.fullstack) {
-      await this.generateAssetRuntime(opts, result);
+    //     Skipped when `rails new` already produced the real runtime (the
+    //     overlay path); only emitted as the offline/no-toolchain fallback.
+    if (!opts.nativeRuntimeProvided) {
+      await this.generateRuntimeSkeleton(opts, result);
+      if (opts.fullstack) {
+        await this.generateAssetRuntime(opts, result);
+      }
     }
 
     // 6. SummarizeDocument feature
@@ -355,6 +365,9 @@ export class RailsScaffold {
       ['app/services/create_user_service.rb',          'app/services/create_user_service.rb'],
       ['app/presenters/user_presenter.rb',             'app/presenters/user_presenter.rb'],
       ['app/handlers/users_handler.rb',                'app/handlers/users_handler.rb'],
+      // Migration backing the User model — DARE value-add (`rails new` never
+      // creates it). Emitted in BOTH the native-overlay and offline paths.
+      ['db/migrate/20260101000001_create_users.rb',    'db/migrate/20260101000001_create_users.rb'],
       ['spec/services/create_user_service_spec.rb',    'spec/services/create_user_service_spec.rb'],
       ['spec/handlers/users_handler_spec.rb',          'spec/handlers/users_handler_spec.rb'],
       ['spec/factories/users.rb',                      'spec/factories/users.rb'],
@@ -515,7 +528,6 @@ export class RailsScaffold {
       'bin/rails',
       'bin/rake',
       'bin/bundle',
-      'db/migrate/20260101000001_create_users.rb',
       'db/seeds.rb',
       'public/404.html',
       'public/422.html',
@@ -608,6 +620,7 @@ export class RailsScaffold {
       skipLlm:       options.skipLlm       ?? false,
       skipChannels:  options.skipChannels  ?? false,
       fullstack:     options.fullstack     ?? false,
+      nativeRuntimeProvided: options.nativeRuntimeProvided ?? false,
       llmProvider:   options.llmProvider   ?? 'dummy',
       verbose:       options.verbose       ?? true,
     };
@@ -695,6 +708,8 @@ export const ruby_rails_8: StackScaffold = {
       // Full-stack MVC (views + asset pipeline) is opt-in via the 'mvc' project
       // structure. Default stays API-only so the 'backend' option is unchanged.
       fullstack: opts.fullstack ?? false,
+      // When `rails new` already produced the runtime, only overlay DARE files.
+      nativeRuntimeProvided: opts.nativeRuntimeProvided ?? false,
       verbose: false,
     });
 

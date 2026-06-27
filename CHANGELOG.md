@@ -9,6 +9,26 @@ Versionamento segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 > mudanças na **estrutura do método, comandos canônicos e templates**.
 > Patches em wording de prompts ou documentação não bumpam major.
 
+## [3.18.0] — 2026-06-27
+
+Release **Rails delegado ao `rails new`** — o scaffolder `ruby-rails-8` passa a rodar o **`rails new` de verdade** (native ou Docker) e sobrepor só os arquivos de valor agregado do DARE. Resolve a incompletude crônica do runtime (locales, credentials, storage.yml, solid_* wired) — em vez de reimplementar o `rails new` à mão, delega a ele.
+
+### ✨ Mudado — geração de Rails
+
+- **`bootstrapRubyRails`** — roda `rails new . --database=postgresql --skip-bundle --skip-git --skip-test --skip-ci [--api]` e depois aplica o overlay DARE. O runtime (boot files, `database.yml`, `bin/`, locales, credentials, `storage.yml`, environments com solid_* corretos) agora vem do gerador oficial, sempre completo e atual.
+- **Overlay-only** — o scaffolder recebe `nativeRuntimeProvided` e, nesse modo, emite **apenas** o valor-add DARE (controllers/services/repositories/presenters/LLM, `application_controller`, `routes`, Gemfile, specs, migration do `User`, views full-stack) — sem clobrar a saída do `rails new`.
+- **Política de toolchain (Rails)** — `auto` usa rails nativo se houver, senão cai nos **templates offline** (não puxa Docker silenciosamente); Docker só com `--toolchain docker`; runtime offline (v3.17) continua como fallback quando não há Ruby/Docker.
+- **`dare init --fullstack`** — novo flag não-interativo: com `--stack ruby-rails-8|php-laravel` gera `structure=mvc` (full-stack) em vez de API-only. Fecha a lacuna de não-interatividade do MVC.
+
+### ✅ Gates
+
+- **`scaffold-overlay.spec.ts`** — modo overlay não emite runtime do `rails new`; emite o valor-add DARE (api + full).
+- **CI `rails-full-boot`** (informativo / `continue-on-error`) — gera o app full-stack via `rails new` real (Docker) e roda boot + `zeitwerk:check`, tornando o status de boot finalmente visível.
+
+### ⚠️ Conhecido
+
+- **Camada LLM tem namespacing incompatível com Zeitwerk** (`LLM::Providers::LLMProvider` sob `app/llm/`, que o Rails trata como root → esperaria `Providers::LLMProvider`). Bug **pré-existente** (desde v3.0), antes invisível porque o app nunca bootava; agora exposto pelo boot real. `zeitwerk:check` falha nesses arquivos até serem reestruturados. Correção em follow-up (requer ambiente Ruby).
+
 ## [3.17.0] — 2026-06-27
 
 Release **Rails runtime skeleton** — o scaffold `ruby-rails-8` passa a emitir os arquivos de boot que o `rails new` normalmente gera, então o projeto roda sem o passo manual `rails new`.
