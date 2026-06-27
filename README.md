@@ -18,7 +18,7 @@
 [![Docs EN](https://img.shields.io/badge/DOCS-ENGLISH-2ea44f?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/en/)
 [![Docs ES](https://img.shields.io/badge/DOCS-ESPA%C3%91OL-d22128?style=for-the-badge&logo=readthedocs&logoColor=white)](https://dewtech-technologies.github.io/dare-method/es/)
 
-> 🚀 **v3.18.0** — última feature: **Rails delegado ao `rails new`** — o scaffolder `ruby-rails-8` agora roda o **`rails new` de verdade** (native/Docker) e sobrepõe só o valor-add do DARE, então o runtime (locales, credentials, storage.yml, solid_* wired) é sempre completo e atual. Novo `dare init --fullstack` (não-interativo). Antes: Rails runtime skeleton à mão (v3.17.0). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
+> 🚀 **v3.18.1** — **Rails delegado ao `rails new`** — o scaffolder `ruby-rails-8` roda o **`rails new` de verdade** (native/Docker, imagem `ruby:3.3`) e sobrepõe só o valor-add do DARE; runtime completo e atual (locales, credentials, storage.yml, solid_* wired). `auto` usa Docker quando não há Ruby nativo. Novo `dare init --fullstack` (não-interativo). Ver [CHANGELOG](CHANGELOG.md). Licença MIT.
 
 [**Quickstart**](#-quickstart-em-5-minutos) ·
 [**Método**](#-o-método) ·

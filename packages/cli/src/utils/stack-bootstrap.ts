@@ -1304,22 +1304,33 @@ async function bootstrapRubyRails(
   ];
   if (!fullstack) flags.push('--api');
 
-  // Toolchain policy (Rails-specific): native `rails` when present; Docker only
-  // when explicitly requested (a `rails new` via `gem install rails` in the ruby
-  // image is heavy — we never trigger it silently on `auto`). When neither path
-  // applies, degrade to DARE's offline template runtime instead of hard-failing.
-  const hasNativeRails = await hasCommand('rails');
-  const useNative = hasNativeRails && (mode === 'native' || mode === 'auto');
+  // Toolchain policy (Rails). The goal is a real, complete app whenever a
+  // toolchain exists — only fall back to DARE's offline templates when there's
+  // genuinely no way to run `rails new`:
+  //   docker → always Docker (explicit).
+  //   native → native `rails`, else offline (never silently pulls Docker).
+  //   auto   → native `rails` if present, else Docker if present, else offline.
+  // DARE_RAILS_OFFLINE=1 forces the offline path (deterministic tests).
+  const forceOffline = process.env.DARE_RAILS_OFFLINE === '1';
+  const hasNativeRails = !forceOffline && (await hasCommand('rails'));
+  const hasDocker = !forceOffline && (await hasCommand('docker'));
 
-  if (mode !== 'docker' && !useNative) {
+  let plan: 'native' | 'docker' | 'offline';
+  if (forceOffline) plan = 'offline';
+  else if (mode === 'docker') plan = 'docker';
+  else if (hasNativeRails) plan = 'native';
+  else if (mode === 'auto' && hasDocker) plan = 'docker';
+  else plan = 'offline';
+
+  if (plan === 'offline') {
     const reason =
       mode === 'native'
         ? '--toolchain=native selected but `rails` is not on PATH'
-        : '`rails` not found on PATH';
+        : 'neither `rails` nor Docker is available';
     console.log(
       chalk.yellow(
         `⚠  ${reason} — using DARE's offline Rails templates (less complete than \`rails new\`).\n` +
-          `   Install Ruby+Rails, or re-run with --toolchain docker, for a full app.`,
+          `   Install Ruby+Rails or Docker, or re-run with --toolchain docker, for a full app.`,
       ),
     );
     await overlayRailsDare(dir, projectName, mode, fullstack, /* nativeRuntimeProvided */ false);
@@ -1329,18 +1340,25 @@ async function bootstrapRubyRails(
   const tool = await StackTool.resolve({
     nativeCmd: 'rails',
     nativeHint: 'Install Ruby 3.3+ and Rails 8: https://rubyonrails.org/ (gem install rails)',
-    // No official `rails` image — use the ruby image and install rails into it.
-    dockerImage: 'ruby:3.3-slim',
+    // No official `rails` image. Use the FULL ruby image (not -slim): it ships
+    // the build toolchain needed to compile rails' native gems (e.g.
+    // websocket-driver). -slim lacks make/gcc and `gem install rails` fails.
+    dockerImage: 'ruby:3.3',
     imageHasEntrypoint: false,
     dir,
-    mode: useNative ? 'native' : 'docker',
+    mode: plan === 'native' ? 'native' : 'docker',
   });
 
   if (tool.usingDocker) {
-    // ruby:3.3 image has gem but not rails — install it, then generate.
+    // The ruby image has gem but not rails — install it, then generate. Point
+    // GEM_HOME at a world-writable dir so this also works when the container
+    // runs as the host user (`--user uid:gid` on Linux can't write the default
+    // /usr/local/bundle).
+    const railsNew = `rails new . ${flags.join(' ')}`;
     await tool.runOther('sh', [
       '-c',
-      `gem install rails -v '~> 8.0' --no-document && rails new . ${flags.join(' ')}`,
+      `export GEM_HOME=/tmp/.dare-gems GEM_PATH=/tmp/.dare-gems PATH="/tmp/.dare-gems/bin:$PATH" && ` +
+        `gem install rails -v '~> 8.0' --no-document && ${railsNew}`,
     ]);
   } else {
     await tool.run(['new', '.', ...flags]);
